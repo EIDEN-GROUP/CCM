@@ -79,6 +79,27 @@ export async function listAlerts(
   return (data ?? []) as AlertRow[];
 }
 
+/**
+ * How many alerts are open.
+ *
+ * Returns `null` when the count could not be read — not `0`. A badge that
+ * shows zero because the query failed is a false statement: it says the
+ * team has nothing to look at, when in fact nobody knows.
+ */
+export async function countOpenAlerts(
+  db: Db,
+  workspaceId: string,
+): Promise<number | null> {
+  const { count, error } = await db
+    .from("alerts")
+    .select("id", { count: "exact", head: true })
+    .eq("workspace_id", workspaceId)
+    .eq("status", "open");
+
+  if (error) return null;
+  return count ?? 0;
+}
+
 export async function listActionItems(
   db: Db,
   workspaceId: string,

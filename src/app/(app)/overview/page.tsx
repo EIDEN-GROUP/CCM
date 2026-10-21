@@ -21,17 +21,14 @@ import {
   getGscMetrics,
   latestFetchedAt,
 } from "@/lib/repositories/metrics";
-import {
-  computeCpa,
-  computeCtr,
-  computeRoas,
-  describeChange,
-  sumSeries,
-  weightedAveragePosition,
-} from "@/domain/kpi";
+import { coverageOf, computeCpa, computeCtr, computeRoas, describeChange, sumSeries, weightedAveragePosition, } from "@/domain/kpi";
 import { formatMoney, formatPercent, microsToAmount } from "@/domain/currency";
+import { addNullable, formatCount } from "@/domain/metrics";
 import { eachDay } from "@/domain/dates";
 import { SYNC_INTERVALS, computeFreshness, formatAge } from "@/domain/freshness";
+import { getLocale } from "@/lib/i18n-server";
+import { intlLocale } from "@/lib/i18n";
+import { ErrorState } from "@/components/ui/states";
 
 export const metadata: Metadata = { title: "Overview" };
 export const dynamic = "force-dynamic";
@@ -57,37 +54,67 @@ export default async function OverviewPage({
   const today = getTodayInTimezone(session.workspaceTimezone);
   const { current, previous } = resolveRangeFromParams(params, today);
   const workspaceId = session.workspaceId!;
+  const locale = intlLocale(await getLocale());
 
-  const [adsRows, ga4Rows, gscRows] = await Promise.all([
-    getAdsMetrics(supabase, workspaceId, current.start, current.end).catch(
-      () => [],
-    ),
-    getGa4Metrics(supabase, workspaceId, current.start, current.end).catch(
-      () => [],
-    ),
-    getGscMetrics(supabase, workspaceId, current.start, current.end).catch(
-      () => [],
-    ),
-  ]);
+  // A failed query is **not** an empty result. The difference is the whole
+  // point: "there was no spend" and "we could not read the spend" are
+  // different facts, and the screen must not confuse them.
+  let adsRows: Awaited<ReturnType<typeof getAdsMetrics>> = [];
+  let ga4Rows: Awaited<ReturnType<typeof getGa4Metrics>> = [];
+  let gscRows: Awaited<ReturnType<typeof getGscMetrics>> = [];
+  let failure: string | null = null;
 
-  const previousAds = await getAdsMetrics(
-    supabase,
-    workspaceId,
-    previous.start,
-    previous.end,
-  ).catch(() => []);
-  const previousGa4 = await getGa4Metrics(
-    supabase,
-    workspaceId,
-    previous.start,
-    previous.end,
-  ).catch(() => []);
-  const previousGsc = await getGscMetrics(
-    supabase,
-    workspaceId,
-    previous.start,
-    previous.end,
-  ).catch(() => []);
+  try {
+    [adsRows, ga4Rows, gscRows] = await Promise.all([
+      getAdsMetrics(supabase, workspaceId, current.start, current.end),
+      getGa4Metrics(supabase, workspaceId, current.start, current.end),
+      getGscMetrics(supabase, workspaceId, current.start, current.end),
+    ]);
+  } catch (error) {
+    failure =
+      error instanceof Error
+        ? error.message
+        : "The metrics could not be read.";
+  }
+
+  // The comparison period is optional. Losing it means no trend, not a
+  // broken screen, and each source loses its own trend on its own.
+  let previousAds: Awaited<ReturnType<typeof getAdsMetrics>> = [];
+  let previousGa4: Awaited<ReturnType<typeof getGa4Metrics>> = [];
+  let previousGsc: Awaited<ReturnType<typeof getGscMetrics>> = [];
+
+  if (!failure) {
+    try {
+      previousAds = await getAdsMetrics(
+        supabase,
+        workspaceId,
+        previous.start,
+        previous.end,
+      );
+    } catch {
+      previousAds = [];
+    }
+    try {
+      previousGa4 = await getGa4Metrics(
+        supabase,
+        workspaceId,
+        previous.start,
+        previous.end,
+      );
+    } catch {
+      previousGa4 = [];
+    }
+    try {
+      previousGsc = await getGscMetrics(
+        supabase,
+        workspaceId,
+        previous.start,
+        previous.end,
+      );
+    } catch {
+      previousGsc = [];
+    }
+  }
 
   const hasData =
     adsRows.length > 0 || ga4Rows.length > 0 || gscRows.length > 0;
@@ -281,7 +308,7 @@ export default async function OverviewPage({
   ];
 
   // --- Connections -----------------------------------------------------------
-  const { data: connections } = await supabase
+  const { data: connections, error: connectionsError } = await supabase
     .from("provider_connections")
     .select("id, provider_key, display_label, status, last_success_at, last_attempt_at")
     .eq("workspace_id", workspaceId)
@@ -303,6 +330,9 @@ export default async function OverviewPage({
     return { connection, freshness };
   });
 
+  // A campaign's total is **unknown** when any of its rows is unknown. A
+  // provider that did not report clicks on one day leaves a hole; the total
+  // of the other days is not the total of the campaign.
   const campaignRows = adsRows
     .filter((row) => row.dimension === "campaign")
     .reduce<Map<string, (typeof adsRows)[number]>>((map, row) => {
@@ -312,17 +342,22 @@ export default async function OverviewPage({
       } else {
         map.set(row.dimension_id, {
           ...existing,
-          impressions: (existing.impressions ?? 0) + (row.impressions ?? 0),
-          clicks: (existing.clicks ?? 0) + (row.clicks ?? 0),
-          cost_micros: (existing.cost_micros ?? 0) + (row.cost_micros ?? 0),
-          conversions: (existing.conversions ?? 0) + (row.conversions ?? 0),
+          impressions: addNullable(existing.impressions, row.impressions),
+          clicks: addNullable(existing.clicks, row.clicks),
+          cost_micros: addNullable(existing.cost_micros, row.cost_micros),
+          conversions: addNullable(existing.conversions, row.conversions),
         });
       }
       return map;
     }, new Map());
 
+  // An unknown spend sorts last. It is not "the cheapest".
   const topCampaigns = [...campaignRows.values()]
-    .sort((a, b) => (b.cost_micros ?? 0) - (a.cost_micros ?? 0))
+    .sort((a, b) => {
+      if (a.cost_micros === null) return b.cost_micros === null ? 0 : 1;
+      if (b.cost_micros === null) return -1;
+      return b.cost_micros - a.cost_micros;
+    })
     .slice(0, 5);
 
   const adsFetchedAt = latestFetchedAt(adsRows);
@@ -337,7 +372,7 @@ export default async function OverviewPage({
         actions={
           <Link
             href="/integrations"
-            className="inline-flex h-[47px] items-center justify-center gap-2 rounded-md bg-primary px-[25px] text-button-text font-semibold text-white transition-colors hover:bg-primary-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            className="inline-flex h-[47px] items-center justify-center gap-2 rounded-md bg-primary px-[25px] text-button-text font-semibold text-tertiary transition-colors hover:bg-primary-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-ink"
           >
             <Plug aria-hidden="true" className="size-4" />
             Connect a source
@@ -345,7 +380,7 @@ export default async function OverviewPage({
         }
       />
 
-      {!hasData ? (
+      {!hasData && !failure ? (
         <Notice tone="info" title="No live data yet">
           CCM is connected to your workspace but no provider has reported yet.
           The figures below stay empty until a source syncs — CCM does not
@@ -357,21 +392,26 @@ export default async function OverviewPage({
         </Notice>
       ) : null}
 
+      {failure ? (
+        <ErrorState
+          detail={failure}
+          className="border-0"
+        />
+      ) : (
+        <>
       {/* KPI row */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-6">
         <KpiCard
           label="Ad spend"
-          value={formatMoney(spendMoney)}
+           coverage={coverageOf(adsTotals)}
+          value={formatMoney(spendMoney, locale)}
           change={describeChange(adsTotals.value, previousAdsTotals.value)}
           source={adsFetchedAt ? { label: "Google Ads", fetchedAt: adsFetchedAt, ageLabel: formatAge((now.getTime() - Date.parse(adsFetchedAt)) / 1000) } : null}
         />
         <KpiCard
           label="Conversions"
-          value={
-            adsConversions.value === null
-              ? "—"
-              : new Intl.NumberFormat("en-GB").format(adsConversions.value)
-          }
+           coverage={coverageOf(adsConversions)}
+          value={formatCount(adsConversions.value, locale)}
           change={describeChange(
             adsConversions.value,
             previousAdsConversions.value,
@@ -380,10 +420,11 @@ export default async function OverviewPage({
         />
         <KpiCard
           label="Organic clicks"
+           coverage={coverageOf(gscClicks)}
           value={
             gscClicks.value === null
               ? "—"
-              : new Intl.NumberFormat("en-GB", { notation: "compact" }).format(
+              : new Intl.NumberFormat(locale, { notation: "compact" }).format(
                   gscClicks.value,
                 )
           }
@@ -402,10 +443,11 @@ export default async function OverviewPage({
         />
         <KpiCard
           label="GA4 sessions"
+           coverage={coverageOf(ga4Sessions)}
           value={
             ga4Sessions.value === null
               ? "—"
-              : new Intl.NumberFormat("en-GB", { notation: "compact" }).format(
+              : new Intl.NumberFormat(locale, { notation: "compact" }).format(
                   ga4Sessions.value,
                 )
           }
@@ -414,17 +456,18 @@ export default async function OverviewPage({
         />
         <KpiCard
           label="GA4 key events"
-          value={
-            ga4KeyEvents.value === null
-              ? "—"
-              : new Intl.NumberFormat("en-GB").format(ga4KeyEvents.value)
-          }
+           coverage={coverageOf(ga4KeyEvents)}
+          value={formatCount(ga4KeyEvents.value, locale)}
           source={ga4FetchedAt ? { label: "GA4", fetchedAt: ga4FetchedAt, ageLabel: formatAge((now.getTime() - Date.parse(ga4FetchedAt)) / 1000) } : null}
         />
         <KpiCard
           label="Cost per conversion"
+           coverage={coverageOf(adsConversions)}
           value={formatMoney(
-            cpa ? { amount: cpa.value ?? 0, currency: "MAD" } : null,
+            cpa && cpa.value !== null
+              ? { amount: cpa.value, currency: "MAD" }
+              : null,
+            locale,
           )}
           source={adsFetchedAt ? { label: "Google Ads", fetchedAt: adsFetchedAt, ageLabel: formatAge((now.getTime() - Date.parse(adsFetchedAt)) / 1000) } : null}
         />
@@ -494,20 +537,20 @@ export default async function OverviewPage({
                     render: (row) =>
                       row.cost_micros === null
                         ? "—"
-                        : formatMoney({
-                            amount: microsToAmount(row.cost_micros, "MAD"),
-                            currency: "MAD",
-                          }),
+                        : formatMoney(
+                            {
+                              amount: microsToAmount(row.cost_micros, "MAD"),
+                              currency: "MAD",
+                            },
+                            locale,
+                          ),
                   },
                   {
                     key: "conversions",
                     header: "Conversions",
                     numeric: true,
                     mobile: "secondary",
-                    render: (row) =>
-                      row.conversions === null
-                        ? "—"
-                        : new Intl.NumberFormat("en-GB").format(row.conversions),
+                    render: (row) => formatCount(row.conversions, locale),
                   },
                 ]}
               />
@@ -526,6 +569,7 @@ export default async function OverviewPage({
                 { value: adsClicks.value, source: "provider", grain: "day", fetchedAt: null },
                 { value: adsImpressions.value, source: "provider", grain: "day", fetchedAt: null },
               )?.value ?? null,
+              locale,
             )}
           </p>
           <p className="mt-1 text-body-sm text-muted-text">Google Ads</p>
@@ -559,6 +603,8 @@ export default async function OverviewPage({
           </p>
         </StatCard>
       </div>
+        </>
+      )}
 
       {/* Connections */}
       <Card>
@@ -576,7 +622,12 @@ export default async function OverviewPage({
           }
         />
         <CardBody className="p-0">
-          {connectionRows.length === 0 ? (
+          {connectionsError ? (
+            <ErrorState
+              detail={`Could not read provider connections: ${connectionsError.message}`}
+              className="border-0"
+            />
+          ) : connectionRows.length === 0 ? (
             <EmptyState
               title="No providers connected"
               description="Connect Google Ads, GA4, Search Console, GTM or a mailbox to start reporting."

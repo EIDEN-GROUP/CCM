@@ -440,7 +440,7 @@ export function MailboxBrowser({
               setOpenThread(null);
               setMessages([]);
             }}
-            className="h-[42px] w-full rounded-md border border-border bg-surface px-3 text-body-md text-secondary focus:border-primary focus:outline-2 focus:outline-primary/40"
+            className="h-[42px] w-full rounded-md border border-border bg-surface px-3 text-body-md text-secondary focus:border-primary focus:outline-2 focus:outline-primary-ink/40"
           >
             {mailboxes.map((mailbox) => (
               <option key={mailbox.id} value={mailbox.id}>
@@ -513,7 +513,7 @@ export function MailboxBrowser({
             className={cn(
               "rounded-full border px-3.5 py-1.5 text-label-md font-semibold transition-colors",
               label === entry.key
-                ? "border-primary/40 bg-pale text-primary"
+                ? "border-primary/40 bg-pale text-primary-ink"
                 : "border-border bg-surface text-muted-text hover:bg-surface-muted",
             )}
           >
@@ -587,7 +587,7 @@ export function MailboxBrowser({
                       {thread.isStarred ? (
                         <Star
                           aria-hidden="true"
-                          className="mt-1 size-4 shrink-0 fill-warning text-warning"
+                          className="mt-1 size-4 shrink-0 fill-warning text-warning-ink"
                         />
                       ) : null}
                     </div>
@@ -861,13 +861,13 @@ export function MailboxBrowser({
                                 ? "Remove the star"
                                 : "Star this message"
                             }
-                            className="rounded p-1 text-muted-text transition-colors hover:bg-surface-muted hover:text-warning focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                            className="rounded p-1 text-muted-text transition-colors hover:bg-surface-muted hover:text-warning-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-ink"
                           >
                             <Star
                               aria-hidden="true"
                               className={cn(
                                 "size-4",
-                                message.isStarred && "fill-warning text-warning",
+                                message.isStarred && "fill-warning text-warning-ink",
                               )}
                             />
                           </button>

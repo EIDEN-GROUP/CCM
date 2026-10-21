@@ -4,12 +4,16 @@ import { cn } from "@/lib/cn";
 /**
  * Form controls match cards and buttons: clean white fill, soft radius,
  * comfortable padding. Legibility over decoration.
+ *
+ * The focus outline is `--color-primary-ink` at full strength. It used to be
+ * the brand teal at 40% opacity, which composited to 1.37:1 on white and
+ * left keyboard users with no visible focus at all.
  */
 
 const FIELD_BASE =
   "w-full rounded-md border border-border bg-surface px-[14px] py-3 text-body-md text-secondary " +
   "placeholder:text-muted-text/70 transition-colors duration-150 " +
-  "focus:border-primary focus:outline-2 focus:outline-offset-0 focus:outline-primary/40 " +
+  "focus:border-primary focus:outline-2 focus:outline-offset-0 focus:outline-primary-ink " +
   "disabled:cursor-not-allowed disabled:bg-surface-muted disabled:text-muted-text " +
   "aria-[invalid=true]:border-error aria-[invalid=true]:outline-error/30";
 
@@ -87,7 +91,7 @@ export function Field({
       <Label htmlFor={htmlFor}>
         {label}
         {required ? (
-          <span className="ms-1 text-error" aria-hidden="true">
+          <span className="ms-1 text-error-ink" aria-hidden="true">
             *
           </span>
         ) : null}
@@ -102,7 +106,7 @@ export function Field({
         <p
           id={`${htmlFor}-error`}
           role="alert"
-          className="text-body-sm text-error"
+          className="text-body-sm text-error-ink"
         >
           {error}
         </p>

@@ -46,7 +46,7 @@ export function InlineSpinner({ className }: { className?: string }) {
   return (
     <Loader2
       aria-hidden="true"
-      className={cn("size-4 animate-spin text-primary", className)}
+      className={cn("size-4 animate-spin text-primary-ink", className)}
     />
   );
 }
@@ -151,7 +151,7 @@ export function NeedsSetupState({
       <div className="flex items-start gap-3">
         <span
           aria-hidden="true"
-          className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full bg-warning-surface text-warning"
+          className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full bg-warning-surface text-warning-ink"
         >
           <AlertTriangle className="size-4" />
         </span>
@@ -223,7 +223,7 @@ export function ErrorState({
     >
       <span
         aria-hidden="true"
-        className="flex size-11 items-center justify-center rounded-full bg-error-surface text-error"
+        className="flex size-11 items-center justify-center rounded-full bg-error-surface text-error-ink"
       >
         <AlertTriangle className="size-5" />
       </span>
@@ -233,7 +233,7 @@ export function ErrorState({
         </h3>
         <p className="text-body-sm text-muted-text">{t("common.errorBody")}</p>
         {detail ? (
-          <p className="pt-1 text-body-sm text-error/90">{detail}</p>
+          <p className="pt-1 text-body-sm text-error-ink">{detail}</p>
         ) : null}
       </div>
       {onRetry ? (
@@ -258,14 +258,14 @@ export function StaleDataNotice({
     <div
       role="status"
       className={cn(
-        "flex flex-wrap items-center gap-2 rounded-md border border-warning/25 bg-warning-surface/60 px-4 py-2.5 text-body-sm text-warning",
+        "flex flex-wrap items-center gap-2 rounded-md border border-warning/25 bg-warning-surface/60 px-4 py-2.5 text-body-sm text-warning-ink",
         className,
       )}
     >
       <AlertTriangle aria-hidden="true" className="size-4 shrink-0" />
       <span className="font-semibold">{t("common.staleTitle")}</span>
-      <span className="text-warning/85">{t("common.staleBody")}</span>
-      {ageLabel ? <span className="text-warning/85">· {ageLabel}</span> : null}
+      <span>{t("common.staleBody")}</span>
+      {ageLabel ? <span>· {ageLabel}</span> : null}
     </div>
   );
 }

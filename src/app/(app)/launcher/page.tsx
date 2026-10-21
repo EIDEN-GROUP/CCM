@@ -40,7 +40,7 @@ export default async function LauncherPage() {
         actions={
           <a
             href="/launcher/setup"
-            className="inline-flex h-[47px] items-center justify-center gap-2 rounded-md border border-primary/35 bg-surface px-[25px] text-button-text font-semibold text-primary transition-colors hover:bg-pale focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            className="inline-flex h-[47px] items-center justify-center gap-2 rounded-md border border-primary/35 bg-surface px-[25px] text-button-text font-semibold text-primary-ink transition-colors hover:bg-pale focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-ink"
           >
             <Rocket aria-hidden="true" className="size-4" />
             Set up account launching

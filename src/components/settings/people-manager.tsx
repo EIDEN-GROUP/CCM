@@ -335,7 +335,7 @@ export function PeopleManager({ currentUserId }: { currentUserId: string }) {
                   .writeText(created.password)
                   .catch(() => undefined)
               }
-              className="inline-flex items-center gap-1 font-semibold text-primary hover:underline"
+              className="inline-flex items-center gap-1 font-semibold text-primary-ink hover:underline"
             >
               <Copy aria-hidden="true" className="size-3.5" />
               Copy
@@ -538,7 +538,7 @@ export function PeopleManager({ currentUserId }: { currentUserId: string }) {
                 aria-pressed={selectedRole === role.key}
                 className={
                   selectedRole === role.key
-                    ? "rounded-full border border-primary/40 bg-pale px-3.5 py-1.5 text-label-md font-semibold text-primary"
+                    ? "rounded-full border border-primary/40 bg-pale px-3.5 py-1.5 text-label-md font-semibold text-primary-ink"
                     : "rounded-full border border-border bg-surface px-3.5 py-1.5 text-label-md font-semibold text-muted-text transition-colors hover:bg-surface-muted"
                 }
               >
@@ -630,7 +630,7 @@ export function PeopleManager({ currentUserId }: { currentUserId: string }) {
                                         <input
                                           type="radio"
                                           name={`level-${tab.key}`}
-                                          className="size-4 accent-[#4bbdbd]"
+                                          className="size-4 accent-primary-ink"
                                           checked={level === option.key}
                                           disabled={locked}
                                           onChange={() => {

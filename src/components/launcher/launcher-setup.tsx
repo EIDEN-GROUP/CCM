@@ -147,7 +147,7 @@ export function LauncherSetup({ accounts }: { accounts: LaunchableAccount[] }) {
             profile and map the account to that instance id.
           </p>
           <p className="flex items-start gap-2">
-            <TriangleAlert aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-warning" />
+            <TriangleAlert aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-warning-ink" />
             The optional local helper exists for the case where the account
             lives in a profile you cannot install the extension into. It is
             explicitly installed and paired by you, it only accepts
@@ -196,7 +196,7 @@ export function LauncherSetup({ accounts }: { accounts: LaunchableAccount[] }) {
             </li>
           </ol>
           <p className="flex items-start gap-2">
-            <TriangleAlert aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-warning" />
+            <TriangleAlert aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-warning-ink" />
             The helper accepts only a signed launch ticket, checks the
             destination against the provider allowlist, and opens the browser
             with the browser&apos;s own cookie store. It never reads a cookie,
@@ -381,7 +381,7 @@ function MappingForm({
       {state.kind === "error" ? (
         <p
           role="alert"
-          className="flex items-center gap-2 text-body-sm text-error"
+          className="flex items-center gap-2 text-body-sm text-error-ink"
         >
           <TriangleAlert aria-hidden="true" className="size-4" />
           {state.message}

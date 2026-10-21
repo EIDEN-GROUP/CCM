@@ -31,7 +31,16 @@ export interface KpiCardProps {
   } | null;
   /** True when the value is a synthetic fixture. */
   isFixture?: boolean;
-  /** Rendered on the right of the header — filters, menus, actions. */
+  /**
+   * How much of the period this figure actually covers.
+   *
+   * A total that covers thirteen of thirty days is not the total for the
+   * period. Without this the card states a partial sum as though it were
+   * the whole, which is the same class of mistake as showing a zero for a
+   * metric nobody measured.
+   */
+  coverage?: { present: number; total: number } | null;
+  /** Rendered on the right of the header - filters, menus, actions. */
   actions?: ReactNode;
   className?: string;
 }
@@ -51,6 +60,7 @@ export function KpiCard({
   trend,
   source,
   isFixture,
+  coverage,
   actions,
   className,
 }: KpiCardProps) {
@@ -58,6 +68,12 @@ export function KpiCard({
   const isUp = change?.direction === "up";
   const isDown = change?.direction === "down";
   const isFlat = change?.direction === "flat";
+
+  // A figure that does not cover the whole period is stated as such.
+  const partial =
+    coverage && coverage.total > 0 && coverage.present < coverage.total
+      ? coverage
+      : null;
 
   return (
     <section
@@ -86,7 +102,7 @@ export function KpiCard({
               className={cn(
                 "inline-flex items-center gap-1 text-label-md font-semibold",
                 isUp && "text-primary-ink",
-                isDown && "text-error",
+                isDown && "text-error-ink",
                 (isFlat || change.direction === "unknown") && "text-muted-text",
               )}
             >
@@ -112,11 +128,19 @@ export function KpiCard({
         ) : null}
       </div>
 
-      {source || isFixture ? (
+      {source || isFixture || partial ? (
         <div className="flex flex-wrap items-center gap-2 border-t border-border/60 pt-2.5 text-body-sm text-muted-text">
           {isFixture ? (
-            <span className="rounded-full bg-warning-surface px-2 py-0.5 text-label-sm font-semibold text-warning">
+            <span className="rounded-full bg-warning-surface px-2 py-0.5 text-label-sm font-semibold text-warning-ink">
               {t("demo.label")}
+            </span>
+          ) : null}
+          {partial ? (
+            <span
+              className="font-semibold text-warning-ink"
+              title="The provider did not report this metric for every day in the period, so the figure covers only the days it did report."
+            >
+              {`${partial.present} of ${partial.total} days reported`}
             </span>
           ) : null}
           {source ? (
@@ -156,7 +180,7 @@ function MiniSparkline({ values }: { values: number[] }) {
       width={width}
       height={height}
       viewBox={`0 0 ${width} ${height}`}
-      className="shrink-0 overflow-visible text-primary"
+      className="shrink-0 overflow-visible text-primary-ink"
     >
       <polyline
         points={points}

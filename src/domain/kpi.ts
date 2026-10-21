@@ -54,6 +54,8 @@ export interface AggregationResult {
   coverage: number;
   /** Number of contributing slots with no value. */
   missing: number;
+  /** Total number of contributing slots considered. */
+  total: number;
   source: MetricSource;
   fetchedAt: string | null;
 }
@@ -68,7 +70,14 @@ export function sumSeries(values: MetricValue[]): AggregationResult {
   const present = values.filter((v) => v.value !== null);
   const missing = values.length - present.length;
   if (present.length === 0) {
-    return { value: null, coverage: 0, missing, source: "provider", fetchedAt: null };
+    return {
+    value: null,
+    coverage: 0,
+    missing,
+    total: values.length,
+    source: "provider",
+    fetchedAt: null,
+  };
   }
   const total = present.reduce((acc, v) => acc + (v.value ?? 0), 0);
   const source = present.some((v) => v.source === "derived") ? "derived" : "provider";
@@ -80,10 +89,25 @@ export function sumSeries(values: MetricValue[]): AggregationResult {
   return {
     value: total,
     coverage: values.length === 0 ? 0 : present.length / values.length,
+    total: values.length,
     missing,
     source,
     fetchedAt,
   };
+}
+
+/**
+ * How much of a period a figure actually covers.
+ *
+ * A total that covers thirteen of thirty days is not the total for the
+ * period, and a person reading a KPI card has no way of knowing that
+ * unless the card says so. This is the pair the card renders.
+ */
+export function coverageOf(result: {
+  missing: number;
+  total: number;
+}): { present: number; total: number } {
+  return { present: result.total - result.missing, total: result.total };
 }
 
 /**
@@ -93,12 +117,20 @@ export function averageSeries(values: MetricValue[]): AggregationResult {
   const present = values.filter((v) => v.value !== null);
   const missing = values.length - present.length;
   if (present.length === 0) {
-    return { value: null, coverage: 0, missing, source: "provider", fetchedAt: null };
+    return {
+    value: null,
+    coverage: 0,
+    missing,
+    total: values.length,
+    source: "provider",
+    fetchedAt: null,
+  };
   }
   const total = present.reduce((acc, v) => acc + (v.value ?? 0), 0);
   return {
     value: total / present.length,
     coverage: values.length === 0 ? 0 : present.length / values.length,
+    total: values.length,
     missing,
     source: present.some((v) => v.source === "derived") ? "derived" : "provider",
     fetchedAt:
@@ -125,7 +157,14 @@ export function weightedAveragePosition(
     (r) => r.position !== null && r.impressions !== null && r.impressions > 0,
   );
   if (usable.length === 0) {
-    return { value: null, coverage: 0, missing: rows.length, source: "provider", fetchedAt: null };
+    return {
+      value: null,
+      coverage: 0,
+      missing: rows.length,
+      total: rows.length,
+      source: "provider",
+      fetchedAt: null,
+    };
   }
   let weightedSum = 0;
   let totalImpressions = 0;
@@ -137,6 +176,7 @@ export function weightedAveragePosition(
     value: weightedSum / totalImpressions,
     coverage: rows.length === 0 ? 0 : usable.length / rows.length,
     missing: rows.length - usable.length,
+    total: rows.length,
     source: "derived",
     fetchedAt: null,
   };

@@ -397,10 +397,25 @@ glyphs. Buttons are 47px tall with a 7px radius; cards are 8px radius with
 16px padding; chips are fully rounded. Shadows are minimal — structure comes
 from spacing and borders, not elevation.
 
-**Derived tokens** (documented as derived, not from `Design.md`): `primary-ink`
-(`#208f91`, the teal used for *text* on white so it clears WCAG AA),
-`pale` (`#eaf8f8`, teal-tinted panel), `muted-text` (`#727984`),
-`warning` (`#9b762d` with `#fff5df` surface) and `error-surface`
+**Derived tokens** (documented as derived, not from `Design.md`). These exist
+because the brand teal is a *fill* colour, and the same teal as *text* does
+not clear WCAG AA. The brand hexes above are unchanged; only the colours
+used for text and focus were re-derived:
+
+| Token | Value | Why |
+|---|---|---|
+| `primary-ink` | `#17787b` | The teal used for *text*: 5.24:1 on white, 4.81:1 on the pale surface. |
+| `error-ink` | `#b33834` | Error *text*: 5.95:1 on white, 5.20:1 on the error surface. The brand `#d9534f` stays for borders and badges. |
+| `warning-ink` | `#7d5f1f` | Warning *text*: 5.95:1 on white, 5.49:1 on the warning surface. The brand `#9b762d` stays for borders and marks. |
+| `success` | `#1f7a4d` | Success text and dots: 5.32:1 on white. |
+| `muted-text` | `#6b727c` | Metadata: 4.86:1 on white, 4.57:1 on the app background. |
+
+A white label on `#4bbdbd` is 2.25:1 and fails, so a button on the brand
+teal carries the deep ink `#3a3a3a` (the owner's own tertiary colour) as
+its label — 5.04:1 at rest, 5.92:1 on hover, 6.86:1 when pressed. The focus
+ring uses `primary-ink` for the same reason.
+
+Also derived: `pale` (`#eaf8f8`, teal-tinted panel) and `error-surface`
 (`#fdeceb`). The warning pair exists because `Design.md` defines only an
 error colour, and a degraded integration must never be mistaken for a
 healthy one.

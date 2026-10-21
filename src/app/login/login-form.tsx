@@ -89,7 +89,7 @@ export function LoginForm() {
       {error ? (
         <p
           role="alert"
-          className="rounded-md border border-error/30 bg-error-surface/60 px-3 py-2 text-body-sm text-error"
+          className="rounded-md border border-error/30 bg-error-surface/60 px-3 py-2 text-body-sm text-error-ink"
         >
           {error}
         </p>

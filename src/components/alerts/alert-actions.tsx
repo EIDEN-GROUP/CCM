@@ -59,7 +59,7 @@ export function AlertActions({
   return (
     <div className="flex items-center gap-2">
       {error ? (
-        <span role="alert" className="text-body-sm text-error">
+        <span role="alert" className="text-body-sm text-error-ink">
           {error}
         </span>
       ) : null}

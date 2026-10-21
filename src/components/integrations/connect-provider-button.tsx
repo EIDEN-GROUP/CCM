@@ -67,7 +67,7 @@ export function ConnectProviderButton({
           be connected. Add them in{" "}
           <a
             href="/settings/integrations"
-            className="font-semibold text-primary underline"
+            className="font-semibold text-primary-ink underline"
           >
             Settings — Provider apps
           </a>
@@ -95,7 +95,7 @@ export function ConnectProviderButton({
                 href={`/api/auth/${provider.key}/authorize?products=${provider.products
                   .map((product) => product.key)
                   .join(",")}`}
-                className="inline-flex h-[38px] items-center justify-center gap-2 rounded-md border border-primary/35 bg-surface px-3.5 text-label-md font-semibold text-primary transition-colors hover:bg-pale focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                className="inline-flex h-[38px] items-center justify-center gap-2 rounded-md border border-primary/35 bg-surface px-3.5 text-label-md font-semibold text-primary-ink transition-colors hover:bg-pale focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-ink"
               >
                 <Plug aria-hidden="true" className="size-4" />
                 Connect
@@ -105,7 +105,7 @@ export function ConnectProviderButton({
                 <Chip tone="warning">App not configured</Chip>
                 <a
                   href={`/settings/integrations?provider=${provider.key}`}
-                  className="text-label-md font-semibold text-primary hover:underline"
+                  className="text-label-md font-semibold text-primary-ink hover:underline"
                 >
                   Set it up
                 </a>
@@ -182,7 +182,7 @@ export function RunActionButton({
         </p>
       ) : null}
       {error ? (
-        <p role="alert" className="mt-1 text-body-sm text-error">
+        <p role="alert" className="mt-1 text-body-sm text-error-ink">
           {error}
         </p>
       ) : null}

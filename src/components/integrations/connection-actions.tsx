@@ -130,7 +130,7 @@ export function ConnectionActions({
       return (
         <a
           href={`/settings/integrations?provider=${oauthProvider}`}
-          className="inline-flex h-[38px] items-center justify-center gap-2 rounded-md border border-warning/40 bg-surface px-3.5 text-label-md font-semibold text-warning transition-colors hover:bg-warning-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-warning"
+          className="inline-flex h-[38px] items-center justify-center gap-2 rounded-md border border-warning/40 bg-surface px-3.5 text-label-md font-semibold text-warning-ink transition-colors hover:bg-warning-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-warning"
         >
           <Plug aria-hidden="true" className="size-4" />
           {t("pages.settings.integrations.setUpApp")}
@@ -141,7 +141,7 @@ export function ConnectionActions({
     return (
       <a
         href={`/api/auth/${oauthProvider}/authorize?products=${providerKey}`}
-        className="inline-flex h-[38px] items-center justify-center gap-2 rounded-md border border-primary/35 bg-surface px-3.5 text-label-md font-semibold text-primary transition-colors hover:bg-pale focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+        className="inline-flex h-[38px] items-center justify-center gap-2 rounded-md border border-primary/35 bg-surface px-3.5 text-label-md font-semibold text-primary-ink transition-colors hover:bg-pale focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-ink"
       >
         <Plug aria-hidden="true" className="size-4" />
         {t("common.connect")}
@@ -155,7 +155,7 @@ export function ConnectionActions({
     <div className="flex flex-col items-end gap-1">
       <div className="flex items-center gap-2">
       {error ? (
-        <span role="alert" className="text-body-sm text-error">
+        <span role="alert" className="text-body-sm text-error-ink">
           {error}
         </span>
       ) : null}
@@ -197,7 +197,7 @@ export function ConnectionActions({
         size="sm"
         onClick={() => act("disconnect")}
         disabled={busy || pending}
-        className={cn("text-error hover:bg-error-surface")}
+        className={cn("text-error-ink hover:bg-error-surface")}
         title={t("common.disconnect")}
       >
         <Unplug aria-hidden="true" className="size-4" />
@@ -211,7 +211,7 @@ export function ConnectionActions({
           className={
             checkResult.ok
               ? "text-body-sm text-success"
-              : "text-body-sm text-error"
+              : "text-body-sm text-error-ink"
           }
         >
           {checkResult.ok

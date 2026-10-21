@@ -50,14 +50,14 @@ export function ReportExportActions() {
           type="checkbox"
           checked={safe}
           onChange={(event) => setSafe(event.target.checked)}
-          className="size-4 rounded border-border accent-[#4bbdbd]"
+          className="size-4 rounded border-border accent-primary"
         />
         {t("pages.reports.safeMode")}
       </label>
 
       <a
         href={`/api/reports/export?kind=${kind}&safe=${safe ? "1" : "0"}`}
-        className="inline-flex h-[38px] items-center justify-center gap-2 rounded-md border border-primary/35 bg-surface px-3.5 text-label-md font-semibold text-primary transition-colors hover:bg-pale focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+        className="inline-flex h-[38px] items-center justify-center gap-2 rounded-md border border-primary/35 bg-surface px-3.5 text-label-md font-semibold text-primary-ink transition-colors hover:bg-pale focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-ink"
       >
         <Download aria-hidden="true" className="size-4" />
         {t("pages.reports.exportCsv")}

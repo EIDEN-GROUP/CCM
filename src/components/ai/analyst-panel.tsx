@@ -93,7 +93,7 @@ export function AnalystPanel({ enabled }: { enabled: boolean }) {
       />
       <CardBody className="space-y-4">
         {!enabled ? (
-          <p className="flex items-start gap-2 rounded-md border border-warning/25 bg-warning-surface/60 px-3 py-2 text-body-sm text-warning">
+          <p className="flex items-start gap-2 rounded-md border border-warning/25 bg-warning-surface/60 px-3 py-2 text-body-sm text-warning-ink">
             <TriangleAlert aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
             <span>
               The model key is not configured, so the analyst reports what it can
@@ -126,7 +126,7 @@ export function AnalystPanel({ enabled }: { enabled: boolean }) {
         </form>
 
         {error ? (
-          <p role="alert" className="text-body-sm text-error">
+          <p role="alert" className="text-body-sm text-error-ink">
             {error}
           </p>
         ) : null}
@@ -137,7 +137,7 @@ export function AnalystPanel({ enabled }: { enabled: boolean }) {
               className={
                 answer.grounded
                   ? "rounded-md border border-border bg-surface-muted/60 px-4 py-3 text-body-md text-secondary"
-                  : "rounded-md border border-warning/30 bg-warning-surface/60 px-4 py-3 text-body-md text-warning"
+                  : "rounded-md border border-warning/30 bg-warning-surface/60 px-4 py-3 text-body-md text-warning-ink"
               }
             >
               <p className="whitespace-pre-wrap">{answer.text}</p>

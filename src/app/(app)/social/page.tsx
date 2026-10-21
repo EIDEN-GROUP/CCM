@@ -12,7 +12,10 @@ import { requirePermission } from "@/lib/auth/guard";
 import { getTodayInTimezone } from "@/domain/timezone";
 import { resolveRangeFromParams } from "@/lib/range-params";
 import { getAccountIds } from "@/lib/repositories/metrics";
-import { formatPercent } from "@/domain/currency";
+import { formatCount, formatRatio } from "@/domain/metrics";
+import { getLocale } from "@/lib/i18n-server";
+import { intlLocale } from "@/lib/i18n";
+import { ErrorState } from "@/components/ui/states";
 import { sumSeries } from "@/domain/kpi";
 
 export const metadata: Metadata = { title: "Social Media" };
@@ -37,15 +40,31 @@ export default async function SocialPage({
   const params = await searchParams;
   const today = getTodayInTimezone(session.workspaceTimezone);
   const { current } = resolveRangeFromParams(params, today);
+  const locale = intlLocale(await getLocale());
 
-  const accounts = await getAccountIds(supabase, session.workspaceId!).catch(
-    () => [],
-  );
+  // A failed query is **not** an empty result. "There are no connected
+  // accounts" and "we could not read the connected accounts" are different
+  // facts, and the screen must not confuse them.
+  let accounts: Awaited<ReturnType<typeof getAccountIds>> = [];
+  let accountsFailure: string | null = null;
+
+  try {
+    accounts = await getAccountIds(supabase, session.workspaceId!);
+  } catch (error) {
+    accountsFailure =
+      error instanceof Error
+        ? error.message
+        : "The connected accounts could not be read.";
+  }
+
   const socialAccounts = accounts.filter((account) =>
     ["meta", "instagram", "linkedin", "youtube"].includes(account.providerKey),
   );
 
-  const { data: metricRows } = await supabase
+  const {
+    data: metricRows,
+    error: metricsError,
+  } = await supabase
     .from("social_account_metrics")
     .select(
       "workspace_id, account_id, metric_date, organic, followers, reach, impressions, engagements, clicks, video_views, content_count, source_fetched_at",
@@ -68,7 +87,7 @@ export default async function SocialPage({
     source_fetched_at: string;
   }>;
 
-  const { data: postRows } = await supabase
+  const { data: postRows, error: postsError } = await supabase
     .from("social_post_metrics")
     .select(
       "id, account_id, platform, post_id, posted_at, format, link, reach, impressions, engagements, clicks, video_views",
@@ -109,7 +128,12 @@ export default async function SocialPage({
           subtitle="Identities, permissions and data freshness"
         />
         <CardBody className="p-0">
-          {socialAccounts.length === 0 ? (
+          {accountsFailure ? (
+            <ErrorState
+              detail={accountsFailure}
+              className="border-0"
+            />
+          ) : socialAccounts.length === 0 ? (
             <EmptyState
               title="No social accounts connected"
               description="Connect Instagram, Meta, LinkedIn or YouTube. Medical Bay's public site links Instagram (medicalbay.maroc), Facebook, LinkedIn (medical-bay-agadir) and TikTok."
@@ -144,6 +168,12 @@ export default async function SocialPage({
         </CardBody>
       </Card>
 
+      {metricsError ? (
+        <ErrorState
+          detail={`Could not read social account metrics: ${metricsError.message}`}
+          className="border-0"
+        />
+      ) : (
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {[
           { label: "Reach", value: reach.value },
@@ -158,20 +188,25 @@ export default async function SocialPage({
             <p className="mt-1 text-headline-md font-bold text-tertiary">
               {card.value === null
                 ? "—"
-                : new Intl.NumberFormat("en-GB", { notation: "compact" }).format(
+                : new Intl.NumberFormat(locale, { notation: "compact" }).format(
                     card.value,
                   )}
             </p>
             <p className="mt-1 text-body-sm text-muted-text">
-              {card.label === "Engagements" && engagements.value !== null
-                ? `Engagement rate ${formatPercent(
-                    reach.value ? engagements.value / reach.value : null,
+              {card.label === "Engagements"
+                ? `Engagement rate ${formatRatio(
+                    engagements.value,
+                    reach.value,
+                    locale,
                   )} of reach`
-                : "No social data synced yet"}
+                : rows.length > 0
+                  ? "Across the connected accounts"
+                  : "No social data synced yet"}
             </p>
           </Card>
         ))}
       </div>
+      )}
 
       <Card>
         <CardHeader
@@ -179,7 +214,12 @@ export default async function SocialPage({
           subtitle="Top and declining posts"
         />
         <CardBody className="p-0">
-          {(postRows ?? []).length === 0 ? (
+          {postsError ? (
+            <ErrorState
+              detail={`Could not read social post metrics: ${postsError.message}`}
+              className="border-0"
+            />
+          ) : (postRows ?? []).length === 0 ? (
             <EmptyState
               title="No post metrics"
               description="Post-level performance appears once a social account reports."
@@ -214,7 +254,7 @@ export default async function SocialPage({
                   numeric: true,
                   mobile: "secondary",
                   render: (row) =>
-                    (row as { reach: number | null }).reach ?? "—",
+                    formatCount((row as { reach: number | null }).reach, locale),
                 },
                 {
                   key: "engagements",
@@ -222,7 +262,10 @@ export default async function SocialPage({
                   numeric: true,
                   mobile: "secondary",
                   render: (row) =>
-                    (row as { engagements: number | null }).engagements ?? "—",
+                    formatCount(
+                      (row as { engagements: number | null }).engagements,
+                      locale,
+                    ),
                 },
                 {
                   key: "link",

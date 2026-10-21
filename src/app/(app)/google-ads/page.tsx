@@ -12,15 +12,13 @@ import { requirePermission } from "@/lib/auth/guard";
 import { getTodayInTimezone } from "@/domain/timezone";
 import { resolveRangeFromParams } from "@/lib/range-params";
 import { getAdsMetrics, latestFetchedAt } from "@/lib/repositories/metrics";
-import {
-  computeCpa,
-  computeCtr,
-  computeRoas,
-  describeChange,
-  sumSeries,
-} from "@/domain/kpi";
+import { coverageOf, computeCpa, computeCtr, computeRoas, describeChange, sumSeries, } from "@/domain/kpi";
 import { formatMoney, formatPercent, microsToAmount } from "@/domain/currency";
 import { formatAge } from "@/domain/freshness";
+import { addNullable, formatCount } from "@/domain/metrics";
+import { getLocale } from "@/lib/i18n-server";
+import { intlLocale } from "@/lib/i18n";
+import { ErrorState } from "@/components/ui/states";
 
 export const metadata: Metadata = { title: "Google Ads" };
 export const dynamic = "force-dynamic";
@@ -48,19 +46,38 @@ export default async function GoogleAdsPage({
   const today = getTodayInTimezone(session.workspaceTimezone);
   const { current, previous } = resolveRangeFromParams(params, today);
   const workspaceId = session.workspaceId!;
+  const locale = intlLocale(await getLocale());
 
-  const rows = await getAdsMetrics(
-    supabase,
-    workspaceId,
-    current.start,
-    current.end,
-  ).catch(() => []);
-  const previousRows = await getAdsMetrics(
-    supabase,
-    workspaceId,
-    previous.start,
-    previous.end,
-  ).catch(() => []);
+  // A failed query is **not** an empty result. The difference is the whole
+  // point: "there was no spend" and "we could not read the spend" are
+  // different facts, and the screen must not confuse them.
+  let rows: Awaited<ReturnType<typeof getAdsMetrics>> = [];
+  let previousRows: Awaited<ReturnType<typeof getAdsMetrics>> = [];
+  let failure: string | null = null;
+
+  try {
+    rows = await getAdsMetrics(supabase, workspaceId, current.start, current.end);
+  } catch (error) {
+    failure =
+      error instanceof Error
+        ? error.message
+        : "The Google Ads metrics could not be read.";
+  }
+
+  if (!failure) {
+    try {
+      previousRows = await getAdsMetrics(
+        supabase,
+        workspaceId,
+        previous.start,
+        previous.end,
+      );
+    } catch {
+      // The comparison period is optional. Losing it means no trend, not a
+      // broken screen.
+      previousRows = [];
+    }
+  }
 
   const sum = (list: typeof rows, field: "cost_micros" | "clicks" | "impressions" | "conversions" | "conversion_value_micros") =>
     sumSeries(
@@ -97,15 +114,19 @@ export default async function GoogleAdsPage({
   );
 
   // Aggregate the daily facts into one row per campaign.
+  //
+  // A campaign's total is **unknown** when any of its days is unknown. A
+  // provider that did not report impressions on one day leaves a hole; the
+  // total of the other days is not the total of the campaign.
   const campaigns = new Map<
     string,
     {
       id: string;
       label: string;
-      impressions: number;
-      clicks: number;
-      cost: number;
-      conversions: number;
+      impressions: number | null;
+      clicks: number | null;
+      cost: number | null;
+      conversions: number | null;
     }
   >();
 
@@ -119,10 +140,10 @@ export default async function GoogleAdsPage({
       cost: 0,
       conversions: 0,
     };
-    entry.impressions += row.impressions ?? 0;
-    entry.clicks += row.clicks ?? 0;
-    entry.cost += row.cost_micros ?? 0;
-    entry.conversions += row.conversions ?? 0;
+    entry.impressions = addNullable(entry.impressions, row.impressions);
+    entry.clicks = addNullable(entry.clicks, row.clicks);
+    entry.cost = addNullable(entry.cost, row.cost_micros);
+    entry.conversions = addNullable(entry.conversions, row.conversions);
     campaigns.set(row.dimension_id, entry);
   }
 
@@ -141,9 +162,17 @@ export default async function GoogleAdsPage({
         record and a reversible version reference before they can be offered.
       </Notice>
 
+      {failure ? (
+        <ErrorState
+          detail={failure}
+          className="border-0"
+        />
+      ) : (
+        <>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         <KpiCard
           label="Spend"
+           coverage={coverageOf(spend)}
           value={formatMoney(spendMoney)}
           change={describeChange(spend.value, previousSpend.value)}
           source={
@@ -160,6 +189,7 @@ export default async function GoogleAdsPage({
         />
         <KpiCard
           label="Impressions"
+           coverage={coverageOf(impressions)}
           value={
             impressions.value === null
               ? "—"
@@ -170,6 +200,7 @@ export default async function GoogleAdsPage({
         />
         <KpiCard
           label="Clicks"
+           coverage={coverageOf(clicks)}
           value={
             clicks.value === null
               ? "—"
@@ -180,6 +211,7 @@ export default async function GoogleAdsPage({
         />
         <KpiCard
           label="Conversions"
+           coverage={coverageOf(conversions)}
           value={
             conversions.value === null
               ? "—"
@@ -189,6 +221,7 @@ export default async function GoogleAdsPage({
         />
         <KpiCard
           label="ROAS"
+           coverage={coverageOf(spend)}
           value={roas?.value === null || roas === null ? "—" : `${roas.value.toFixed(2)}x`}
         />
       </div>
@@ -196,6 +229,7 @@ export default async function GoogleAdsPage({
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <KpiCard
           label="CTR"
+           coverage={coverageOf(clicks)}
           value={formatPercent(
             computeCtr(
               { value: clicks.value, source: "provider", grain: "day", fetchedAt: null },
@@ -205,6 +239,7 @@ export default async function GoogleAdsPage({
         />
         <KpiCard
           label="Avg. CPC"
+           coverage={coverageOf(clicks)}
           value={formatMoney(
             clicks.value === null || clicks.value === 0 || spendMoney === null
               ? null
@@ -213,12 +248,14 @@ export default async function GoogleAdsPage({
         />
         <KpiCard
           label="CPA"
+           coverage={coverageOf(conversions)}
           value={formatMoney(
             cpa ? { amount: cpa.value ?? 0, currency } : null,
           )}
         />
         <KpiCard
           label="Conversion value"
+           coverage={coverageOf(conversionValue)}
           value={formatMoney(
             conversionValue.value === null
               ? null
@@ -262,16 +299,14 @@ export default async function GoogleAdsPage({
                   header: "Impressions",
                   numeric: true,
                   mobile: "secondary",
-                  render: (row) =>
-                    new Intl.NumberFormat("en-GB").format(row.impressions),
+                  render: (row) => formatCount(row.impressions, locale),
                 },
                 {
                   key: "clicks",
                   header: "Clicks",
                   numeric: true,
                   mobile: "secondary",
-                  render: (row) =>
-                    new Intl.NumberFormat("en-GB").format(row.clicks),
+                  render: (row) => formatCount(row.clicks, locale),
                 },
                 {
                   key: "spend",
@@ -279,18 +314,19 @@ export default async function GoogleAdsPage({
                   numeric: true,
                   mobile: "secondary",
                   render: (row) =>
-                    formatMoney({
-                      amount: microsToAmount(row.cost, currency),
-                      currency,
-                    }),
+                    row.cost === null
+                      ? "—"
+                      : formatMoney({
+                          amount: microsToAmount(row.cost, currency),
+                          currency,
+                        }),
                 },
                 {
                   key: "conversions",
                   header: "Conversions",
                   numeric: true,
                   mobile: "secondary",
-                  render: (row) =>
-                    new Intl.NumberFormat("en-GB").format(row.conversions),
+                  render: (row) => formatCount(row.conversions, locale),
                 },
                 {
                   key: "cpa",
@@ -298,7 +334,7 @@ export default async function GoogleAdsPage({
                   numeric: true,
                   mobile: "hidden",
                   render: (row) =>
-                    row.conversions === 0
+                    row.conversions === null || row.cost === null || row.conversions === 0
                       ? "—"
                       : formatMoney({
                           amount: microsToAmount(row.cost, currency) / row.conversions,
@@ -310,6 +346,8 @@ export default async function GoogleAdsPage({
           )}
         </CardBody>
       </Card>
+        </>
+      )}
     </div>
   );
 }

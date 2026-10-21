@@ -103,7 +103,7 @@ export function RegisterWebsiteButton({ canManage }: { canManage: boolean }) {
       </div>
 
       {error ? (
-        <p role="alert" className="mt-3 text-body-sm text-error">
+        <p role="alert" className="mt-3 text-body-sm text-error-ink">
           {error}
         </p>
       ) : null}

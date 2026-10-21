@@ -11,7 +11,10 @@
   --color-primary: #4bbdbd;
   --color-primary-60: #6ccaca;
   --color-primary-70: #8ad6d6;
-  --color-primary-ink: #208f91; /* derived: accessible teal text on white (AA) */
+  /* derived: accessible teal *text* on white. #208f91 measured 3.89:1 on
+     white and 3.57:1 on the pale surface, so it failed AA for text.
+     #17787b measures 5.24:1 on white and 4.81:1 on --color-pale. */
+  --color-primary-ink: #17787b;
 
   /* Neutrals ------------------------------------------------------------- */
   --color-secondary: #4b4f58; /* body text */
@@ -26,12 +29,20 @@
    * muted-text: secondary ink at lower emphasis for metadata.
    * warning: restrained amber for "needs setup" states. The palette in
    * Design.md defines only an error colour; a single amber is required so a
-   * degraded integration is never mistaken for a healthy one. */
+   * degraded integration is never mistaken for a healthy one.
+   *
+   * The *-ink tokens are the text-safe twins of the brand fills. The fills
+   * stay exactly as Design.md and the owner specified them — they are used
+   * for borders, badges and decorative marks. The inks are what text is
+   * painted in, because the fills are too light to carry a label. */
   --color-pale: #eaf8f8;
-  --color-muted-text: #727984;
+  --color-muted-text: #6b727c; /* was #727984: 4.39:1 on white, 4.13:1 on --color-surface-muted — both below 4.5:1. Now 4.86:1 / 4.57:1. */
   --color-warning: #9b762d;
+  --color-warning-ink: #7d5f1f; /* warning text: 5.95:1 on white, 5.49:1 on --color-warning-surface */
   --color-warning-surface: #fff5df;
+  --color-error-ink: #b33834; /* error text: 5.95:1 on white, 5.20:1 on --color-error-surface */
   --color-error-surface: #fdeceb;
+  --color-success: #1f7a4d; /* success text: 5.32:1 on white, 5.00:1 on --color-surface-muted. Fills a gap — `text-success` was used in the UI with no token behind it, so the class was never generated. */
 
   /* Typography ----------------------------------------------------------- */
   --font-heebo: var(--font-heebo-src);
@@ -127,9 +138,11 @@
     text-wrap: balance;
   }
 
-  /* Visible, consistent focus for keyboard users only. */
+  /* Visible, consistent focus for keyboard users only.
+     The ring is painted in the derived ink, not in the brand teal: the teal
+     measures 2.25:1 on white and fails the 3:1 a focus indicator needs. */
   :focus-visible {
-    outline: 2px solid var(--color-primary);
+    outline: 2px solid var(--color-primary-ink);
     outline-offset: 2px;
     border-radius: var(--radius-sm);
   }
@@ -192,6 +205,6 @@
   a[href]::after {
     content: " (" attr(href) ")";
     font-size: 10px;
-    color: #727984;
+    color: var(--color-muted-text);
   }
 }

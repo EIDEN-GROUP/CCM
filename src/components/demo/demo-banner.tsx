@@ -13,7 +13,7 @@ export function DemoBanner() {
   return (
     <div
       role="status"
-      className="flex flex-wrap items-center gap-2 border-b border-warning/30 bg-warning-surface px-4 py-2 text-body-sm text-warning md:px-6"
+      className="flex flex-wrap items-center gap-2 border-b border-warning/30 bg-warning-surface px-4 py-2 text-body-sm text-warning-ink md:px-6"
     >
       <span className="rounded-full bg-warning-surface px-2 py-0.5 text-label-sm font-bold uppercase tracking-[0.04em]">
         Demo mode

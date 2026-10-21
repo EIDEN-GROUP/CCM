@@ -5,16 +5,12 @@ import {
   useCallback,
   useContext,
   useMemo,
+  useState,
   type ReactNode,
 } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import {
-  resolveRange,
-  type DateRange,
-  type RangePreset,
-  type ResolvedRange,
-} from "@/domain/dates";
 import { resolveRangeFromParams } from "@/lib/range-params";
+import type { DateRange, RangePreset } from "@/domain/dates";
 
 interface ShellContextValue {
   /** The active range, driven by the URL. */
@@ -23,15 +19,21 @@ interface ShellContextValue {
   setPreset: (preset: Exclude<RangePreset, "custom">) => void;
   /** Move to an explicit range. */
   setCustomRange: (start: string, end: string) => void;
-  /** The current window plus its comparison window. */
-  resolved: ResolvedRange;
   /** Today's date in the workspace timezone, supplied by the server. */
   today: string;
   /** Workspace display timezone. */
   timezone: string;
-  /** Selected website id, when the user has narrowed the scope. */
-  websiteId: string | null;
-  setWebsiteId: (id: string | null) => void;
+  /**
+   * Whether the off-canvas navigation drawer is open.
+   *
+   * The drawer only exists below the `md` breakpoint; on a wide screen the
+   * navigation rail is always on screen and this flag stays false.
+   */
+  navOpen: boolean;
+  /** Reveal the navigation drawer (phone layout). */
+  openNav: () => void;
+  /** Hide the navigation drawer (phone layout). */
+  closeNav: () => void;
 }
 
 const ShellContext = createContext<ShellContextValue | null>(null);
@@ -51,6 +53,10 @@ export function ShellProvider({
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const [navOpen, setNavOpen] = useState(false);
+
+  const openNav = useCallback(() => setNavOpen(true), []);
+  const closeNav = useCallback(() => setNavOpen(false), []);
 
   const setPreset = useCallback(
     (preset: Exclude<RangePreset, "custom">) => {
@@ -85,27 +91,27 @@ export function ShellProvider({
     return resolveRangeFromParams(params, today).range;
   }, [searchParams, today]);
 
-  const resolved = useMemo(
-    () =>
-      resolveRange(range.preset, today, {
-        start: range.start,
-        end: range.end,
-      }),
-    [range, today],
-  );
-
   const value = useMemo<ShellContextValue>(
     () => ({
       range,
       setPreset,
       setCustomRange,
-      resolved,
       today,
       timezone,
-      websiteId: null,
-      setWebsiteId: () => undefined,
+      navOpen,
+      openNav,
+      closeNav,
     }),
-    [range, setPreset, setCustomRange, resolved, today, timezone],
+    [
+      range,
+      setPreset,
+      setCustomRange,
+      today,
+      timezone,
+      navOpen,
+      openNav,
+      closeNav,
+    ],
   );
 
   return <ShellContext.Provider value={value}>{children}</ShellContext.Provider>;

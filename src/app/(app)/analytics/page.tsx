@@ -12,8 +12,12 @@ import { requirePermission } from "@/lib/auth/guard";
 import { getTodayInTimezone } from "@/domain/timezone";
 import { resolveRangeFromParams } from "@/lib/range-params";
 import { getGa4Metrics, latestFetchedAt } from "@/lib/repositories/metrics";
-import { computeKeyEventRate, describeChange, sumSeries } from "@/domain/kpi";
+import { coverageOf, computeKeyEventRate, describeChange, sumSeries } from "@/domain/kpi";
 import { formatPercent } from "@/domain/currency";
+import { addNullable, formatCount } from "@/domain/metrics";
+import { getLocale } from "@/lib/i18n-server";
+import { intlLocale } from "@/lib/i18n";
+import { ErrorState } from "@/components/ui/states";
 
 export const metadata: Metadata = { title: "GA4 & Attribution" };
 export const dynamic = "force-dynamic";
@@ -39,19 +43,41 @@ export default async function AnalyticsPage({
   const today = getTodayInTimezone(session.workspaceTimezone);
   const { current, previous } = resolveRangeFromParams(params, today);
   const workspaceId = session.workspaceId!;
+  const locale = intlLocale(await getLocale());
 
-  const rows = await getGa4Metrics(
-    supabase,
-    workspaceId,
-    current.start,
-    current.end,
-  ).catch(() => []);
-  const previousRows = await getGa4Metrics(
-    supabase,
-    workspaceId,
-    previous.start,
-    previous.end,
-  ).catch(() => []);
+  // A failed query is **not** an empty result. The difference is the whole
+  // point: "there was no traffic" and "we could not read the traffic" are
+  // different facts, and the screen must not confuse them.
+  let rows: Awaited<ReturnType<typeof getGa4Metrics>> = [];
+  let previousRows: Awaited<ReturnType<typeof getGa4Metrics>> = [];
+  let failure: string | null = null;
+
+  try {
+    rows = await getGa4Metrics(
+      supabase,
+      workspaceId,
+      current.start,
+      current.end,
+    );
+  } catch (error) {
+    failure =
+      error instanceof Error ? error.message : "The GA4 metrics could not be read.";
+  }
+
+  if (!failure) {
+    try {
+      previousRows = await getGa4Metrics(
+        supabase,
+        workspaceId,
+        previous.start,
+        previous.end,
+      );
+    } catch {
+      // The comparison period is optional. Losing it means no trend, not a
+      // broken screen.
+      previousRows = [];
+    }
+  }
 
   const totalRows = rows.filter((row) => row.dimension === "total");
   const sum = (list: typeof rows, field: "sessions" | "active_users" | "new_users" | "engaged_sessions" | "key_events" | "screen_page_views") =>
@@ -89,7 +115,10 @@ export default async function AnalyticsPage({
     key: "landing_page" | "source",
     field: "sessions",
   ) => {
-    const map = new Map<string, { id: string; label: string; value: number }>();
+    const map = new Map<
+      string,
+      { id: string; label: string; value: number | null }
+    >();
     for (const row of list) {
       if (row.dimension !== key) continue;
       const entry = map.get(row.dimension_id) ?? {
@@ -97,10 +126,17 @@ export default async function AnalyticsPage({
         label: row.dimension_label ?? row.dimension_id,
         value: 0,
       };
-      entry.value += row[field] ?? 0;
+      // A dimension's total is unknown as soon as one of its rows is unknown:
+      // the other rows are not the whole of it.
+      entry.value = addNullable(entry.value, row[field]);
       map.set(row.dimension_id, entry);
     }
-    return [...map.values()].sort((a, b) => b.value - a.value);
+    // An unknown total sorts last. It is not "the smallest".
+    return [...map.values()].sort((a, b) => {
+      if (a.value === null) return b.value === null ? 0 : 1;
+      if (b.value === null) return -1;
+      return b.value - a.value;
+    });
   };
 
   return (
@@ -116,13 +152,21 @@ export default async function AnalyticsPage({
         side and flags the difference; it never silently reconciles them.
       </Notice>
 
+      {failure ? (
+        <ErrorState
+          detail={failure}
+          className="border-0"
+        />
+      ) : (
+        <>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         <KpiCard
           label="Sessions"
+           coverage={coverageOf(sessions)}
           value={
             sessions.value === null
               ? "—"
-              : new Intl.NumberFormat("en-GB", { notation: "compact" }).format(
+              : new Intl.NumberFormat(locale, { notation: "compact" }).format(
                   sessions.value,
                 )
           }
@@ -131,48 +175,50 @@ export default async function AnalyticsPage({
         />
         <KpiCard
           label="Active users"
+           coverage={coverageOf(activeUsers)}
           value={
             activeUsers.value === null
               ? "—"
-              : new Intl.NumberFormat("en-GB", { notation: "compact" }).format(
+              : new Intl.NumberFormat(locale, { notation: "compact" }).format(
                   activeUsers.value,
                 )
           }
         />
         <KpiCard
           label="New users"
+           coverage={coverageOf(newUsers)}
           value={
             newUsers.value === null
               ? "—"
-              : new Intl.NumberFormat("en-GB", { notation: "compact" }).format(
+              : new Intl.NumberFormat(locale, { notation: "compact" }).format(
                   newUsers.value,
                 )
           }
         />
         <KpiCard
           label="Key events"
-          value={
-            keyEvents.value === null
-              ? "—"
-              : new Intl.NumberFormat("en-GB").format(keyEvents.value)
-          }
+           coverage={coverageOf(keyEvents)}
+          value={formatCount(keyEvents.value, locale)}
           change={describeChange(keyEvents.value, previousKeyEvents.value)}
         />
         <KpiCard
           label="Key event rate"
+           coverage={coverageOf(keyEvents)}
           value={formatPercent(
             computeKeyEventRate(
               { value: keyEvents.value, source: "provider", grain: "day", fetchedAt: null },
               { value: sessions.value, source: "provider", grain: "day", fetchedAt: null },
             )?.value ?? null,
+            locale,
           )}
         />
         <KpiCard
           label="Page views"
+           coverage={coverageOf(views)}
           value={
             views.value === null
               ? "—"
-              : new Intl.NumberFormat("en-GB", { notation: "compact" }).format(
+              : new Intl.NumberFormat(locale, { notation: "compact" }).format(
                   views.value,
                 )
           }
@@ -212,8 +258,7 @@ export default async function AnalyticsPage({
                     header: "Sessions",
                     numeric: true,
                     mobile: "secondary",
-                    render: (row) =>
-                      new Intl.NumberFormat("en-GB").format(row.value),
+                    render: (row) => formatCount(row.value, locale),
                   },
                 ]}
               />
@@ -249,8 +294,7 @@ export default async function AnalyticsPage({
                     header: "Sessions",
                     numeric: true,
                     mobile: "secondary",
-                    render: (row) =>
-                      new Intl.NumberFormat("en-GB").format(row.value),
+                    render: (row) => formatCount(row.value, locale),
                   },
                 ]}
               />
@@ -265,7 +309,7 @@ export default async function AnalyticsPage({
           subtitle="Sessions → engaged sessions → key events"
         />
         <CardBody>
-          {sessions.value === null ? (
+          {totalRows.length === 0 ? (
             <EmptyState
               title="No funnel data"
               description="The funnel is built from GA4 session and key-event data."
@@ -295,9 +339,7 @@ export default async function AnalyticsPage({
                     {step.label}
                   </dt>
                   <dd className="mt-1 text-headline-md font-bold text-tertiary">
-                    {step.value === null
-                      ? "—"
-                      : new Intl.NumberFormat("en-GB").format(step.value)}
+                    {formatCount(step.value, locale)}
                   </dd>
                 </div>
               ))}
@@ -305,6 +347,8 @@ export default async function AnalyticsPage({
           )}
         </CardBody>
       </Card>
+        </>
+      )}
     </div>
   );
 }

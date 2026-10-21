@@ -37,7 +37,7 @@ export default function AppError({
       <div className="w-full max-w-lg space-y-5 text-center">
         <span
           aria-hidden="true"
-          className="mx-auto flex size-11 items-center justify-center rounded-full bg-error-surface text-error"
+          className="mx-auto flex size-11 items-center justify-center rounded-full bg-error-surface text-error-ink"
         >
           <TriangleAlert className="size-5" />
         </span>
@@ -64,7 +64,7 @@ export default function AppError({
           </Button>
           <Link
             href="/overview"
-            className="inline-flex h-[47px] items-center justify-center rounded-md border border-primary/35 bg-surface px-[25px] text-button-text font-semibold text-primary transition-colors hover:bg-pale focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            className="inline-flex h-[47px] items-center justify-center rounded-md border border-primary/35 bg-surface px-[25px] text-button-text font-semibold text-primary-ink transition-colors hover:bg-pale focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-ink"
           >
             Go to the overview
           </Link>

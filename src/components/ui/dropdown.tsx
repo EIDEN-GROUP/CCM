@@ -1,7 +1,9 @@
 "use client";
 
 import {
+  createContext,
   useCallback,
+  useContext,
   useEffect,
   useId,
   useRef,
@@ -10,6 +12,14 @@ import {
 } from "react";
 import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/cn";
+
+/**
+ * The role of the panel a dropdown item sits in.
+ *
+ * Items are menu items only when the panel is a menu; inside a panel that
+ * holds form controls they are ordinary buttons.
+ */
+const PanelRoleContext = createContext<"menu" | "group" | "dialog">("menu");
 
 /**
  * An accessible dropdown built on native buttons.
@@ -24,22 +34,58 @@ export function Dropdown({
   label,
   className,
   buttonClassName,
+  panelRole = "menu",
 }: {
   /**
    * Custom trigger. When omitted a default button is rendered, which is what
    * most call sites want.
    */
-  trigger?: (props: { open: boolean; toggle: () => void; id: string }) => ReactNode;
+  trigger?: (props: {
+    open: boolean;
+    toggle: () => void;
+    /** Id of the trigger button. */
+    id: string;
+    /** Id of the popover, for `aria-controls`. */
+    panelId: string;
+    /**
+     * Attach to the trigger button with `ref={triggerRef}` so the focus can
+     * return to it when the popover closes.
+     *
+     * It is a callback ref rather than a ref object because the trigger is
+     * rendered by a caller: a ref object handed to a render prop could be
+     * read during render, which React does not allow.
+     */
+    triggerRef: (node: HTMLButtonElement | null) => void;
+  }) => ReactNode;
   children: (props: { close: () => void }) => ReactNode;
   align?: "start" | "end";
   label: string;
   className?: string;
   buttonClassName?: string;
+  /**
+   * The role of the popover.
+   *
+   * `menu` for a list of commands. `group` when the popover holds form
+   * controls — `role="menu"` is invalid for inputs, because a menu only
+   * accepts menu items.
+   */
+  panelRole?: "menu" | "group" | "dialog";
 }) {
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
-  const triggerRef = useRef<HTMLButtonElement>(null);
   const id = useId();
+  const panelId = `${id}-panel`;
+
+  // The trigger button belongs to the caller. It is held in state rather
+  // than in a ref because the trigger is rendered through a render prop: a
+  // ref object handed to a render prop could be read during render, which
+  // React does not allow.
+  const [triggerNode, setTriggerNode] = useState<HTMLButtonElement | null>(
+    null,
+  );
+  const attachTrigger = useCallback((node: HTMLButtonElement | null) => {
+    setTriggerNode(node);
+  }, []);
 
   const close = useCallback(() => {
     setOpen(false);
@@ -50,10 +96,10 @@ export function Dropdown({
   const wasOpen = useRef(false);
   useEffect(() => {
     if (wasOpen.current && !open) {
-      triggerRef.current?.focus();
+      triggerNode?.focus();
     }
     wasOpen.current = open;
-  }, [open]);
+  }, [open, triggerNode]);
 
   useEffect(() => {
     if (!open) return;
@@ -80,40 +126,47 @@ export function Dropdown({
   return (
     <div ref={containerRef} className={cn("relative", className)}>
       {trigger ? (
-        trigger({ open, toggle: () => setOpen((value) => !value), id })
+        trigger({
+          open,
+          toggle: () => setOpen((value) => !value),
+          id,
+          panelId,
+          triggerRef: attachTrigger,
+        })
       ) : (
         <button
-          ref={triggerRef}
+          ref={attachTrigger}
           type="button"
           id={id}
           aria-haspopup="menu"
           aria-expanded={open}
-          aria-controls={open ? `${id}-panel` : undefined}
+          aria-controls={open ? panelId : undefined}
           onClick={() => setOpen((value) => !value)}
           className={cn(
-            "inline-flex h-11 items-center gap-2 rounded-md border border-border bg-surface px-3",
+            "inline-flex h-11 min-w-0 items-center gap-2 rounded-md border border-border bg-surface px-3",
             "text-label-md font-semibold text-secondary transition-colors hover:bg-surface-muted",
-            "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
+            "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-ink",
             buttonClassName,
           )}
         >
-          <span className="sr-only">{label}</span>
-          {label}
-          <ChevronDown aria-hidden="true" className="size-4 text-muted-text" />
+          <span className="truncate">{label}</span>
+          <ChevronDown aria-hidden="true" className="size-4 shrink-0 text-muted-text" />
         </button>
       )}
       {open ? (
-        <div
-          id={`${id}-panel`}
-          role="menu"
-          aria-label={label}
-          className={cn(
-            "absolute z-50 mt-2 min-w-[220px] rounded-lg border border-border bg-surface p-1.5 shadow-overlay",
-            align === "end" ? "end-0" : "start-0",
-          )}
-        >
-          {children({ close })}
-        </div>
+        <PanelRoleContext.Provider value={panelRole}>
+          <div
+            id={panelId}
+            role={panelRole}
+            aria-label={label}
+            className={cn(
+              "absolute z-50 mt-2 min-w-[220px] rounded-lg border border-border bg-surface p-1.5 shadow-overlay",
+              align === "end" ? "end-0" : "start-0",
+            )}
+          >
+            {children({ close })}
+          </div>
+        </PanelRoleContext.Provider>
       ) : null}
     </div>
   );
@@ -133,18 +186,23 @@ export function DropdownItem({
   href?: string;
   destructive?: boolean;
 }) {
+  const panelRole = useContext(PanelRoleContext);
+  // `menuitem` is only correct inside a menu. In a panel that holds form
+  // controls the items are ordinary buttons.
+  const role = panelRole === "menu" ? "menuitem" : undefined;
+
   const className = cn(
     "flex w-full items-center gap-2 rounded-md px-3 py-2 text-start text-body-sm",
     "transition-colors hover:bg-surface-muted",
-    "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
-    destructive ? "text-error hover:bg-error-surface" : "text-secondary",
+    "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-ink",
+    destructive ? "text-error-ink hover:bg-error-surface" : "text-secondary",
   );
 
   if (href) {
     return (
       <a
         href={href}
-        role="menuitem"
+        role={role}
         className={className}
         target="_blank"
         rel="noopener noreferrer"
@@ -157,7 +215,7 @@ export function DropdownItem({
   return (
     <button
       type="button"
-      role="menuitem"
+      role={role}
       className={className}
       onClick={onSelect}
     >

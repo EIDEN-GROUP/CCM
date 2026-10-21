@@ -20,7 +20,7 @@ export default async function LoginPage() {
         <header className="space-y-2 text-center">
           <span
             aria-hidden="true"
-            className="mx-auto flex size-11 items-center justify-center rounded-lg bg-primary text-white"
+            className="mx-auto flex size-11 items-center justify-center rounded-lg bg-primary text-tertiary"
           >
             <span className="text-label-md font-bold">CCM</span>
           </span>

@@ -247,7 +247,7 @@ export function ProviderSetupPanel({
                       [provider.key]: !current[provider.key],
                     }))
                   }
-                  className="mt-1 text-body-sm font-semibold text-primary hover:underline"
+                  className="mt-1 text-body-sm font-semibold text-primary-ink hover:underline"
                 >
                   {revealed[provider.key] ? "Hide" : "Show"}
                 </button>
@@ -265,7 +265,7 @@ export function ProviderSetupPanel({
                 <button
                   type="button"
                   onClick={() => void copy(redirectUri)}
-                  className="inline-flex items-center gap-1 text-body-sm font-semibold text-primary hover:underline"
+                  className="inline-flex items-center gap-1 text-body-sm font-semibold text-primary-ink hover:underline"
                 >
                   {copied === redirectUri ? (
                     <Check aria-hidden="true" className="size-3.5" />
@@ -276,7 +276,7 @@ export function ProviderSetupPanel({
                 </button>
               </div>
               {origin ? null : (
-                <p className="mt-1 flex items-start gap-1.5 text-body-sm text-warning">
+                <p className="mt-1 flex items-start gap-1.5 text-body-sm text-warning-ink">
                   <TriangleAlert aria-hidden="true" className="mt-0.5 size-3.5 shrink-0" />
                   Set NEXT_PUBLIC_APP_ORIGIN so the full redirect URI can be
                   copied.

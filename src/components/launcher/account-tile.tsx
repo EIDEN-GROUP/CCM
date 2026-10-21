@@ -119,7 +119,7 @@ export function AccountTile({
       </p>
 
       {account.missing.length > 0 ? (
-        <p className="rounded-md border border-warning/25 bg-warning-surface/60 px-3 py-2 text-body-sm text-warning">
+        <p className="rounded-md border border-warning/25 bg-warning-surface/60 px-3 py-2 text-body-sm text-warning-ink">
           {account.missing.join(" · ")}
         </p>
       ) : null}
@@ -147,7 +147,7 @@ export function AccountTile({
             className={cn(
               "inline-flex flex-1 items-center justify-center gap-1.5 rounded-md px-2 py-1.5",
               "text-label-md font-semibold text-primary-ink transition-colors hover:bg-pale",
-              "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
+              "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-ink",
               "disabled:cursor-not-allowed disabled:text-muted-text disabled:hover:bg-transparent",
             )}
           >
@@ -161,7 +161,7 @@ export function AccountTile({
             className={cn(
               "inline-flex items-center justify-center gap-1.5 rounded-md px-2 py-1.5",
               "text-label-md font-semibold text-muted-text transition-colors hover:bg-surface-muted",
-              "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
+              "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-ink",
               "disabled:cursor-not-allowed",
             )}
           >
@@ -204,7 +204,7 @@ function LaunchFeedback({ result }: { result: LaunchResult }) {
     return (
       <div
         role="status"
-        className="rounded-md border border-warning/25 bg-warning-surface/60 px-3 py-2 text-body-sm text-warning"
+        className="rounded-md border border-warning/25 bg-warning-surface/60 px-3 py-2 text-body-sm text-warning-ink"
       >
         <p className="font-semibold">{t("launcher.launchBlocked")}</p>
         <p className="mt-0.5">{result.message}</p>
@@ -223,7 +223,7 @@ function LaunchFeedback({ result }: { result: LaunchResult }) {
   return (
     <p
       role="alert"
-      className="flex items-start gap-2 rounded-md border border-error/30 bg-error-surface/60 px-3 py-2 text-body-sm text-error"
+      className="flex items-start gap-2 rounded-md border border-error/30 bg-error-surface/60 px-3 py-2 text-body-sm text-error-ink"
     >
       <CircleX aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
       <span>

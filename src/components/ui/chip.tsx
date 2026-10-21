@@ -9,13 +9,16 @@ export type Tone =
   | "danger"
   | "info";
 
+/* The warning and danger tones carry their *-ink token, because the fills
+   are too light to carry words: the amber measured 3.86:1 on its own
+   surface and the red 3.47:1. The surfaces stay the brand fills. */
 const TONES: Record<Tone, string> = {
   neutral: "bg-surface-muted text-secondary border-border",
   teal: "bg-pale text-primary-ink border-transparent",
-  success: "bg-pale text-primary-ink border-transparent",
+  success: "bg-surface-muted text-success border-transparent",
   info: "bg-surface-muted text-secondary border-border",
-  warning: "bg-warning-surface text-warning border-transparent",
-  danger: "bg-error-surface text-error border-transparent",
+  warning: "bg-warning-surface text-warning-ink border-transparent",
+  danger: "bg-error-surface text-error-ink border-transparent",
 };
 
 /**
@@ -42,7 +45,7 @@ export function Chip({
 const DOT_TONES: Record<Tone, string> = {
   neutral: "bg-muted-text",
   teal: "bg-primary",
-  success: "bg-primary",
+  success: "bg-success",
   info: "bg-secondary",
   warning: "bg-warning",
   danger: "bg-error",

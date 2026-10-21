@@ -109,7 +109,7 @@ export function DatabaseRepair() {
         subtitle="Row Level Security is not installed, so every user sees an empty product"
       />
       <CardBody className="space-y-3">
-        <p className="flex items-start gap-2 text-body-sm text-warning">
+        <p className="flex items-start gap-2 text-body-sm text-warning-ink">
           <TriangleAlert aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
           {state.reason}
         </p>
