@@ -1,0 +1,64 @@
+# CCM — local orchestration for the VPS profile.
+#
+#   docker compose up -d
+#
+# The Supabase stack is intentionally NOT included here. Use the official
+# self-hosting compose (supabase/supabase/docker) and point the variables
+# below at it. See docs/deployment/vps.md.
+
+services:
+  app:
+    build:
+      context: .
+      target: runner
+    restart: unless-stopped
+    env_file:
+      - .env.local
+    environment:
+      PORT: "3000"
+      HOSTNAME: "0.0.0.0"
+    ports:
+      - "127.0.0.1:3000:3000"
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  worker:
+    build:
+      context: .
+      target: runner
+    restart: unless-stopped
+    command: ["npx", "tsx", "scripts/worker.mts"]
+    env_file:
+      - .env.local
+    environment:
+      WORKER_POLL_INTERVAL_MS: "15000"
+      WORKER_BATCH_SIZE: "10"
+      WORKER_LEASE_SECONDS: "300"
+    # The worker needs no public port and no inbound access.
+    expose:
+      - "3000"
+
+  # A reverse proxy in front of the app, for TLS. Uncomment once a hostname
+  # and certificates are configured.
+  # proxy:
+  #   image: caddy:2-alpine
+  #   restart: unless-stopped
+  #   ports:
+  #     - "80:80"
+  #     - "443:443"
+  #   volumes:
+  #     - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+  #     - caddy_data:/data
+  #   depends_on:
+  #     - app
+  #
+  # volumes:
+  #   caddy_data:

@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="CCM — Command Center Medicalbay: system blueprint, architecture, account launcher, integrations, security and implementation roadmap.">
+<title>CCM — Command Center Medicalbay | Blueprint</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--primary:#4bbdbd;--p60:#6ccaca;--p70:#8ad6d6;--secondary:#4b4f58;--tertiary:#3a3a3a;--surface:#fff;--muted:#f7f8f9;--border:#e5e7eb;--error:#d9534f;--pale:#eaf8f8;--ink:#25343a;--shadow:0 18px 48px rgba(48,80,82,.08)}
+*{box-sizing:border-box}html,body{margin:0;height:100%;background:#edf1f2;color:var(--secondary);font-family:Heebo,"Noto Sans",Arial,sans-serif}body{overflow:hidden}a{color:#208f91;text-decoration:none}a:hover{text-decoration:underline}.deck{height:100%;width:100%;position:relative}.slide{display:none;position:absolute;inset:0;overflow:auto;background:var(--surface);padding:42px clamp(24px,4.6vw,76px) 68px}.slide.active{display:flex;flex-direction:column}.eyebrow{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:#229899;font-weight:700;margin-bottom:10px}.slide h1,.slide h2,.slide h3,.slide p{margin-top:0}.slide h1{font-size:clamp(34px,4vw,62px);line-height:1.08;letter-spacing:-.025em;color:var(--tertiary);margin-bottom:16px}.slide h2{font-size:clamp(27px,2.3vw,40px);line-height:1.15;letter-spacing:-.018em;color:var(--tertiary);margin-bottom:12px}.slide h3{font-size:18px;color:var(--tertiary);margin-bottom:7px;font-weight:700}.lede{font-size:clamp(16px,1.4vw,22px);line-height:1.55;max-width:900px}.muted{color:#727984}.small{font-size:13px;line-height:1.45}.micro{font-size:11px;line-height:1.4}.tag{display:inline-flex;align-items:center;gap:7px;padding:7px 11px;border-radius:999px;background:var(--pale);color:#208f91;font-size:12px;font-weight:700;white-space:nowrap}.tag.neutral{background:#f3f5f6;color:#687178}.tag.warn{background:#fff5df;color:#9b762d}.tag.red{background:#fdeceb;color:var(--error)}.row{display:flex;gap:18px;align-items:stretch}.col{display:flex;flex-direction:column;gap:14px;min-width:0}.grid{display:grid;gap:14px}.g2{grid-template-columns:repeat(2,minmax(0,1fr))}.g3{grid-template-columns:repeat(3,minmax(0,1fr))}.g4{grid-template-columns:repeat(4,minmax(0,1fr))}.card{background:#fff;border:1px solid var(--border);border-radius:9px;padding:17px 18px;min-width:0}.card.soft{background:#fbfdfd}.card.teal{background:var(--pale);border-color:transparent}.card h3{margin-bottom:6px}.card p:last-child{margin-bottom:0}.kpi{padding:19px}.kpi .label{font-size:13px;color:#707980;font-weight:600}.kpi .num{font-size:31px;line-height:1.2;color:var(--tertiary);font-weight:800;margin:9px 0 6px}.kpi .delta{font-size:12px;color:#218b78}.check{display:flex;gap:10px;align-items:flex-start}.check b{color:var(--tertiary)}.mark{width:27px;height:27px;border-radius:8px;background:var(--pale);color:var(--primary);display:flex;align-items:center;justify-content:center;font-weight:800;flex:0 0 27px}.bullet{padding-left:18px;margin:5px 0}.bullet li{margin:7px 0;line-height:1.45}.big-num{color:var(--primary);font-size:38px;font-weight:800;line-height:1}.divider{height:1px;background:var(--border);margin:8px 0}.slide-foot{margin-top:auto;padding-top:18px;display:flex;justify-content:space-between;align-items:center;gap:20px;border-top:1px solid #eef0f1;color:#9299a0;font-size:11px}.controls{position:fixed;z-index:20;right:22px;bottom:17px;display:flex;align-items:center;gap:9px;background:rgba(255,255,255,.95);border:1px solid var(--border);border-radius:11px;padding:8px 10px;box-shadow:var(--shadow)}.controls button{border:1px solid var(--border);background:#fff;color:var(--secondary);border-radius:7px;padding:8px 12px;font:600 13px Heebo,Arial;cursor:pointer}.controls button:hover{background:var(--pale);border-color:var(--p60)}.controls button:focus-visible{outline:3px solid var(--p60);outline-offset:2px}.counter{font-size:12px;min-width:48px;text-align:center;color:var(--secondary);font-weight:700}.progress{position:fixed;top:0;left:0;right:0;height:4px;background:#e5ecec;z-index:20}.progress>div{height:100%;width:0;background:var(--primary);transition:width .2s}.hero{display:grid;grid-template-columns:.93fr 1.07fr;gap:36px;align-items:center;flex:1}.hero-image{border:1px solid var(--border);border-radius:13px;overflow:hidden;box-shadow:var(--shadow);background:#fff}.hero-image img{display:block;width:100%;height:auto}.brandmark{display:flex;align-items:center;gap:10px;font-weight:800;color:var(--tertiary);margin-bottom:28px}.brand-symbol{width:43px;height:43px;border-radius:12px;background:var(--pale);display:grid;place-items:center;color:var(--primary);font-size:24px}.services{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}.module-card{min-height:96px}.module-number{font-size:11px;color:var(--primary);font-weight:800;letter-spacing:.04em;margin-bottom:8px}.module-card p{font-size:13px;line-height:1.4;margin:0;color:#697078}.data-table{width:100%;border-collapse:collapse;font-size:13px}.data-table th{text-align:left;background:#f7f9f9;color:#6c737a;font-weight:700;padding:10px;border-bottom:1px solid var(--border)}.data-table td{padding:10px;border-bottom:1px solid #eef0f1;vertical-align:top}.data-table td:first-child{font-weight:700;color:var(--tertiary)}.flow{display:flex;align-items:stretch;gap:10px;margin-top:18px}.flow .node{flex:1;border:1px solid var(--border);border-radius:9px;padding:14px;background:#fbfdfd}.flow .node strong{display:block;font-size:14px;color:var(--tertiary);margin-bottom:5px}.flow .node span{font-size:12px;line-height:1.4;display:block}.flow .arrow{align-self:center;color:var(--primary);font-size:24px;font-weight:700}.source-list{display:flex;flex-wrap:wrap;gap:8px}.source-list a{font-size:11px;border:1px solid var(--border);border-radius:6px;padding:6px 8px;background:white;overflow-wrap:anywhere}.source-note{font-size:12px;line-height:1.5;color:#697078}.dashboard-figure{max-height:54vh;object-fit:contain;object-position:center;border:1px solid var(--border);border-radius:10px;width:100%;background:#fff}.image-map{max-height:49vh;object-fit:contain;width:100%;border:1px solid var(--border);border-radius:10px;background:#f7f8f9}.iconcircle{width:36px;height:36px;display:grid;place-items:center;border-radius:10px;background:var(--pale);color:#229899;font-weight:800;flex:0 0 auto}.step{display:flex;gap:12px;align-items:flex-start}.step-number{width:30px;height:30px;border-radius:50%;background:var(--primary);color:white;display:grid;place-items:center;font-weight:800;flex:0 0 auto}.step p{font-size:13px;margin:4px 0 0;line-height:1.45}.split-main{display:grid;grid-template-columns:1.05fr .95fr;gap:20px;flex:1;min-height:0}.quote{font-size:25px;line-height:1.35;letter-spacing:-.01em;font-weight:600;color:var(--tertiary)}.footlink{font-size:11px;overflow-wrap:anywhere}.risk{border-left:4px solid #d6b765;padding-left:13px}.green{color:#2d8d76}.warning{color:#b1832b}.redtext{color:var(--error)}.logo-strip{display:flex;flex-wrap:wrap;gap:8px}.logo-strip span{padding:8px 10px;border:1px solid var(--border);border-radius:7px;background:#fff;font-size:12px;font-weight:600}.two-line{line-height:1.35}.subtitle{font-size:14px;color:#7a8086;margin-bottom:22px}.tight p{margin-bottom:6px}.footer-links a{margin-right:10px}
+@media(max-width:900px){.slide{padding:28px 22px 68px}.hero,.split-main{grid-template-columns:1fr}.hero-image{max-height:40vh;overflow:hidden}.g3,.g4{grid-template-columns:repeat(2,minmax(0,1fr))}.flow{flex-wrap:wrap}.flow .node{min-width:28%}.flow .arrow{display:none}.slide h1{font-size:34px}.slide h2{font-size:27px}}
+@media(max-width:560px){.g2,.g3,.g4{grid-template-columns:1fr}.row{flex-direction:column}.controls{left:10px;right:10px;justify-content:center}.slide{padding-bottom:74px}.kpi .num{font-size:26px}}
+@media print{html,body{overflow:visible;background:#fff;height:auto}.deck{height:auto}.slide,.slide.active{position:relative;display:flex;inset:auto;width:100%;height:7.5in;min-height:7.5in;max-height:7.5in;page-break-after:always;break-after:page;overflow:hidden;padding:.34in .45in .4in}.controls,.progress{display:none!important}.slide h1{font-size:31pt}.slide h2{font-size:23pt}.lede{font-size:12pt}.card{break-inside:avoid}.dashboard-figure{max-height:4.1in}.image-map{max-height:3.7in}a{color:inherit;text-decoration:none}@page{size:13.333in 7.5in;margin:0}}
+</style>
+</head>
+<body>
+<div class="progress" aria-hidden="true"><div id="progressFill"></div></div>
+<main class="deck" id="deck">
+<section class="slide active" data-title="CCM blueprint">
+ <div class="hero">
+  <div>
+   <div class="brandmark"><span class="brand-symbol">✚</span><span>MEDICAL BAY <span class="muted" style="font-weight:400">/ DIGITAL OPERATIONS</span></span></div>
+   <div class="eyebrow">SYSTEM BLUEPRINT · 20 OCTOBER 2026</div>
+   <h1>CCM<br><span style="color:var(--primary)">Command Center Medicalbay</span></h1>
+   <p class="lede">One calm, secure command center for website performance, paid media, SEO, social channels, email and the actions that grow Medical Bay.</p>
+   <div class="services"><span class="tag">Vercel + Supabase first</span><span class="tag neutral">VPS-ready architecture</span><span class="tag neutral">EN · FR · AR</span></div>
+   <p class="muted" style="margin-top:24px;max-width:520px">This is a build blueprint—not a claim that providers are connected yet. The implementation agent must verify every integration against real accounts and current API permissions.</p>
+  </div>
+  <div class="hero-image"><img src="CCM_Dashboard_Concept.png" alt="Visual dashboard concept for CCM showing navigation, scorecards, charts, alerts, account launcher and integration health"></div>
+ </div>
+ <div class="slide-foot"><span>Medicalbay Calm Care visual system</span><span>Use arrow keys or the controls to navigate →</span></div>
+</section>
+
+<section class="slide" data-title="Medical Bay context">
+ <div class="eyebrow">01 · BUSINESS CONTEXT</div><h2>Built around Medical Bay’s actual digital journey</h2>
+ <p class="lede">Medical Bay presents itself as an Agadir-based medical-tourism coordinator. Its public site covers cosmetic dentistry, hair transplantation and medical-tourism support, with French, English and Arabic navigation.</p>
+ <div class="grid g3" style="margin-top:10px">
+  <div class="card teal"><div class="big-num">01</div><h3 style="margin-top:12px">Cosmetic dentistry</h3><p>Monitor service pages and landing pages for smile design, veneers, crowns, zirconium, implants, whitening and aligners where currently listed.</p></div>
+  <div class="card teal"><div class="big-num">02</div><h3 style="margin-top:12px">Hair transplantation</h3><p>Track FUE/DHI and related service landing pages, localized search demand and inquiry conversions.</p></div>
+  <div class="card teal"><div class="big-num">03</div><h3 style="margin-top:12px">Medical tourism</h3><p>Measure lead-source performance for international inquiries and content around clinic, accommodation and travel coordination.</p></div>
+ </div>
+ <div class="row" style="margin-top:16px">
+  <div class="card" style="flex:1"><h3>Marketing funnel</h3><div class="flow"><div class="node"><strong>Discover</strong><span>Search, social, ads</span></div><div class="arrow">→</div><div class="node"><strong>Explore</strong><span>Landing page/content</span></div><div class="arrow">→</div><div class="node"><strong>Inquire</strong><span>Quote/contact/WhatsApp</span></div><div class="arrow">→</div><div class="node"><strong>Qualify</strong><span>Only with approved CRM source</span></div></div></div>
+  <div class="card risk" style="flex:.72"><h3>Privacy boundary</h3><p class="two-line">CCM is a marketing command center, not a medical record system. Keep patient names, phone numbers, health details, free-text inquiries and treatment data out of GA4, ads, URLs, generic logs and AI prompts.</p></div>
+ </div>
+ <div class="slide-foot"><span>Public context: <a href="https://www.medicalbay.ma/" target="_blank" rel="noreferrer">medicalbay.ma</a> · <a href="https://www.medicalbay.ma/en/about-us/" target="_blank" rel="noreferrer">About Medical Bay</a></span><span>CCM · Business fit</span></div>
+</section>
+
+<section class="slide" data-title="Navigation map">
+ <div class="eyebrow">02 · PRODUCT SCOPE</div><h2>One system, twelve workspaces</h2><p class="subtitle">Every destination must be a real route with working controls and loading, error, empty, permissions and populated states.</p>
+ <div class="grid g4" style="flex:1;align-content:start">
+  <div class="card module-card"><div class="module-number">01 · OVERVIEW</div><h3>Executive Command Center</h3><p>Portfolio KPIs, comparisons, top movers and alerts.</p></div>
+  <div class="card module-card"><div class="module-number">02 · WEB</div><h3>Websites</h3><p>Domains, page inventory, funnels and site health.</p></div>
+  <div class="card module-card"><div class="module-number">03 · PAID</div><h3>Google Ads</h3><p>Campaigns, cost, conversions, budgets and CPA/ROAS.</p></div>
+  <div class="card module-card"><div class="module-number">04 · DATA</div><h3>GA4 & Attribution</h3><p>Traffic sources, events, landing pages and conversions.</p></div>
+  <div class="card module-card"><div class="module-number">05 · TAGGING</div><h3>GTM & Tracking</h3><p>Containers, tags, triggers, versions and validation.</p></div>
+  <div class="card module-card"><div class="module-number">06 · SEARCH</div><h3>SEO & Rankings</h3><p>GSC, technical checks, local ranks and competitors.</p></div>
+  <div class="card module-card"><div class="module-number">07 · UX</div><h3>Heatmaps & UX</h3><p>Clarity snapshots, replay links and friction signals.</p></div>
+  <div class="card module-card"><div class="module-number">08 · SOCIAL</div><h3>Social Command</h3><p>Account health, content metrics and publishing where approved.</p></div>
+  <div class="card module-card"><div class="module-number">09 · INBOX</div><h3>Unified Email</h3><p>Gmail, Workspace and supported custom-domain mail.</p></div>
+  <div class="card module-card"><div class="module-number">10 · OPERATIONS</div><h3>Alerts & Actions</h3><p>Evidence, impact, owner, due date and resolution history.</p></div>
+  <div class="card module-card"><div class="module-number">11 · REPORTING</div><h3>Reports & AI Analyst</h3><p>Scheduled briefs and evidence-backed explanations.</p></div>
+  <div class="card module-card"><div class="module-number">12 · ADMIN</div><h3>Integrations & Audit</h3><p>Scopes, sync health, permissions, retention and logs.</p></div>
+ </div>
+ <div class="slide-foot"><span>No dead navigation or decorative-only cards</span><span>CCM · Scope</span></div>
+</section>
+
+<section class="slide" data-title="Integration map">
+ <div class="eyebrow">03 · DATA CONNECTORS</div><h2>Use the source of truth for each metric</h2>
+ <div class="split-main">
+  <div class="col">
+   <div class="card"><h3>Google + website stack</h3><table class="data-table"><thead><tr><th>Source</th><th>What CCM uses it for</th></tr></thead><tbody>
+    <tr><td>Google Ads API</td><td>Spend, campaign/ad-group metrics, conversions, CPA/ROAS, budget pacing.</td></tr>
+    <tr><td>GA4 Data API</td><td>Sessions, acquisition, events, funnels, key events, landing pages and revenue if configured.</td></tr>
+    <tr><td>Search Console</td><td>Clicks, impressions, CTR, average position, queries, pages, devices and countries.</td></tr>
+    <tr><td>GTM API</td><td>Container/workspace/tag inventory, versions and controlled publish workflow.</td></tr>
+    <tr><td>PageSpeed + uptime</td><td>Performance diagnostics, Core Web Vitals where available, SSL and availability.</td></tr>
+    <tr><td>Microsoft Clarity</td><td>Supported aggregate exports/snapshots and links to native replay/heatmap screens.</td></tr>
+   </tbody></table></div>
+   <div class="card soft"><h3>Data freshness and quotas</h3><p>Every connector needs a documented scope/permissions list, source timestamp, last successful sync, pagination/checkpoint, quota budget, retry policy, stale-data state and failure reason. API absence must not be disguised as a zero.</p></div>
+  </div>
+  <div class="col">
+   <div class="card teal"><h3>SEO data layers</h3><div class="check"><span class="mark">1</span><div><b>Google Search Console</b><br><span class="small">Actual search query/page performance.</span></div></div><div class="divider"></div><div class="check"><span class="mark">2</span><div><b>Independent rank tracker</b><br><span class="small">Keyword/location/device snapshots from an authorized paid provider.</span></div></div><div class="divider"></div><div class="check"><span class="mark">3</span><div><b>Technical site crawl</b><br><span class="small">Indexability, canonical/hreflang, status codes, internal links, metadata and structured data.</span></div></div><div class="divider"></div><div class="check"><span class="mark">4</span><div><b>AI-search visibility</b><br><span class="small">Only provider-reported mentions/citations/share of voice; never invented AI ranks.</span></div></div></div>
+   <div class="card"><h3>Social provider registry</h3><div class="logo-strip"><span>Instagram</span><span>Facebook / Meta</span><span>LinkedIn</span><span>YouTube</span><span>TikTok</span><span>Pinterest</span><span>X</span></div><p class="small muted" style="margin-top:12px">Availability depends on current API version, account type, OAuth scopes, review approval and provider quotas. Separate organic analytics from paid social reporting.</p></div>
+   <div class="card risk"><h3>Never merge unlike numbers</h3><p>GSC average position is not the same as a third-party tracked rank. Ads conversions and GA4 key events may have different attribution windows and definitions. Keep source and formula visible.</p></div>
+  </div>
+ </div>
+ <div class="slide-foot"><span>Provider docs must be rechecked during implementation</span><span>CCM · Integrations</span></div>
+</section>
+
+<section class="slide" data-title="Account launcher">
+ <div class="eyebrow">04 · RELEASE-BLOCKING FEATURE</div><h2>Account Launcher: one click, correct account, correct browser profile</h2>
+ <p class="lede">The account launcher must work, not just decorate the dashboard with external links. Keep API authorization and browser login as two independent state machines.</p>
+ <div class="grid g2" style="margin-top:12px;flex:1;align-content:start">
+  <div class="card teal"><span class="tag">A · API connection</span><h3 style="margin-top:12px">Background access</h3><p>Official OAuth/API token for reading metrics. Refresh securely; reconnect when revoked; enforce scopes. A good API status does not prove the browser is logged in.</p></div>
+  <div class="card"><span class="tag neutral">B · Browser session</span><h3 style="margin-top:12px">Native website access</h3><p>Open a verified account/property/page/management deep link in a browser profile that already has the provider session, whenever it remains valid.</p></div>
+ </div>
+ <div class="card" style="margin-top:15px"><h3>Required launch path</h3><div class="flow"><div class="node"><strong>CCM account tile</strong><span>Authorized account ID</span></div><div class="arrow">→</div><div class="node"><strong>Short-lived ticket</strong><span>Signed, one-use, user-bound</span></div><div class="arrow">→</div><div class="node"><strong>Session bridge</strong><span>Exact origin + host allowlist</span></div><div class="arrow">→</div><div class="node"><strong>Correct new tab</strong><span>Session reused by provider</span></div></div></div>
+ <div class="grid g3" style="margin-top:14px">
+  <div class="card"><h3>Correct deep links</h3><p class="small">Google Ads customer, GA4 property, GSC property, GTM container, Instagram/Meta business, LinkedIn Page, YouTube Studio, TikTok Business and Gmail mailbox.</p></div>
+  <div class="card"><h3>Multi-account support</h3><p class="small">Map account → browser profile. Use a minimal Chromium extension and optionally a paired native helper for deterministic cross-profile launches.</p></div>
+  <div class="card risk"><h3>No fake “always signed in” promise</h3><p class="small">The web app cannot inspect arbitrary provider cookies. The provider can expire sessions or require MFA/CAPTCHA; let the user reauthenticate normally.</p></div>
+ </div>
+ <div class="slide-foot"><span>Minimum permissions; never store passwords/cookies or bypass provider controls</span><span>CCM · Launcher</span></div>
+</section>
+
+<section class="slide" data-title="Email center">
+ <div class="eyebrow">05 · UNIFIED EMAIL</div><h2>A real mailbox workspace—not just a Gmail shortcut</h2>
+ <div class="row" style="flex:1">
+  <div class="col" style="flex:1.05">
+   <div class="card teal"><h3>Supported mailbox paths</h3><div class="check"><span class="mark">G</span><div><b>Gmail / Google Workspace</b><p class="small">Gmail API; use the same Google authorization model for custom domains hosted on Workspace.</p></div></div><div class="divider"></div><div class="check"><span class="mark">M</span><div><b>Microsoft 365 / Exchange Online</b><p class="small">Microsoft Graph when enabled and authorized.</p></div></div><div class="divider"></div><div class="check"><span class="mark">@</span><div><b>Other custom domain hosts</b><p class="small">Official provider API where available; otherwise secure TLS IMAP/SMTP only after checking support and owner approval.</p></div></div></div>
+   <div class="card"><h3>Daily usability</h3><div class="grid g2"><div><b>Inbox actions</b><p class="small">Read, unread, labels/folders, archive, threads, search and pagination.</p></div><div><b>Compose</b><p class="small">Draft, reply, reply-all, forward and send-as identity.</p></div><div><b>Operations</b><p class="small">Priority view, follow-up reminders and email-to-task conversion.</p></div><div><b>Sync</b><p class="small">Cursors, retries, push/webhooks where available and polling fallback.</p></div></div></div>
+  </div>
+  <div class="col" style="flex:.95">
+   <div class="card"><h3>Security and side-effect controls</h3><ul class="bullet"><li>Mailbox-level permissions and separate content policies.</li><li>Store minimal metadata; avoid copying all attachments into the analytics warehouse.</li><li>Confirm before sending, forwarding externally, deleting or bulk actions.</li><li>Show the sender mailbox/address before every send.</li><li>AI mail summarization is opt-in; no message bodies/attachments sent to external AI by default.</li></ul></div>
+   <div class="card risk"><h3>OAuth approval is part of delivery</h3><p>Some Gmail permissions are restricted and server-side storage/processing may trigger provider verification or security-assessment requirements. Track approvals as launch blockers, not as optional documentation.</p></div>
+   <div class="card soft"><h3>Before connecting an email</h3><p class="small">Identify the actual host, auth method, mailbox identity, delegated/shared mailbox requirements, sync frequency, retention need, and user list. Do not assume that every custom-domain mailbox is Gmail.</p></div>
+  </div>
+ </div>
+ <div class="slide-foot"><span>Source: Google Gmail API and Microsoft Graph; verify current scopes</span><span>CCM · Email</span></div>
+</section>
+
+<section class="slide" data-title="Architecture">
+ <div class="eyebrow">06 · TECHNICAL ARCHITECTURE</div><h2>Vercel + Supabase first, without painting the project into a corner</h2>
+ <p class="subtitle">A modular monolith with separated connector adapters and a durable, observable sync queue is the default—not a premature microservice fleet.</p>
+ <img class="image-map" src="CCM_Command_Center_Master_Map.png" alt="CCM system map showing connected sources, twelve workspaces, browser account launcher, actions, architecture, deployment and security guardrails">
+ <div class="grid g3" style="margin-top:14px">
+  <div class="card"><h3>Frontend & API</h3><p class="small">Next.js/React + TypeScript on Vercel. Keep all provider secrets server-side; short authenticated routes; robust form and error states.</p></div>
+  <div class="card"><h3>Data and access</h3><p class="small">Supabase Auth, Postgres, strict RLS, migrations, encrypted private credentials, metric registry, audit trail and account mappings.</p></div>
+  <div class="card"><h3>Sync and portability</h3><p class="small">DB-backed queue, leases, idempotency, retries, API quotas and bounded jobs. Share domain logic; wrap cloud/VPS scheduling separately.</p></div>
+ </div>
+ <div class="slide-foot"><span>Supabase self-hosting has operational responsibilities and feature differences; document them</span><span>CCM · Architecture</span></div>
+</section>
+
+<section class="slide" data-title="Security and privacy">
+ <div class="eyebrow">07 · TRUST AND PROTECTION</div><h2>Healthcare-aware privacy and production security by default</h2>
+ <div class="grid g3" style="flex:1;align-content:start">
+  <div class="card teal"><h3>Identity and access</h3><ul class="bullet"><li>Invite-only internal accounts.</li><li>MFA/passkeys and strong sessions.</li><li>Role and account-level authorization.</li><li>Default-deny RLS policies.</li></ul></div>
+  <div class="card"><h3>Secrets and APIs</h3><ul class="bullet"><li>Server-side encrypted refresh tokens.</li><li>Least scopes and explicit reconnect.</li><li>PKCE/state/CSRF and secure callbacks.</li><li>Rotate secrets; no keys in Git/browser/logs.</li></ul></div>
+  <div class="card"><h3>Operations and audit</h3><ul class="bullet"><li>Idempotent jobs, backoff and quota budgets.</li><li>Signed webhooks and replay protection.</li><li>Append-only sensitive action history.</li><li>Backups, restore tests and alerts.</li></ul></div>
+  <div class="card"><h3>Email privacy</h3><p>Mailbox content is separately permissioned. Minimize caching. AI summaries and attachment processing require explicit opt-in and policy review.</p></div>
+  <div class="card"><h3>Marketing data minimization</h3><p>Use aggregate lead conversion events. Do not push names, emails, phone numbers, medical details or free-text patient questions to ad and analytics platforms.</p></div>
+  <div class="card risk"><h3>Human approval required</h3><p>Sending mail, posting content, editing budgets, changing tags and publishing GTM containers need preview, confirmation, role checks and audit logging.</p></div>
+ </div>
+ <div class="card soft" style="margin-top:14px"><p class="small">Privacy/legal workstream: assess Morocco Law 09-08/CNDP requirements and any applicable international data-transfer rules with qualified counsel. Do not make blanket claims of compliance based only on this blueprint.</p></div>
+ <div class="slide-foot"><span>Principles: least privilege · minimal retention · default-deny · evidence-backed AI</span><span>CCM · Security</span></div>
+</section>
+
+<section class="slide" data-title="Metrics and action center">
+ <div class="eyebrow">08 · INSIGHTS, NOT JUST CHARTS</div><h2>From “what happened?” to an actionable next step</h2>
+ <div class="grid g4" style="margin-top:8px">
+  <div class="card kpi"><div class="label">Paid media</div><div class="num">Spend</div><div class="small muted">CPA · ROAS · pacing</div></div>
+  <div class="card kpi"><div class="label">Website</div><div class="num">Conversion</div><div class="small muted">Funnel · landing pages</div></div>
+  <div class="card kpi"><div class="label">Organic search</div><div class="num">Visibility</div><div class="small muted">Clicks · CTR · ranks</div></div>
+  <div class="card kpi"><div class="label">Social & inbox</div><div class="num">Engagement</div><div class="small muted">Content · messages · follow-ups</div></div>
+ </div>
+ <div class="row" style="margin-top:16px;flex:1">
+  <div class="col" style="flex:1">
+   <div class="card"><h3>Alert examples</h3><div class="check"><span class="mark" style="color:#bc8928;background:#fff5df">!</span><div><b>Spend rises, conversions fall</b><p class="small">Show impacted campaigns, baseline, time range, spend and source evidence.</p></div></div><div class="divider"></div><div class="check"><span class="mark">↘</span><div><b>Priority keyword drops</b><p class="small">Show keyword, country/device, tracked URL, rank source and observation date.</p></div></div><div class="divider"></div><div class="check"><span class="mark" style="color:var(--error);background:#fdeceb">!</span><div><b>Tracking or site fails</b><p class="small">Show which source went stale, first detected time, last good sync and fix checklist.</p></div></div></div>
+  </div>
+  <div class="col" style="flex:1">
+   <div class="card teal"><h3>AI analyst contract</h3><div class="quote">“Explain the change, show the data, and tell me what to inspect next.”</div><ul class="bullet"><li>Answers grounded in synced records and source citations.</li><li>Show freshness, filters, definitions and uncertainty.</li><li>Separate observation from hypothesis and recommendation.</li><li>Never invent missing data or present correlation as proof.</li><li>Draft tasks or actions; do not execute sensitive changes without approval.</li></ul></div>
+  </div>
+ </div>
+ <div class="slide-foot"><span>Missing data = missing; never silently zero-fill or fake a connected state</span><span>CCM · Intelligence</span></div>
+</section>
+
+<section class="slide" data-title="Design system">
+ <div class="eyebrow">09 · UI/UX DESIGN SYSTEM</div><h2>Medicalbay Calm Care—not a generic admin template</h2>
+ <div class="split-main">
+  <div class="col">
+   <div class="card"><h3>Core palette from design.md</h3><div class="grid g3"><div><div style="height:58px;border-radius:7px;background:#4bbdbd"></div><p class="small"><b>Primary</b><br>#4bbdbd</p></div><div><div style="height:58px;border-radius:7px;background:#6ccaca"></div><p class="small"><b>Primary 60</b><br>#6ccaca</p></div><div><div style="height:58px;border-radius:7px;background:#8ad6d6"></div><p class="small"><b>Primary 70</b><br>#8ad6d6</p></div><div><div style="height:58px;border-radius:7px;background:#ffffff;border:1px solid #e5e7eb"></div><p class="small"><b>Surface</b><br>#ffffff</p></div><div><div style="height:58px;border-radius:7px;background:#f7f8f9;border:1px solid #e5e7eb"></div><p class="small"><b>Muted</b><br>#f7f8f9</p></div><div><div style="height:58px;border-radius:7px;background:#d9534f"></div><p class="small"><b>Error</b><br>#d9534f</p></div></div></div>
+   <div class="card soft"><h3>Typography and components</h3><p><b>Heebo</b> throughout, spacious line heights, 41px display headline, compact but calm data labels. Main buttons 47px high, 7px radius; cards 8px radius and ~16px padding; soft borders, minimal shadows.</p></div>
+  </div>
+  <div class="col">
+   <div class="card teal"><h3>Layout principles</h3><ul class="bullet"><li>White background, clear hierarchy and breathing room.</li><li>Quiet left navigation; strong page titles; top filters and date selectors.</li><li>Readable KPI cards, charts, sortable tables and focused action lists.</li><li>Use teal for active/action emphasis, not every surface.</li><li>Keyboard focus, accessible contrast, semantic tables and reduced motion.</li></ul></div>
+   <div class="card"><h3>Responsive and multilingual</h3><p>Desktop should support dense operational views; tablet and mobile get adapted tables/navigation, not simply shrunk content. Support EN/FR/AR foundation; Arabic RTL must correctly mirror layout and directional icons.</p></div>
+   <div class="card risk"><h3>Prohibited shortcut</h3><p>Do not deliver charts that use hard-coded “live” values, inert buttons, nonfunctional navigation, or a visually polished front end disconnected from auth/data/backend.</p></div>
+  </div>
+ </div>
+ <div class="slide-foot"><span>Respect the owner's supplied design.md as the visual source of truth</span><span>CCM · Design</span></div>
+</section>
+
+<section class="slide" data-title="Open source inspiration">
+ <div class="eyebrow">10 · OPEN-SOURCE RESEARCH</div><h2>Learn from focused tools; don't clone them into CCM</h2>
+ <div class="col" style="flex:1">
+  <div class="card"><div class="row"><div class="iconcircle">GA</div><div style="flex:1"><h3><a href="https://github.com/jafforgehq/site-analytics-tool" target="_blank" rel="noreferrer">jafforgehq/site-analytics-tool</a></h3><p>Multi-site GA4/Search Console/Bing, Supabase, scheduled sync, stale-data detection, RLS/MFA, exports and content opportunities. A small single-admin project—study the focused slice, not the entire target architecture. License declared MIT.</p></div><span class="tag neutral">Analytics</span></div></div>
+  <div class="card"><div class="row"><div class="iconcircle">PH</div><div style="flex:1"><h3><a href="https://github.com/PostHog/posthog" target="_blank" rel="noreferrer">PostHog/posthog</a></h3><p>Product/web analytics, session replay, heatmaps, error tracking and AI/MCP workflows. Inspect licensing per area; do not assume the complete repository has one uniform permissive license.</p></div><span class="tag neutral">Behavior</span></div></div>
+  <div class="card"><div class="row"><div class="iconcircle">PZ</div><div style="flex:1"><h3><a href="https://github.com/gitroomhq/postiz-app" target="_blank" rel="noreferrer">gitroomhq/postiz-app</a></h3><p>Social scheduling, account connectors, analytics and team collaboration. Declares AGPL-3.0; use as a product/UX reference unless code reuse is reviewed.</p></div><span class="tag neutral">Social</span></div></div>
+  <div class="grid g2"><div class="card"><h3><a href="https://github.com/umami-software/umami" target="_blank" rel="noreferrer">Umami</a></h3><p class="small">Clean privacy analytics, Node/Next.js/PostgreSQL and self-hosting references. MIT.</p></div><div class="card"><h3><a href="https://github.com/plausible/analytics" target="_blank" rel="noreferrer">Plausible</a></h3><p class="small">Privacy-first analytics and source-based reporting. AGPL-3.0; review license before reuse.</p></div></div>
+ </div>
+ <div class="slide-foot"><span>Inspect maintenance, license, security, dependency health, tests and current commits</span><span>CCM · Research</span></div>
+</section>
+
+<section class="slide" data-title="Tools and skills">
+ <div class="eyebrow">11 · CODING AGENT TOOLCHAIN</div><h2>Use skills and MCPs deliberately</h2>
+ <div class="grid g2" style="flex:1;align-content:start">
+  <div class="card teal"><h3>Design and application skills</h3><ul class="bullet"><li><b>12ui Design:</b> explore multiple reference directions, inspect results and branch into app states; verify CLI help and usage before use.</li><li><b>Supabase skill:</b> auth, RLS, migrations, Edge Functions, security/performance advisors.</li><li><b>Vercel deployments/CI skill:</b> preview, environment, build and deployment configuration.</li><li><b>Data Analytics:</b> metric definitions, chart/report validation and dashboard QA.</li><li><b>Security/OWASP:</b> OAuth, RLS, authorization, XSS/CSRF/SSRF and secrets checks.</li></ul></div>
+  <div class="card"><h3>MCPs / provider tooling</h3><ul class="bullet"><li><b>GitHub MCP:</b> repo/reference inspection, change review and issue discovery.</li><li><b>Supabase MCP:</b> schema and migration inspection, advisors and authorized project checks.</li><li><b>Vercel MCP:</b> build/preview/deployment checks (do not deploy without permission).</li><li><b>Google Ads official MCP:</b> current documented read-only campaign inspection and developer workflows.</li><li><b>PostHog MCP:</b> only if PostHog is selected/authorized.</li><li><b>Ahrefs remote MCP:</b> use current remote documentation; the older GitHub server was archived.</li></ul></div>
+  <div class="card"><h3>Rule for production connectors</h3><p>Developer MCPs help the coding agent. CCM should normally call official provider APIs directly through its own adapter, OAuth flow, permission enforcement and audit logging. Do not pass production user data through arbitrary MCP servers just because they are installed.</p></div>
+  <div class="card risk"><h3>Rules of engagement</h3><p>Inspect repo and installed skills; verify package health, scopes and licenses; keep secrets outside Git. Don't blindly install everything. Preserve uncommitted work; no commits, pushes, production database edits or deployments until explicitly approved.</p></div>
+ </div>
+ <div class="slide-foot"><span>Current docs must be rechecked at implementation time</span><span>CCM · Toolchain</span></div>
+</section>
+
+<section class="slide" data-title="Roadmap">
+ <div class="eyebrow">12 · BUILD ROADMAP</div><h2>Ship complete vertical slices, not a wall of placeholders</h2>
+ <div class="col" style="flex:1">
+  <div class="step"><div class="step-number">A</div><div><h3>Repository baseline + design system</h3><p>Audit repo and current failures, Medical Bay site structure, data model, roles, connector capability matrix and UI references. Build auth, app shell, tokens, reusable components and honest demo mode.</p></div></div>
+  <div class="divider"></div>
+  <div class="step"><div class="step-number">B</div><div><h3>First live Google / website slice</h3><p>Supabase schema/RLS, connection registry, job queue, sync history and source freshness; implement GA4 and Search Console read-only when access is ready.</p></div></div>
+  <div class="divider"></div>
+  <div class="step"><div class="step-number">C</div><div><h3>Paid, technical SEO and tracking</h3><p>Google Ads reporting, GTM inventory, PageSpeed, uptime and a licensed rank-tracking adapter. Add accurate KPI definitions and safe alerts.</p></div></div>
+  <div class="divider"></div>
+  <div class="step"><div class="step-number">D</div><div><h3>Social + browser-session bridge</h3><p>Permissioned social connectors, exact management links, Chromium extension, account-to-profile mapping, optional native cross-profile helper and launch E2E tests.</p></div></div>
+  <div class="divider"></div>
+  <div class="step"><div class="step-number">E</div><div><h3>Email + reports + AI</h3><p>Gmail/Workspace first where authorized; actual inbox thread/search/send confirmation, mailbox isolation, reports, action queue and evidence-backed AI. Complete EN/FR/AR and RTL.</p></div></div>
+  <div class="divider"></div>
+  <div class="step"><div class="step-number">F</div><div><h3>Hardening + VPS deployment path</h3><p>Revoke/refresh tests, rate-limit recovery, security/RLS audit, backup/restore drills, Docker/worker setup, deployment docs and verified build/E2E evidence.</p></div></div>
+ </div>
+ <div class="slide-foot"><span>Don't mark an integration live until tested against a real authorized account</span><span>CCM · Delivery plan</span></div>
+</section>
+
+<section class="slide" data-title="Acceptance criteria">
+ <div class="eyebrow">13 · DEFINITION OF DONE</div><h2>Evidence, not appearances</h2>
+ <div class="grid g2" style="flex:1;align-content:start">
+  <div class="card"><h3>Product and data</h3><ul class="bullet"><li>Every page/interaction works and has loading/error/empty states.</li><li>Source-specific metrics, date ranges, currencies, timezones and freshness are truthful.</li><li>Provider capability matrix distinguishes API access, missing approvals and unavailable data.</li><li>No synthetic fixtures are shown as live data in production.</li></ul></div>
+  <div class="card"><h3>Account launcher</h3><ul class="bullet"><li>Every implemented account tile opens its exact expected destination.</li><li>Same-profile valid session is reused when the provider permits it.</li><li>Two accounts on the same provider are mapped correctly.</li><li>Expired/replayed tickets, wrong hosts and IDs are rejected.</li><li>Expired session/MFA/CAPTCHA is handled honestly and normally.</li></ul></div>
+  <div class="card"><h3>Security and privacy</h3><ul class="bullet"><li>RLS tests cover unauthenticated, read-only, analyst, mailbox and admin roles.</li><li>No secret in client bundles, logs, fixtures or Git.</li><li>OAuth state/PKCE/revocation and authorization checks tested.</li><li>Mailbox privacy and health-data minimization independently tested.</li></ul></div>
+  <div class="card"><h3>Engineering and portability</h3><ul class="bullet"><li>Lint, typecheck, unit, integration, E2E and production build pass or blockers are exact.</li><li>Architecture, security, data flows, connector matrix, Vercel/Supabase and VPS docs exist.</li><li>Sync queue survives restart and handles retries, pagination and provider quotas.</li><li>Owner retains control: no commit/push/merge/deploy or prod data changes without approval.</li></ul></div>
+ </div>
+ <div class="card teal" style="margin-top:14px"><p class="quote" style="font-size:21px;margin:0">“A page that renders is not production-ready. CCM is ready only when its data, permissions, connectors, account launcher, privacy controls and recovery paths have been verified.”</p></div>
+ <div class="slide-foot"><span>See the implementation prompt for detailed test cases and the per-provider capability matrix</span><span>CCM · Done means tested</span></div>
+</section>
+
+<section class="slide" data-title="Reference shelf">
+ <div class="eyebrow">14 · CURRENT REFERENCE SHELF</div><h2>Official sources to re-verify before coding</h2>
+ <p class="subtitle">API permissions, limits and versions change. The implementation agent must check the latest official sources and record its verification date.</p>
+ <div class="grid g3" style="flex:1;align-content:start">
+  <div class="card"><h3>Google</h3><div class="source-list"><a href="https://developers.google.com/google-ads/api/docs/api-policy/developer-token" target="_blank">Google Ads API access</a><a href="https://developers.google.com/google-ads/api/docs/developer-toolkit/mcp-server" target="_blank">Google Ads MCP</a><a href="https://developers.google.com/analytics/devguides/reporting/data/v1" target="_blank">GA4 Data API</a><a href="https://developers.google.com/webmaster-tools/v1/searchanalytics/query" target="_blank">Search Console API</a><a href="https://developers.google.com/tag-platform/tag-manager/api/v2" target="_blank">GTM API</a><a href="https://developers.google.com/identity/protocols/oauth2/" target="_blank">Google OAuth</a><a href="https://developers.google.com/workspace/gmail/api/guides" target="_blank">Gmail API</a></div></div>
+  <div class="card"><h3>Other provider/platform docs</h3><div class="source-list"><a href="https://learn.microsoft.com/en-us/linkedin/marketing/integrations/migrations" target="_blank">LinkedIn API migrations</a><a href="https://developers.google.com/youtube/v3" target="_blank">YouTube Data API</a><a href="https://developers.google.com/youtube/analytics" target="_blank">YouTube Analytics</a><a href="https://help.ahrefs.com/en/articles/13913559-getting-started-with-ahrefs-mcp" target="_blank">Ahrefs remote MCP</a><a href="https://developer.chrome.com/docs/extensions/reference/api/tabs" target="_blank">Chrome tabs API</a><a href="https://developer.chrome.com/docs/extensions/develop/concepts/messaging" target="_blank">Chrome messaging</a></div></div>
+  <div class="card"><h3>Hosting and inspiration</h3><div class="source-list"><a href="https://supabase.com/docs/guides/self-hosting" target="_blank">Supabase self-hosting</a><a href="https://vercel.com/docs/functions/limitations" target="_blank">Vercel function limits</a><a href="https://github.com/jafforgehq/site-analytics-tool" target="_blank">Site Analytics repo</a><a href="https://github.com/PostHog/posthog" target="_blank">PostHog</a><a href="https://github.com/gitroomhq/postiz-app" target="_blank">Postiz</a><a href="https://github.com/umami-software/umami" target="_blank">Umami</a><a href="https://github.com/plausible/analytics" target="_blank">Plausible</a></div></div>
+ </div>
+ <div class="card soft" style="margin-top:12px"><div class="row" style="align-items:center"><div style="flex:1"><h3 style="margin-bottom:4px">Reference material and deliverables</h3><p class="small">The companion prompt contains the full scope, architecture, security rules, provider caveats, toolchain suggestions, open-source notes and acceptance tests. The master map is the one-page visual summary.</p></div><span class="tag">CCM · Rev 1</span></div></div>
+ <div class="slide-foot"><span>Medical Bay public site and the owner-supplied design.md are the business and visual references</span><span>End of presentation</span></div>
+</section>
+</main>
+<div class="controls" role="group" aria-label="Presentation navigation">
+ <button id="prevBtn" type="button" aria-label="Previous slide">← Previous</button><span id="counter" class="counter" aria-live="polite">1 / 14</span><button id="nextBtn" type="button" aria-label="Next slide">Next →</button><button id="printBtn" type="button" aria-label="Print or save as PDF">Print / PDF</button>
+</div>
+<script>
+(function(){
+ const slides=Array.from(document.querySelectorAll('.slide'));
+ const progress=document.getElementById('progressFill');
+ const counter=document.getElementById('counter');
+ let index=0;
+ function show(next){index=Math.max(0,Math.min(slides.length-1,next));slides.forEach((s,i)=>{s.classList.toggle('active',i===index);s.setAttribute('aria-hidden',i===index?'false':'true')});counter.textContent=(index+1)+' / '+slides.length;progress.style.width=((index+1)/slides.length*100)+'%';document.title=slides[index].dataset.title+' — CCM Command Center Medicalbay';history.replaceState(null,'','#slide-'+(index+1));}
+ document.getElementById('prevBtn').addEventListener('click',()=>show(index-1));
+ document.getElementById('nextBtn').addEventListener('click',()=>show(index+1));
+ document.getElementById('printBtn').addEventListener('click',()=>window.print());
+ document.addEventListener('keydown',e=>{if(['ArrowRight','PageDown',' '].includes(e.key)){e.preventDefault();show(index+1)}else if(['ArrowLeft','PageUp'].includes(e.key)){e.preventDefault();show(index-1)}else if(e.key==='Home'){show(0)}else if(e.key==='End'){show(slides.length-1)}});
+ const match=location.hash.match(/slide-(\d+)/); if(match)show(Number(match[1])-1);else show(0);
+})();
+</script>
+</body>
+</html>

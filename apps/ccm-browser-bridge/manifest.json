@@ -1,0 +1,30 @@
+{
+  "manifest_version": 3,
+  "name": "CCM Browser Bridge",
+  "version": "0.1.0",
+  "description": "Opens CCM's connected accounts in the browser profile where this extension is installed, and verifies that the request really came from CCM.",
+  "minimum_chrome_version": "116",
+
+  "permissions": ["storage"],
+
+  "host_permissions": [],
+
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+
+  "externally_connectable": {
+    "matches": [
+      "http://localhost:3000/*",
+      "https://ccm.medicalbay.ma/*"
+    ]
+  },
+
+  "options_page": "options.html",
+
+  "action": {
+    "default_title": "CCM Browser Bridge",
+    "default_popup": "popup.html"
+  }
+}

@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>CCM Browser Bridge</title>
+    <style>
+      :root { --primary: #4bbdbd; --secondary: #4b4f58; --tertiary: #3a3a3a; --muted: #f7f8f9; --border: #e5e7eb; }
+      body {
+        width: 280px; margin: 0; padding: 16px;
+        font-family: Heebo, "Noto Sans", Arial, sans-serif; font-size: 14px; color: var(--secondary);
+      }
+      h1 { margin: 0 0 2px; font-size: 16px; color: var(--tertiary); }
+      p { margin: 0 0 12px; color: #727984; font-size: 13px; }
+      .row { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-top: 1px solid var(--border); }
+      .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--primary); flex: none; }
+      .dot.off { background: #d9534f; }
+      a { color: #208f91; }
+      button {
+        width: 100%; height: 38px; border: 1px solid var(--primary); border-radius: 7px;
+        background: #fff; color: #208f91; font: inherit; font-weight: 600; cursor: pointer; margin-top: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>CCM Browser Bridge</h1>
+    <p>Verified account launches for CCM.</p>
+    <div class="row"><span class="dot" id="dot"></span><span id="state">Checking…</span></div>
+    <button id="open" type="button">Open setup</button>
+    <script type="module" src="popup.js"></script>
+  </body>
+</html>

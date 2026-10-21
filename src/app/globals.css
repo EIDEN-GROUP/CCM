@@ -1,0 +1,197 @@
+@import "tailwindcss";
+
+/* ---------------------------------------------------------------------------
+ * Medicalbay Calm Care — design tokens.
+ * Source of truth: Design.md (owner-supplied). Values below are transcribed
+ * verbatim; derived tokens are marked and justified in docs/ARCHITECTURE.md.
+ * ------------------------------------------------------------------------- */
+
+@theme inline {
+  /* Brand palette -------------------------------------------------------- */
+  --color-primary: #4bbdbd;
+  --color-primary-60: #6ccaca;
+  --color-primary-70: #8ad6d6;
+  --color-primary-ink: #208f91; /* derived: accessible teal text on white (AA) */
+
+  /* Neutrals ------------------------------------------------------------- */
+  --color-secondary: #4b4f58; /* body text */
+  --color-tertiary: #3a3a3a; /* strong text */
+  --color-surface: #ffffff;
+  --color-surface-muted: #f7f8f9;
+  --color-border: #e5e7eb;
+  --color-error: #d9534f;
+
+  /* Derived (documented) --------------------------------------------------
+   * pale: teal-tinted panel used for chips, selected-nav and callouts.
+   * muted-text: secondary ink at lower emphasis for metadata.
+   * warning: restrained amber for "needs setup" states. The palette in
+   * Design.md defines only an error colour; a single amber is required so a
+   * degraded integration is never mistaken for a healthy one. */
+  --color-pale: #eaf8f8;
+  --color-muted-text: #727984;
+  --color-warning: #9b762d;
+  --color-warning-surface: #fff5df;
+  --color-error-surface: #fdeceb;
+
+  /* Typography ----------------------------------------------------------- */
+  --font-heebo: var(--font-heebo-src);
+  --font-arabic: var(--font-arabic-src);
+
+  --text-headline-display: 41px;
+  --text-headline-display--line-height: 49px;
+  --text-headline-lg: 30px;
+  --text-headline-lg--line-height: 39px;
+  --text-headline-md: 25px;
+  --text-headline-md--line-height: 35px;
+  --text-headline-sm: 18px;
+  --text-headline-sm--line-height: 22px;
+  --text-body-lg: 16px;
+  --text-body-lg--line-height: 28px;
+  --text-body-md: 15px;
+  --text-body-md--line-height: 28px;
+  --text-body-sm: 14px;
+  --text-body-sm--line-height: 24px;
+  --text-label-lg: 15px;
+  --text-label-lg--line-height: 20px;
+  --text-label-md: 14px;
+  --text-label-md--line-height: 18px;
+  --text-label-sm: 12px;
+  --text-label-sm--line-height: 16px;
+  --text-nav-link: 15px;
+  --text-nav-link--line-height: 20px;
+  --text-button-text: 15px;
+  --text-button-text--line-height: 20px;
+
+  /* Radii ---------------------------------------------------------------- */
+  --radius-none: 0px;
+  --radius-sm: 4px;
+  --radius-md: 7px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+  --radius-full: 9999px;
+
+  /* NOTE — the Design.md spacing scale is deliberately NOT declared here.
+     Tailwind v4 treats `--spacing-<name>` as the spacing scale used by
+     `p-`, `m-`, `gap-`, `w-`, `max-w-` and every other size utility.
+     Declaring `--spacing-md: 24px` would therefore redefine `max-w-md` from
+     28rem to 24px and silently shrink every container in the product.
+     The scale lives in `:root` below instead, and is used for page-level
+     section rhythm through `var(--ccm-space-*)`. */
+
+  /* Elevation ------------------------------------------------------------
+   * Design.md: "mostly flat ... shadows should be minimal and almost
+   * imperceptible, only used when needed to lift floating UI". */
+  --shadow-card: 0 1px 2px rgba(48, 80, 82, 0.04);
+  --shadow-raised: 0 1px 2px rgba(48, 80, 82, 0.05), 0 8px 24px rgba(48, 80, 82, 0.06);
+  --shadow-overlay: 0 18px 48px rgba(48, 80, 82, 0.08);
+
+  /* Motion --------------------------------------------------------------- */
+  --ease-calm: cubic-bezier(0.2, 0, 0.2, 1);
+}
+
+@layer base {
+  /* The Medicalbay Calm Care spacing rhythm.
+     Declared outside Tailwind's theme namespaces on purpose — see the note
+     in the `@theme` block above. Use it for page-level section spacing:
+     `py-[var(--ccm-space-lg)]`. */
+  :root {
+    --ccm-space-xs: 6px;
+    --ccm-space-sm: 14px;
+    --ccm-space-md: 24px;
+    --ccm-space-lg: 50px;
+    --ccm-space-xl: 100px;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--color-surface);
+    color: var(--color-secondary);
+    font-family: var(--font-heebo), var(--font-arabic), "Noto Sans", Arial,
+      sans-serif;
+    font-size: var(--text-body-md);
+    line-height: var(--text-body-md--line-height);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    color: var(--color-tertiary);
+    font-weight: 700;
+    letter-spacing: 0;
+    text-wrap: balance;
+  }
+
+  /* Visible, consistent focus for keyboard users only. */
+  :focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
+  }
+
+  ::selection {
+    background-color: var(--color-pale);
+    color: var(--color-tertiary);
+  }
+
+  /* Numeric columns must align in tables and KPI tiles. */
+  [data-numeric="true"] {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@layer utilities {
+  /* Respect the reduced-motion preference across the whole product. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+
+  .scrollbar-calm {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-border) transparent;
+  }
+
+  .scrollbar-calm::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  .scrollbar-calm::-webkit-scrollbar-thumb {
+    background-color: var(--color-border);
+    border-radius: var(--radius-full);
+    border: 3px solid var(--color-surface);
+  }
+}
+
+/* Print: reports and briefings must print cleanly on white. */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+
+  body {
+    background: #fff;
+  }
+
+  .print-break {
+    break-inside: avoid;
+  }
+
+  a[href]::after {
+    content: " (" attr(href) ")";
+    font-size: 10px;
+    color: #727984;
+  }
+}

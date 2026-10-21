@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CCM Browser Bridge — Setup</title>
+    <style>
+      :root {
+        --primary: #4bbdbd;
+        --primary-ink: #208f91;
+        --secondary: #4b4f58;
+        --tertiary: #3a3a3a;
+        --muted: #f7f8f9;
+        --border: #e5e7eb;
+        --error: #d9534f;
+        --warning-surface: #fff5df;
+        --warning: #9b762d;
+        --pale: #eaf8f8;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        padding: 32px 24px;
+        background: var(--muted);
+        color: var(--secondary);
+        font-family: Heebo, "Noto Sans", Arial, sans-serif;
+        font-size: 15px;
+        line-height: 1.7;
+      }
+      .card {
+        max-width: 620px;
+        margin: 0 auto;
+        background: #fff;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 24px;
+      }
+      h1 { margin: 0 0 4px; font-size: 25px; line-height: 35px; color: var(--tertiary); }
+      p.lede { margin: 0 0 24px; color: #727984; }
+      h2 { margin: 24px 0 8px; font-size: 18px; line-height: 22px; color: var(--tertiary); }
+      label { display: block; margin-bottom: 6px; font-size: 14px; font-weight: 600; }
+      input[type="text"], input[type="url"] {
+        width: 100%; height: 47px; padding: 12px 14px;
+        border: 1px solid var(--border); border-radius: 7px;
+        font: inherit; color: var(--secondary); background: #fff;
+      }
+      input:focus { outline: 2px solid var(--primary); outline-offset: 1px; border-color: var(--primary); }
+      button {
+        height: 47px; padding: 0 25px; margin-top: 12px;
+        border: 1px solid var(--primary); border-radius: 7px;
+        background: var(--primary); color: #fff;
+        font: inherit; font-weight: 600; cursor: pointer;
+      }
+      button:hover { background: #6ccaca; }
+      .code {
+        display: block; padding: 12px 14px; margin: 8px 0 0;
+        background: var(--muted); border: 1px solid var(--border); border-radius: 7px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px;
+        word-break: break-all; user-select: all;
+      }
+      .status { margin-top: 16px; padding: 12px 14px; border-radius: 7px; font-size: 14px; }
+      .status.ok { background: var(--pale); color: var(--primary-ink); }
+      .status.error { background: #fdeceb; color: var(--error); }
+      .status.warn { background: var(--warning-surface); color: var(--warning); }
+      .note { margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--border); font-size: 14px; color: #727984; }
+      ul { padding-left: 20px; }
+    </style>
+  </head>
+  <body>
+    <main class="card">
+      <h1>CCM Browser Bridge</h1>
+      <p class="lede">
+        This extension opens Medical Bay's connected accounts in the browser
+        profile where it is installed, and verifies that each request really
+        came from CCM.
+      </p>
+
+      <h2>1. Point the extension at CCM</h2>
+      <label for="origin">CCM origin</label>
+      <input id="origin" type="url" placeholder="https://ccm.medicalbay.ma" />
+      <button id="save" type="button">Save and verify key</button>
+      <div id="status" class="status" role="status" hidden></div>
+
+      <h2>2. Copy this instance id into CCM</h2>
+      <p>
+        In CCM, open <strong>Account Launcher → Set up account launching</strong>
+        and paste the id below. CCM uses it to map this browser profile to your
+        accounts.
+      </p>
+      <code class="code" id="instance">…</code>
+
+      <div class="note">
+        <p><strong>What this extension does not do</strong></p>
+        <ul>
+          <li>It never asks for access to cookies, browsing history, passwords or form data.</li>
+          <li>It never signs in to a provider on your behalf, and never bypasses MFA or a CAPTCHA.</li>
+          <li>It refuses to open any address that is not on the provider allowlist.</li>
+          <li>A valid API connection does not imply a signed-in browser session; the provider decides that.</li>
+        </ul>
+      </div>
+    </main>
+    <script type="module" src="options.js"></script>
+  </body>
+</html>

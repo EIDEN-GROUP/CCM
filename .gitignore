@@ -1,0 +1,48 @@
+# dependencies
+/node_modules
+/.pnp
+.pnp.*
+
+# next.js
+/.next/
+/out/
+next-env.d.ts
+
+# production
+/build
+
+# testing
+/coverage
+/test-results
+/playwright-report
+/blob-report
+/playwright/.cache
+
+# vercel
+.vercel
+
+# supabase
+.supabase
+
+# environment — never commit real secrets
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# misc
+.DS_Store
+*.pem
+*.key
+!.github/**/*.yml
+
+# typescript
+*.tsbuildinfo
+tsconfig.tsbuildinfo
+
+# local scratch
+/tmp
+/.scratch
+*.local.log
+npm-debug.log*
+yarn-error.log*

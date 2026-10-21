@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="CCM">
+  <rect width="64" height="64" rx="14" fill="#4bbdbd" />
+  <path
+    d="M20 42V22h4.6l7.4 12.4L39.4 22H44v20h-4.4V29.6L32.6 42h-1.2L24.4 29.6V42H20z"
+    fill="#ffffff"
+  />
+</svg>

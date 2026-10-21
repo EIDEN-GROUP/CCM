@@ -1,0 +1,18 @@
+{
+  "name": "ccm-helper",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "CCM local companion. Opens a connected account in a specific browser profile, using a short-lived signed launch ticket.",
+  "main": "helper.mjs",
+  "bin": {
+    "ccm-helper": "helper.mjs"
+  },
+  "scripts": {
+    "start": "node helper.mjs"
+  },
+  "engines": {
+    "node": ">=20.9.0"
+  },
+  "license": "UNLICENSED"
+}

@@ -1,0 +1,3 @@
+# CCM is an internal command centre. It must never be indexed.
+User-agent: *
+Disallow: /
