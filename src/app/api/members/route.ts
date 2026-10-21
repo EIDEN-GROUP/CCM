@@ -201,14 +201,18 @@ export async function POST(request: Request) {
       details: { role: parsed.data.role },
     });
 
-    return NextResponse.json({
-      ok: true,
-      userId: created.user.id,
-      email,
-      password,
-      role: parsed.data.role,
-      roleLabel: ROLE_LABELS[parsed.data.role],
-    });
+    return NextResponse.json(
+      {
+        ok: true,
+        userId: created.user.id,
+        email,
+        password,
+        role: parsed.data.role,
+        roleLabel: ROLE_LABELS[parsed.data.role],
+      },
+      // The password is in this body. It must never be cached.
+      { headers: { "Cache-Control": "no-store" } },
+    );
   } catch (error) {
     return NextResponse.json(
       {

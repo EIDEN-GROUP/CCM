@@ -692,6 +692,7 @@ export interface Database {
       };
       role_tab_access: {
         Row: Row<{
+          workspace_id: string;
           role: string;
           tab: string;
           level: string;
@@ -703,7 +704,11 @@ export interface Database {
         Relationships: [];
       };
       role_permissions: {
-        Row: Row<{ role: string; permission: string }>;
+        Row: Row<{
+          workspace_id: string;
+          role: string;
+          permission: string;
+        }>;
         Insert: Write;
         Update: Write;
         Relationships: [];

@@ -142,7 +142,10 @@ export async function POST(request: Request) {
       details: {
         to: confirmation.to,
         cc: confirmation.cc,
-        subject: confirmation.subject,
+        // The subject is **not** recorded. A subject line is mailbox content
+        // and can carry a patient's name; the audit log is not the place for
+        // it. The recipient and the provider's message id are enough to trace
+        // the send.
         providerMessageId: sent.id,
         providerThreadId: sent.threadId,
       },

@@ -24,8 +24,10 @@ export default function AppError({
   reset: () => void;
 }) {
   useEffect(() => {
-    // The server log gets the detail; the person gets the reference.
-    console.error("[ccm] an application screen failed", error);
+    // Only the reference is logged. The error itself can carry a provider
+    // response or a fragment of somebody's data, and the browser console is
+    // not a safe place for it.
+    console.error(`[ccm] an application screen failed (${error.digest ?? "no reference"})`);
   }, [error]);
 
   const reference = error.digest ?? "unknown";

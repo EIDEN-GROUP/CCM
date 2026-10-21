@@ -176,10 +176,13 @@ export function LauncherSetup({ accounts }: { accounts: LaunchableAccount[] }) {
               </code>
             </li>
             <li>
-              Pair it with this deployment:{" "}
+              Pair it with this deployment. The helper prints a{" "}
+              <strong>pairing code</strong> on its own console when it
+              starts; that code is required, so no other page can re-point
+              the helper at a site of its choosing:{" "}
               <code className="rounded bg-surface px-1.5 py-0.5 text-[13px]">
                 {
-                  'curl -X POST http://127.0.0.1:8787/pair -H "Content-Type: application/json" -d \'{"origin":"https://your-ccm-origin"}\''
+                  'curl -X POST http://127.0.0.1:8787/pair -H "Content-Type: application/json" -d \'{"origin":"https://your-ccm-origin","pairingToken":"<the code it printed>"}\''
                 }
               </code>
             </li>

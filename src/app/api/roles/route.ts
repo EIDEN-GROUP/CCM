@@ -40,8 +40,11 @@ export async function GET() {
 
   try {
     const [levels, { data: permissionRows }] = await Promise.all([
-      readRoleTabAccess(db),
-      db.from("role_permissions").select("role, permission"),
+      readRoleTabAccess(db, session.workspaceId),
+      db
+        .from("role_permissions")
+        .select("role, permission")
+        .eq("workspace_id", session.workspaceId),
     ]);
 
     const byRole = new Map<string, string[]>();
@@ -169,6 +172,7 @@ export async function PUT(request: Request) {
 
   try {
     const permissions = await writeRoleTabAccess(db, {
+      workspaceId: session.workspaceId,
       role: parsed.data.role as Role,
       levels: parsed.data.levels,
       actorUserId: session.userId,

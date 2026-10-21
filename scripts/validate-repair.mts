@@ -238,7 +238,6 @@ async function main() {
 
   for (const [table, expected] of [
     ["roles", "8"],
-    ["role_permissions", "97"],
     ["provider_definitions", "13"],
     ["metric_definitions", "22"],
   ] as const) {
@@ -249,6 +248,22 @@ async function main() {
     const mark = actual === expected ? "✓" : "✗";
     console.log(`  ${mark} ${table}: ${actual} (expected ${expected})`);
   }
+
+  // The role grants belong to a workspace, and a trigger seeds them when the
+  // workspace is created.
+  await db.exec(
+    "insert into public.workspaces (name, slug) values ('Validation', 'validation');",
+  );
+  const grantRows = await db.query<{ count: string }>(
+    `select count(*)::text as count
+       from public.role_permissions rp
+       join public.workspaces w on w.id = rp.workspace_id
+      where w.slug = 'validation'`,
+  );
+  const grantCount = grantRows.rows[0]?.count;
+  console.log(
+    `  ${grantCount === "103" ? "✓" : "✗"} role_permissions: ${grantCount} (expected 103)`,
+  );
 
   // The digest definitions are created per workspace, so there are none
   // until a workspace exists.
@@ -262,10 +277,11 @@ async function main() {
   await db.exec(
     "insert into public.workspaces (name, slug) values ('Medical Bay', 'medical-bay');",
   );
-  await db.exec("insert into public.report_definitions (workspace_id, key, title, description, cadence, sections, formats, recipients, enabled) select w.id, s.key, s.title, s.description, s.cadence, s.sections, s.formats, '{}'::text[], s.enabled from public.workspaces w cross join (values ('daily-performance','Daily','d','daily','[\"ads\"]'::jsonb,array['csv']::text[],true), ('weekly-performance','Weekly','w','weekly','[\"ads\"]'::jsonb,array['csv']::text[],true), ('monthly-performance','Monthly','m','monthly','[\"ads\"]'::jsonb,array['csv']::text[],true)) as s(key,title,description,cadence,sections,formats,enabled) on conflict (workspace_id, key) do nothing;");
-
   const digestsWithWorkspace = await db.query<{ count: string }>(
-    "select count(*)::text as count from public.report_definitions",
+    `select count(*)::text as count
+       from public.report_definitions d
+       join public.workspaces w on w.id = d.workspace_id
+      where w.slug = 'medical-bay'`,
   );
   console.log(
     `  ${digestsWithWorkspace.rows[0]?.count === "3" ? "✓" : "✗"} report_definitions with a workspace: ${digestsWithWorkspace.rows[0]?.count} (expected 3)`,

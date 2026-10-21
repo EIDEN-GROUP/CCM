@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { classify, serviceLineOf } from "@/lib/jobs/handlers/site-crawl";
+import {
+  classify,
+  sameHost,
+  serviceLineOf,
+} from "@/lib/jobs/handlers/site-crawl";
 
 /**
  * The crawl's classification.
@@ -41,8 +45,41 @@ describe("the page class", () => {
   });
 });
 
-describe("the service line", () => {
-  it("maps the site's own service paths", () => {
+describe("the host check", () => {
+  it("accepts a URL on the same host", () => {
+    expect(sameHost("https://medicalbay.ma/a", "https://medicalbay.ma")).toBe(
+      true,
+    );
+    expect(sameHost("https://www.medicalbay.ma/a", "https://www.medicalbay.ma")).toBe(
+      true,
+    );
+  });
+
+  it("refuses a host that merely starts with the site's address", () => {
+    // A string prefix would accept all three of these.
+    expect(sameHost("https://medicalbay.ma.evil.test/a", "https://medicalbay.ma")).toBe(
+      false,
+    );
+    expect(sameHost("https://medicalbay.ma@evil.test/a", "https://medicalbay.ma")).toBe(
+      false,
+    );
+    expect(sameHost("https://evil.test/?x=https://medicalbay.ma", "https://medicalbay.ma")).toBe(
+      false,
+    );
+  });
+
+  it("refuses a different scheme on the same host", () => {
+    expect(sameHost("http://medicalbay.ma/a", "https://medicalbay.ma")).toBe(
+      false,
+    );
+  });
+
+  it("refuses a malformed URL", () => {
+    expect(sameHost("not a url", "https://medicalbay.ma")).toBe(false);
+  });
+});
+
+describe("the service line", () => {  it("maps the site's own service paths", () => {
     expect(serviceLineOf("/dentiste-agadir")).toBe("dentistry");
     expect(serviceLineOf("/services/dentistry")).toBe("dentistry");
     expect(serviceLineOf("/greffe-de-cheveux")).toBe("hair_transplant");

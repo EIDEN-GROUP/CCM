@@ -11,7 +11,7 @@ profile that the extension is not installed in**.
 | | |
 |---|---|
 | **Does** | Bind to `127.0.0.1` only, accept a signed launch ticket from a paired CCM origin, verify the ticket's signature, check the destination against the provider allowlist, and open the browser in the configured profile. |
-| **Does not** | Read, export or modify cookies, passwords, sessions or MFA codes. Accept a URL from a web page. Listen on a routable interface. Sign in to any provider. Bypass a CAPTCHA or an MFA challenge. |
+| **Does not** | Read, export or modify cookies, passwords, sessions or MFA codes. Accept a URL from a web page. Listen on a routable interface. Sign in to any provider. Bypass a CAPTCHA or an MFA challenge. Re-pair without the console pairing code. |
 
 The browser opens the profile with its **own** cookie store. The helper never
 touches it — it just asks the browser to open a tab, and the browser does the
@@ -30,15 +30,24 @@ The helper writes its configuration to `~/.ccm-helper/config.json`
 
 ## Pair it with CCM
 
-```bash
-curl -X POST http://127.0.0.1:8787/pair \
-  -H "Content-Type: application/json" \
-  -d '{"origin":"https://ccm.medicalbay.ma"}'
+The helper prints a **pairing code** on its own console when it starts:
+
+```
+CCM helper listening on http://127.0.0.1:8787
+
+  Pairing code: Z5qYPgv8gS1xXq59
+  Pass it with the origin when pairing:
+    curl -X POST http://127.0.0.1:8787/pair -H "Content-Type: application/json" -d '{"origin":"https://ccm.medicalbay.ma","pairingToken":"Z5qYPgv8gS1xXq59"}'
 ```
 
+The code is required. Without it, any page in any browser tab could
+re-point the helper's trust anchor at a site of its choosing, and the helper
+would then fetch and pin that site's public key. It is shown only on the
+console, and a request without it is refused.
+
 The response contains the **instance id**. Paste that into CCM:
-**Account Launcher → Set up account launching → Local helper**, and set the
-browser profile directory (for example `Profile 1` or `Default`).
+**Account Launcher → Set up account launching**, and set the browser
+profile directory (for example `Profile 1` or `Default`).
 
 The helper fetches and pins CCM's public verification key from
 `<origin>/api/launch/public-key`, so it can verify every ticket it is given.

@@ -17,6 +17,12 @@ export async function GET() {
 
   const databaseReachable = session.configured && !session.problem;
 
+  // The endpoint is public, so the *reason* is only given to somebody who
+  // is signed in. An anonymous caller gets the state, not the database's
+  // error message.
+  const isSignedIn = Boolean(session.userId);
+  const problem = session.problem;
+
   const body = {
     status: report.ready && databaseReachable ? "ok" : "degraded",
     configuration: {
@@ -26,7 +32,7 @@ export async function GET() {
     },
     database: {
       reachable: databaseReachable,
-      ...(session.problem ? { problem: session.problem } : {}),
+      ...(problem && isSignedIn ? { problem } : {}),
     },
     version: process.env.npm_package_version ?? "0.1.0",
     timestamp: new Date().toISOString(),

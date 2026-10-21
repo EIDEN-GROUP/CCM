@@ -3,6 +3,7 @@ import {
   demoAdsRows,
   demoGa4Rows,
   demoGscRows,
+  demoModeIsUnsafe,
   isDemoMode,
 } from "@/lib/demo/fixtures";
 
@@ -68,9 +69,15 @@ export async function getAdsMetrics(
   end: string,
   accountIds?: string[],
 ): Promise<AdsMetricRow[]> {
-  // Demo mode returns clearly-labelled synthetic fixtures instead of querying
-  // the database, so the interface can be demonstrated without a provider.
+  // Demo mode returns clearly-labelled synthetic fixtures instead of
+  // querying the database, so the interface can be demonstrated without a
+  // provider.
+  //
+  // In production it refuses: a deployment that served fabricated marketing
+  // figures in place of the real — missing — ones would be lying to the
+  // owner, and the fixtures would contradict the screens.
   if (isDemoMode()) {
+    if (demoModeIsUnsafe()) return [];
     return demoAdsRows(start, end) as AdsMetricRow[];
   }
 
@@ -100,6 +107,7 @@ export async function getGa4Metrics(
   accountIds?: string[],
 ): Promise<Ga4MetricRow[]> {
   if (isDemoMode()) {
+    if (demoModeIsUnsafe()) return [];
     return demoGa4Rows(start, end) as Ga4MetricRow[];
   }
 
@@ -129,6 +137,7 @@ export async function getGscMetrics(
   accountIds?: string[],
 ): Promise<GscMetricRow[]> {
   if (isDemoMode()) {
+    if (demoModeIsUnsafe()) return [];
     return demoGscRows(start, end) as GscMetricRow[];
   }
 

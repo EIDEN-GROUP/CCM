@@ -27,9 +27,10 @@
 
 import { createServer } from "node:http";
 import { spawn } from "node:child_process";
-import { readFileSync, writeFileSync, existsSync } from "node:fs";
+import { randomBytes } from "node:crypto";
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
 import { homedir, platform } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { webcrypto } from "node:crypto";
 
 const { subtle } = webcrypto;
@@ -62,6 +63,26 @@ const PROVIDER_HOSTS = {
   uptime: ["www.google.com"],
 };
 
+/**
+ * A one-time pairing code.
+ *
+ * It is printed when the helper starts, so pairing has to be done from the
+ * helper's own console. Without it, any page could re-point the helper's
+ * trust anchor at a site of its choosing.
+ */
+const pairingToken = process.env.CCM_HELPER_PAIRING_TOKEN ?? randomBytes(12).toString("base64url");
+
+/** A constant-time comparison of two tokens. */
+function safeEqual(a, b) {
+  if (typeof a !== "string" || typeof b !== "string") return false;
+  if (a.length !== b.length) return false;
+  let difference = 0;
+  for (let i = 0; i < a.length; i += 1) {
+    difference |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+  return difference === 0;
+}
+
 const LAUNCHER = process.env.CCM_HELPER_LAUNCHER ?? defaultLauncher();
 
 function defaultLauncher() {
@@ -87,6 +108,8 @@ function readConfig() {
 }
 
 function writeConfig(config) {
+  // The configuration directory may not exist yet — this is the first run.
+  mkdirSync(dirname(CONFIG_PATH), { recursive: true });
   writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2), "utf8");
 }
 
@@ -258,8 +281,27 @@ const server = createServer(async (request, response) => {
     try {
       const body = JSON.parse((await readBody(request)) || "{}");
       const ccmOrigin = String(body.origin ?? "");
+      const presentedToken = String(body.pairingToken ?? "");
 
-      let parsed: URL;
+      // The pairing code is printed by the helper when it starts and is
+      // shown only on its own console. Without it, any page in any browser
+      // tab could re-point the helper's trust anchor at a site of its
+      // choosing, and the helper would then fetch and pin that site's
+      // public key.
+      if (!pairingToken || !safeEqual(presentedToken, pairingToken)) {
+        send(
+          response,
+          403,
+          {
+            error:
+              "The pairing code is wrong. It is printed by the helper when it starts.",
+          },
+          origin,
+        );
+        return;
+      }
+
+      let parsed;
       try {
         parsed = new URL(ccmOrigin);
       } catch {
@@ -326,7 +368,9 @@ const server = createServer(async (request, response) => {
       send(response, 503, { error: "The helper is not paired." }, origin);
       return;
     }
-    if (origin && origin !== config.origin) {
+    if (origin !== config.origin) {
+      // A request with **no** Origin header — curl, any local process — is
+      // refused too. Only the paired origin may launch anything.
       send(
         response,
         403,
@@ -396,9 +440,18 @@ const server = createServer(async (request, response) => {
 server.listen(PORT, HOST, () => {
   const config = readConfig();
   console.log(`CCM helper listening on http://${HOST}:${PORT}`);
+  console.log("");
+  console.log(`  Pairing code: ${pairingToken}`);
+  console.log(
+    "  Pass it with the origin when pairing:",
+  );
+  console.log(
+    `    curl -X POST http://${HOST}:${PORT}/pair -H "Content-Type: application/json" -d '{"origin":"https://your-ccm-origin","pairingToken":"${pairingToken}"}'`,
+  );
+  console.log("");
   console.log(
     config
       ? `Paired with ${config.origin} (instance ${config.instanceId}).`
-      : "Not paired yet. POST /pair with the CCM origin to pair.",
+      : "Not paired yet.",
   );
 });

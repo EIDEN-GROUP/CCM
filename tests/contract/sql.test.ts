@@ -220,9 +220,14 @@ describe("the schema applies to a real PostgreSQL", () => {
   });
 
   it("seeds the registry exactly", async () => {
+    // The role grants are per workspace, so a workspace has to exist before
+    // they can be counted.
+    await db.exec(
+      "insert into public.workspaces (name, slug) values ('SQL test', 'sql-test');",
+    );
+
     for (const [table, expected] of [
       ["roles", 8],
-      ["role_permissions", 103],
       ["provider_definitions", 13],
       ["metric_definitions", 22],
     ] as const) {
@@ -231,6 +236,15 @@ describe("the schema applies to a real PostgreSQL", () => {
       );
       expect(Number(rows[0]?.count), table).toBe(expected);
     }
+
+    // The grants, per workspace.
+    const { rows: grantRows } = await db.query<{ count: string }>(
+      `select count(*)::text as count
+         from public.role_permissions rp
+         join public.workspaces w on w.id = rp.workspace_id
+        where w.slug = 'sql-test'`,
+    );
+    expect(Number(grantRows[0]?.count), "role_permissions").toBe(103);
   });
 
   it("gives every provider a host array", async () => {
@@ -249,19 +263,24 @@ describe("the schema applies to a real PostgreSQL", () => {
       "insert into public.workspaces (name, slug) values ('Medical Bay', 'medical-bay');",
     );
 
-    // The digest seed creates one definition per workspace, so the repair is
-    // re-run with a workspace in place — the situation the owner is in.
-    await execFile("repair.sql (with a workspace)", "supabase/repair.sql");
-
+    // The digests belong to a workspace, and the trigger creates them with
+    // the workspace.
     const { rows: digests } = await db.query<{ count: string }>(
-      "select count(*)::text as count from public.report_definitions",
+      `select count(*)::text as count
+         from public.report_definitions d
+         join public.workspaces w on w.id = d.workspace_id
+        where w.slug = 'medical-bay'`,
     );
     expect(Number(digests[0]?.count)).toBe(3);
 
     const { rows: cadenceRows } = await db.query<{ cadence: string }>(
-      "select cadence from public.report_definitions order by cadence",
+      `select d.cadence
+         from public.report_definitions d
+         join public.workspaces w on w.id = d.workspace_id
+        where w.slug = 'medical-bay'
+        order by d.cadence`,
     );
-    expect(cadenceRows.map((row) => row.cadence).sort()).toEqual([
+    expect(cadenceRows.map((row) => row.cadence)).toEqual([
       "daily",
       "monthly",
       "weekly",

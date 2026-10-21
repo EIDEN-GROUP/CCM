@@ -57,13 +57,12 @@ function textArray(values: readonly string[]): string {
   return `array[${values.map(sql).join(", ")}]::text[]`;
 }
 
-/**
- * A `jsonb` literal.
- *
- * It is written as a quoted JSON string with an explicit cast, because a
- * bare `[...]` is not an expression in PostgreSQL either — it is an array
- * subscript. The cast makes the type unambiguous.
- */
+/** A JSON array literal, for a `jsonb` column. */
+function jsonArrayLiteral(values: readonly string[]): string {
+  return `'${JSON.stringify(values).replace(/'/g, "''")}'`;
+}
+
+/** A JSON array literal, for a `jsonb` column. */
 function jsonArray(values: readonly string[]): string {
   return `'${JSON.stringify(values).replace(/'/g, "''")}'::jsonb`;
 }
@@ -239,16 +238,39 @@ create index if not exists provider_app_credentials_workspace_idx
 -- permissions the database enforces are derived from them.
 
 create table if not exists public.role_tab_access (
+  workspace_id uuid not null references public.workspaces(id) on delete cascade,
   role text not null references public.roles(key) on delete cascade,
   tab text not null,
   level text not null check (level in ('none','view','use','edit')),
   updated_by uuid references auth.users(id) on delete set null,
   updated_at timestamptz not null default now(),
-  primary key (role, tab)
+  primary key (workspace_id, role, tab)
 );
 
 create index if not exists role_tab_access_role_idx
   on public.role_tab_access (role);
+
+-- The role grants are per workspace, so one workspace's owner can never
+-- change what a role means in another workspace.
+
+alter table public.role_permissions
+  add column if not exists workspace_id uuid
+  references public.workspaces(id) on delete cascade;
+
+update public.role_permissions
+   set workspace_id = w.id
+  from public.workspaces w
+ where role_permissions.workspace_id is null;
+
+delete from public.role_permissions where workspace_id is null;
+
+alter table public.role_permissions
+  drop constraint if exists role_permissions_pkey;
+alter table public.role_permissions
+  add primary key (workspace_id, role, permission);
+
+create index if not exists role_permissions_role_idx
+  on public.role_permissions (role);
 
 -- --- Row Level Security helper functions -------------------------------------
 --
@@ -283,7 +305,8 @@ as $$
     select 1
     from public.workspace_members m
     join public.role_permissions rp
-      on rp.role = m.role
+      on rp.workspace_id = m.workspace_id
+     and rp.role = m.role
     where m.workspace_id = target_workspace
       and m.user_id = auth.uid()
       and m.status = 'active'
@@ -308,7 +331,8 @@ as $$
     join public.roles r
       on r.key = m.role
     join public.role_permissions rp
-      on rp.role = m.role
+      on rp.workspace_id = m.workspace_id
+     and rp.role = m.role
      and rp.permission = perm
     where a.id = target_account
       and (
@@ -472,16 +496,20 @@ grant execute on function public.has_provider_quota(uuid) to service_role;
 -- The levels the owner sees and edits. The permission set is derived from
 -- them, so the two cannot disagree.
 
-insert into public.role_tab_access (role, tab, level)
-values
+insert into public.role_tab_access (workspace_id, role, tab, level)
+select w.id, r.role, r.tab, r.level
+from public.workspaces w
+cross join (
+  values
 ${Object.entries(ROLE_TAB_ACCESS_SEED)
   .flatMap(([role, levels]) =>
     Object.entries(levels).map(
-      ([tab, level]) => `  (${sql(role)}, ${sql(tab)}, ${sql(level)})`,
+      ([tab, level]) => `    (${sql(role)}, ${sql(tab)}, ${sql(level)})`,
     ),
   )
   .join(",\n")}
-on conflict (role, tab) do update
+  ) as r(role, tab, level)
+on conflict (workspace_id, role, tab) do update
   set level = excluded.level,
       updated_at = now();
 
@@ -497,18 +525,87 @@ on conflict (key) do update
       account_scoped = excluded.account_scoped,
       description = excluded.description;
 
-insert into public.role_permissions (role, permission)
-select r.role, r.permission
-from (values
+-- The grants are per workspace: every workspace gets the default matrix,
+-- and an owner may then change their own workspace's roles without touching
+-- anybody else's.
+
+insert into public.role_permissions (workspace_id, role, permission)
+select w.id, r.role, r.permission
+from public.workspaces w
+cross join (
+  values
 ${Object.entries(ROLE_PERMISSION_SEED)
   .flatMap(([role, permissions]) =>
     permissions.map(
-      (permission) => `  (${sql(role)}, ${sql(permission)})`,
+      (permission) => `    (${sql(role)}, ${sql(permission)})`,
     ),
   )
   .join(",\n")}
-) as r(role, permission)
-on conflict (role, permission) do nothing;
+  ) as r(role, permission)
+on conflict (workspace_id, role, permission) do nothing;
+
+-- --- A new workspace gets its defaults ----------------------------------------
+--
+-- The grants, the tab levels and the digests belong to a workspace, so a
+-- workspace created after the repair would otherwise have none. A trigger
+-- seeds them at the moment the workspace is created.
+
+create or replace function public.seed_workspace_defaults()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  insert into public.role_permissions (workspace_id, role, permission)
+  select new.id, r.role, r.permission
+  from (
+    values
+${Object.entries(ROLE_PERMISSION_SEED)
+  .flatMap(([role, permissions]) =>
+    permissions.map(
+      (permission) => `      (${sql(role)}, ${sql(permission)})`,
+    ),
+  )
+  .join(",\n")}
+  ) as r(role, permission)
+  on conflict (workspace_id, role, permission) do nothing;
+
+  insert into public.role_tab_access (workspace_id, role, tab, level)
+  select new.id, r.role, r.tab, r.level
+  from (
+    values
+${Object.entries(ROLE_TAB_ACCESS_SEED)
+  .flatMap(([role, levels]) =>
+    Object.entries(levels).map(
+      ([tab, level]) => `      (${sql(role)}, ${sql(tab)}, ${sql(level)})`,
+    ),
+  )
+  .join(",\n")}
+  ) as r(role, tab, level)
+  on conflict (workspace_id, role, tab) do nothing;
+
+  insert into public.report_definitions
+    (workspace_id, key, title, description, cadence, sections, formats, recipients, enabled)
+  select new.id, r.key, r.title, r.description, r.cadence, r.sections, r.formats, '{}'::text[], r.enabled
+  from (
+    values
+${REPORT_SEED.map(
+  (report) =>
+    `      (${sql(report.key)}, ${sql(report.title)}, ${sql(report.description)}, ${sql(report.cadence)}, ${jsonArrayLiteral(report.sections)}::jsonb, ${textArray(report.formats)}, ${report.enabled})`,
+).join(",\n")}
+  ) as r(key, title, description, cadence, sections, formats, enabled)
+  on conflict (workspace_id, key) do nothing;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists seed_workspace_defaults on public.workspaces;
+
+create trigger seed_workspace_defaults
+  after insert on public.workspaces
+  for each row execute function public.seed_workspace_defaults();
 
 -- --- Seed data: the provider catalogue ---------------------------------------
 
@@ -682,11 +779,15 @@ const POLICIES: Policy[] = [
 
   { table: "provider_app_credentials", name: "provider_app_credentials_read", command: "select", using: "public.has_permission(workspace_id, 'settings.manage')" },
   { table: "provider_app_credentials", name: "provider_app_credentials_write", command: "all", using: "public.has_permission(workspace_id, 'settings.manage')", check: "public.has_permission(workspace_id, 'settings.manage')" },
+  // The single-use guard for a launch ticket. Without it the update that
+  // marks a ticket consumed matches no rows, every outcome report is
+  // refused, and the replay guard never fires.
+  { table: "launch_tickets", name: "launch_tickets_update", command: "update", using: "user_id = auth.uid() and public.has_permission(workspace_id, 'launch.execute')", check: "user_id = auth.uid() and public.has_permission(workspace_id, 'launch.execute')" },
   // The tab map is readable by any member: it describes how the product is
   // organised, not anything private. It is written only by somebody who may
   // change roles.
-  { table: "role_tab_access", name: "role_tab_access_read", command: "select", using: "true" },
-  { table: "role_tab_access", name: "role_tab_access_write", command: "all", using: "exists (select 1 from public.workspace_members m join public.role_permissions rp on rp.role = m.role where m.user_id = auth.uid() and m.status = 'active' and rp.permission = 'roles.manage')", check: "exists (select 1 from public.workspace_members m join public.role_permissions rp on rp.role = m.role where m.user_id = auth.uid() and m.status = 'active' and rp.permission = 'roles.manage')" },
+  { table: "role_tab_access", name: "role_tab_access_read", command: "select", using: "exists (select 1 from public.workspace_members m where m.workspace_id = role_tab_access.workspace_id and m.user_id = auth.uid() and m.status = 'active')" },
+  { table: "role_tab_access", name: "role_tab_access_write", command: "all", using: "exists (select 1 from public.workspace_members m join public.role_permissions rp on rp.workspace_id = m.workspace_id and rp.role = m.role where m.workspace_id = role_tab_access.workspace_id and m.user_id = auth.uid() and m.status = 'active' and rp.permission = 'roles.manage')", check: "exists (select 1 from public.workspace_members m join public.role_permissions rp on rp.workspace_id = m.workspace_id and rp.role = m.role where m.workspace_id = role_tab_access.workspace_id and m.user_id = auth.uid() and m.status = 'active' and rp.permission = 'roles.manage')" },
   { table: "provider_connections", name: "provider_connections_read", command: "select", using: "public.has_permission(workspace_id, 'integrations.read')" },
   { table: "provider_connections", name: "provider_connections_write", command: "all", using: "public.has_permission(workspace_id, 'integrations.manage')", check: "public.has_permission(workspace_id, 'integrations.manage')" },
 

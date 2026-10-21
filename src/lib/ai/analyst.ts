@@ -368,13 +368,18 @@ export async function askAnalyst(
     `Question: ${question}`,
   ].join("\n");
 
+  // The key travels in a header, never in the URL. A URL ends up in egress
+  // logs, proxy logs and trace headers; a header does not.
   const response = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(
       model,
-    )}:generateContent?key=${encodeURIComponent(apiKey)}`,
+    )}:generateContent`,
     {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "x-goog-api-key": apiKey,
+      },
       body: JSON.stringify({
         systemInstruction: { parts: [{ text: SYSTEM_INSTRUCTION }] },
         contents: [{ role: "user", parts: [{ text: prompt }] }],

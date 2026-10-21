@@ -64,14 +64,16 @@ export function derivePermissions(
 }
 
 /**
- * The tab levels of every role.
+ * The tab levels of every role in a workspace.
  */
 export async function readRoleTabAccess(
   db: Db,
+  workspaceId: string,
 ): Promise<Record<string, TabLevels>> {
   const { data, error } = await db
     .from("role_tab_access")
-    .select("role, tab, level");
+    .select("role, tab, level")
+    .eq("workspace_id", workspaceId);
 
   if (error) {
     throw new Error(`Could not read the tab access: ${error.message}`);
@@ -96,16 +98,21 @@ export async function readRoleTabAccess(
  *
  * The two writes are one operation: the tab levels are the input and the
  * permission set is the output, so they must not be able to disagree.
+ *
+ * The grants are **per workspace**. A workspace's roles mean only what that
+ * workspace decided, so one owner can never change what a role means in
+ * another workspace.
  */
 export async function writeRoleTabAccess(
   db: Db,
   options: {
+    workspaceId: string;
     role: Role;
     levels: TabLevels;
     actorUserId: string | null;
   },
 ): Promise<Permission[]> {
-  const { role, levels, actorUserId } = options;
+  const { workspaceId, role, levels, actorUserId } = options;
 
   // The owner's role is immutable.
   if (role === "owner") {
@@ -115,6 +122,7 @@ export async function writeRoleTabAccess(
   }
 
   const rows = TABS.map((tab) => ({
+    workspace_id: workspaceId,
     role,
     tab: tab.key,
     level: levels[tab.key] ?? ("none" as TabLevel),
@@ -124,7 +132,7 @@ export async function writeRoleTabAccess(
 
   const { error: accessError } = await db
     .from("role_tab_access")
-    .upsert(rows, { onConflict: "role,tab" });
+    .upsert(rows, { onConflict: "workspace_id,role,tab" });
 
   if (accessError) {
     throw new Error(
@@ -134,10 +142,12 @@ export async function writeRoleTabAccess(
 
   const permissions = derivePermissions(role, levels);
 
-  // The derived set replaces the old one. The owner's rows are left alone.
+  // The derived set replaces the old one, for this workspace only. The
+  // owner's rows are left alone.
   const { error: deleteError } = await db
     .from("role_permissions")
     .delete()
+    .eq("workspace_id", workspaceId)
     .eq("role", role);
 
   if (deleteError) {
@@ -149,7 +159,13 @@ export async function writeRoleTabAccess(
   if (permissions.length > 0) {
     const { error: insertError } = await db
       .from("role_permissions")
-      .insert(permissions.map((permission) => ({ role, permission })));
+      .insert(
+        permissions.map((permission) => ({
+          workspace_id: workspaceId,
+          role,
+          permission,
+        })),
+      );
 
     if (insertError) {
       throw new Error(

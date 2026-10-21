@@ -76,10 +76,14 @@ export const siteCrawlHandler: JobHandler = async (context) => {
   const candidates = sitemapUrls.length > 0 ? sitemapUrls : await seedUrls(origin);
 
   const disallowed = (url: string) =>
-    robots.disallowed.some((rule) => url.startsWith(rule));
+    robots.disallowed.some((rule) => sameHost(rule, url));
 
+  // A **host** comparison, not a string prefix. `https://medicalbay.ma.evil.tld`
+  // and `https://medicalbay.ma@evil.tld` both start with the site's origin
+  // but belong to somebody else, and the crawl fetches them with the server's
+  // own identity.
   const toCrawl = candidates
-    .filter((url) => url.startsWith(origin))
+    .filter((url) => sameHost(url, origin))
     .filter((url) => !disallowed(url))
     .slice(0, MAX_PAGES);
 
@@ -140,6 +144,24 @@ export const siteCrawlHandler: JobHandler = async (context) => {
 /** A pause between requests, so the crawl does not hammer the site. */
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Whether two URLs belong to the same origin.
+ *
+ * A string prefix is not enough: `https://medicalbay.ma.evil.tld` and
+ * `https://medicalbay.ma@evil.tld` both begin with the site's origin, and
+ * the second parses to the host `evil.tld`.
+ *
+ * The scheme is compared too, so a page that links the `http://` version of
+ * the site is not silently crawled over an unencrypted connection.
+ */
+export function sameHost(a: string, b: string): boolean {
+  try {
+    return new URL(a).origin === new URL(b).origin;
+  } catch {
+    return false;
+  }
 }
 
 /** Read `robots.txt` and collect the disallowed prefixes. */

@@ -1,7 +1,6 @@
 import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import {
-  permissionsForRoles,
   type Permission,
   type Role,
 } from "@/domain/permissions";
@@ -129,6 +128,36 @@ export const getSession = cache(async (): Promise<CcmSession> => {
 
     const role = membership.role as Role;
 
+    // The permissions come from the **database**, not from a map in the
+    // code. The owner edits a role's tab levels in the interface, and the
+    // derived grants land in `role_permissions`; reading them here means
+    // the change takes effect at once and there is only one source of
+    // truth.
+    const { data: grants, error: grantError } = await supabase
+      .from("role_permissions")
+      .select("permission")
+      .eq("workspace_id", membership.workspace_id)
+      .eq("role", role);
+
+    if (grantError) {
+      // The grants could not be read. The session is reported as
+      // unconfigured rather than falling back to a built-in list, because
+      // a fallback would quietly grant permissions the database may have
+      // taken away.
+      return {
+        ...FALLBACK,
+        configured: true,
+        userId,
+        userEmail,
+        problem: `The permissions for this role could not be read: ${grantError.message}`,
+      };
+    }
+
+    const permissions = new Set<Permission>();
+    for (const grant of (grants ?? []) as Array<{ permission: string }>) {
+      permissions.add(grant.permission as Permission);
+    }
+
     return {
       userId,
       userEmail,
@@ -137,7 +166,7 @@ export const getSession = cache(async (): Promise<CcmSession> => {
       workspaceTimezone: workspace?.timezone ?? "Africa/Casablanca",
       workspaceCurrency: workspace?.currency ?? "MAD",
       role,
-      permissions: permissionsForRoles([role]),
+      permissions,
       configured: true,
       problem: null,
     };
