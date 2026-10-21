@@ -32,6 +32,7 @@ export const fr: Messages = {
     auditSecurity: "Audit & Sécurité",
     settings: "Paramètres",
     providerApps: "Applications fournisseurs",
+    people: "Personnes et roles",
     collapse: "Réduire la navigation",
     expand: "Déplier la navigation",
   },

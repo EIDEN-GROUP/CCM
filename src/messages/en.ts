@@ -36,6 +36,7 @@ export const en = {
     auditSecurity: "Audit & Security",
     settings: "Settings",
     providerApps: "Provider apps",
+    people: "People & roles",
     collapse: "Collapse navigation",
     expand: "Expand navigation",
   },

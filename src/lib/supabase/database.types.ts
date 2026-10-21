@@ -690,6 +690,18 @@ export interface Database {
         Update: Write;
         Relationships: [];
       };
+      role_tab_access: {
+        Row: Row<{
+          role: string;
+          tab: string;
+          level: string;
+          updated_by: string | null;
+          updated_at: string;
+        }>;
+        Insert: Write;
+        Update: Write;
+        Relationships: [];
+      };
       role_permissions: {
         Row: Row<{ role: string; permission: string }>;
         Insert: Write;

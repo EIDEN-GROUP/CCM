@@ -272,6 +272,30 @@ their password to somebody else's site — a phishing primitive that costs
 them their session. The proxy overwrites `next` with the path it actually
 redirected from, so the value is internal by construction as well as
 validated.
+## 6d. Who may change what
+
+The **owner** is the only role that may change a role. It holds
+`roles.manage`, and that permission is deliberately withheld from the
+administrator: an administrator runs the operation, not the authority.
+
+The owner edits **tabs** — view, use or edit — and the feature permissions
+the database enforces are derived from those levels. The derivation is one
+function, so the interface and the Row Level Security policies cannot
+disagree about what a role may do.
+
+Four things are protected from a mistake:
+
+| | |
+|---|---|
+| **The owner's role** | Not editable. It always holds every permission, so the workspace can always be administered. |
+| **The people tab** | Its permission comes from the role, not from the tab, so granting the tab to the administrator cannot hand over the authority to change roles. |
+| **The last owner** | The owner cannot be demoted, suspended, or have their role changed. The workspace would have no administrator. |
+| **Your own access** | The owner cannot suspend themselves, and a person cannot be given the owner role through the interface — the owner is whoever made the workspace. |
+
+Adding a person creates a confirmed account with a generated password that
+is shown **once** and is never stored, logged or sent anywhere. The
+membership, the role and the password are all recorded in the audit log,
+because adding somebody to a workspace is a security event.
 ## 7. Session and access control
 - Invite-only. There is no sign-up path, and the sign-in failure message is
   deliberately generic so the form cannot be used to enumerate accounts.

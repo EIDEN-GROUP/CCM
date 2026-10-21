@@ -156,6 +156,51 @@ export function LauncherSetup({ accounts }: { accounts: LaunchableAccount[] }) {
           </p>
         </CardBody>
       </Card>
+
+      <Card>
+        <CardHeader
+          title="The local helper"
+          subtitle="For a profile the extension cannot be installed in"
+        />
+        <CardBody className="space-y-3 text-body-sm text-secondary">
+          <p>
+            The helper is a small program that runs on your own machine. It
+            opens the account in a named browser profile — the one case a web
+            page and the extension both cannot cover.
+          </p>
+          <ol className="ml-4 list-decimal space-y-1.5">
+            <li>
+              Run it from the repository:{" "}
+              <code className="rounded bg-surface px-1.5 py-0.5 text-[13px]">
+                cd apps/ccm-helper &amp;&amp; npm install &amp;&amp; npm start
+              </code>
+            </li>
+            <li>
+              Pair it with this deployment:{" "}
+              <code className="rounded bg-surface px-1.5 py-0.5 text-[13px]">
+                {
+                  'curl -X POST http://127.0.0.1:8787/pair -H "Content-Type: application/json" -d \'{"origin":"https://your-ccm-origin"}\''
+                }
+              </code>
+            </li>
+            <li>
+              Choose <strong>Local helper</strong> as the launch mode above
+              and name the browser profile directory — the one shown in{" "}
+              <code className="rounded bg-surface px-1.5 py-0.5 text-[13px]">
+                chrome://version
+              </code>
+              , for example <code>Profile 1</code> or <code>Default</code>.
+            </li>
+          </ol>
+          <p className="flex items-start gap-2">
+            <TriangleAlert aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-warning" />
+            The helper accepts only a signed launch ticket, checks the
+            destination against the provider allowlist, and opens the browser
+            with the browser&apos;s own cookie store. It never reads a cookie,
+            a password or an MFA code.
+          </p>
+        </CardBody>
+      </Card>
     </div>
   );
 }
@@ -173,7 +218,11 @@ function MappingForm({
   account: LaunchableAccount;
   detectedInstanceId: string | null;
 }) {
-  const [instanceId, setInstanceId] = useState("");
+  // The saved mapping is the starting point. Without this, saving the form
+  // would silently wipe the instance id the operator had already recorded.
+  const [instanceId, setInstanceId] = useState(
+    account.extensionInstanceId ?? "",
+  );
   const [profileLabel, setProfileLabel] = useState(
     account.browserProfileLabel ?? "",
   );

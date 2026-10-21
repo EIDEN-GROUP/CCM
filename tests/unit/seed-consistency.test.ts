@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { PERMISSIONS, ROLE_PERMISSIONS, ROLES } from "@/domain/permissions";
+import {
+  DEFAULT_TAB_LEVELS,
+  PERMISSIONS,
+  ROLE_PERMISSIONS,
+  ROLES,
+} from "@/domain/permissions";
+import { deriveRolePermissions } from "@/domain/roles";
+import { TABS } from "@/domain/tabs";
 import {
   ALL_PERMISSIONS,
   METRIC_SEED,
@@ -57,6 +64,52 @@ describe("the permission matrix", () => {
     // The one role that must never be workspace-wide.
     const mailbox = ROLE_SEED.find((row) => row.key === "mailbox_user")!;
     expect(mailbox.account_scoped).toBe(true);
+  });
+});
+
+describe("the tab levels", () => {
+  it("derive exactly the permissions the role holds", () => {
+    // The levels are the input; the permission set is derived from them.
+    // If the two ever disagree, the interface would offer a permission the
+    // database refuses.
+    for (const role of ROLES) {
+      const derived = deriveRolePermissions(
+        role,
+        DEFAULT_TAB_LEVELS[role],
+        PERMISSIONS,
+      );
+      expect([...derived].sort(), `role ${role}`).toEqual(
+        [...ROLE_PERMISSIONS[role]].sort(),
+      );
+    }
+  });
+
+  it("give every role a level for every tab", () => {
+    for (const role of ROLES) {
+      const levels = DEFAULT_TAB_LEVELS[role];
+      for (const tab of TABS) {
+        expect(levels[tab.key], `${role}.${tab.key}`).toBeDefined();
+      }
+    }
+  });
+
+  it("give the owner every tab", () => {
+    for (const tab of TABS) {
+      expect(DEFAULT_TAB_LEVELS.owner[tab.key], tab.key).toBe("edit");
+    }
+  });
+
+  it("withhold the people tab from the administrator", () => {
+    // The administrator runs the operation. Changing roles is the owner's
+    // authority.
+    expect(DEFAULT_TAB_LEVELS.admin.people).toBe("none");
+    expect(ROLE_PERMISSIONS.admin).not.toContain("roles.manage");
+    expect(ROLE_PERMISSIONS.owner).toContain("roles.manage");
+  });
+
+  it("keep the owner's permissions complete whatever the levels say", () => {
+    const derived = deriveRolePermissions("owner", {}, PERMISSIONS);
+    expect([...derived].sort()).toEqual([...PERMISSIONS].sort());
   });
 });
 

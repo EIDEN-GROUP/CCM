@@ -15,6 +15,11 @@
  * a test asserts the two agree.
  */
 
+import {
+  DEFAULT_TAB_LEVELS,
+  ROLE_PERMISSIONS,
+} from "./permissions";
+
 export const ROLE_SEED = [
   {
     key: "owner",
@@ -86,6 +91,7 @@ export const ALL_PERMISSIONS = [
   "integrations.read",
   "integrations.manage",
   "settings.manage",
+  "roles.manage",
   "audit.read",
   "launch.read",
   "launch.execute",
@@ -93,79 +99,33 @@ export const ALL_PERMISSIONS = [
 ] as const;
 
 /** Permissions granted to each role. */
-export const ROLE_PERMISSION_SEED: Record<string, readonly string[]> = {
-  owner: [...ALL_PERMISSIONS],
-  admin: [...ALL_PERMISSIONS],
-  marketing_analyst: [
-    "overview.read",
-    "websites.read",
-    "integrations.read",
-    "ads.read",
-    "analytics.read",
-    "gtm.read",
-    "seo.read",
-    "ux.read",
-    "social.read",
-    "alerts.read",
-    "alerts.manage",
-    "reports.read",
-    "reports.export",
-    "launch.read",
-    "launch.execute",
-    "ai.query",
-  ],
-  seo: [
-    "overview.read",
-    "websites.read",
-    "integrations.read",
-    "seo.read",
-    "analytics.read",
-    "reports.read",
-    "reports.export",
-    "launch.read",
-    "launch.execute",
-    "ai.query",
-  ],
-  ads_manager: [
-    "overview.read",
-    "websites.read",
-    "integrations.read",
-    "ads.read",
-    "analytics.read",
-    "reports.read",
-    "reports.export",
-    "launch.read",
-    "launch.execute",
-    "ai.query",
-  ],
-  social_manager: [
-    "overview.read",
-    "integrations.read",
-    "social.read",
-    "inbox.read",
-    "reports.read",
-    "reports.export",
-    "launch.read",
-    "launch.execute",
-    "ai.query",
-  ],
-  mailbox_user: ["inbox.read", "inbox.send", "launch.read"],
-  read_only: [
-    "overview.read",
-    "websites.read",
-    "integrations.read",
-    "ads.read",
-    "analytics.read",
-    "gtm.read",
-    "seo.read",
-    "ux.read",
-    "social.read",
-    "alerts.read",
-    "reports.read",
-    "launch.read",
-  ],
-};
+/**
+ * Permissions granted to each role.
+ *
+ * Derived from the tab levels rather than written out by hand, so the
+ * database and the interface cannot disagree about what a role may do.
+ */
+export const ROLE_PERMISSION_SEED: Record<string, readonly string[]> =
+  Object.fromEntries(
+    Object.entries(ROLE_PERMISSIONS).map(([role, permissions]) => [
+      role,
+      permissions as readonly string[],
+    ]),
+  );
 
+/**
+ * The tab levels each role starts with.
+ *
+ * This is what the owner sees and edits. The permission set above is
+ * derived from it.
+ */
+export const ROLE_TAB_ACCESS_SEED: Record<string, Record<string, string>> =
+  Object.fromEntries(
+    Object.entries(DEFAULT_TAB_LEVELS).map(([role, levels]) => [
+      role,
+      levels as Record<string, string>,
+    ]),
+  );
 export const PROVIDER_SEED = [
   {
     key: "google_ads",

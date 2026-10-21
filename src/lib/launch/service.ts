@@ -47,6 +47,10 @@ export interface LaunchableAccount {
   launchMode: "direct" | "extension" | "helper";
   browserProfileLabel: string | null;
   browserProfileDirectory: string | null;
+  /** The browser bridge instance this account is mapped to. */
+  extensionInstanceId: string | null;
+  /** The local helper endpoint, when one is paired. */
+  helperEndpoint: string | null;
   status: string;
   apiStatus: string;
   lastOpenedAt: string | null;

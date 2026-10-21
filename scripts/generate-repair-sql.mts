@@ -20,6 +20,7 @@ import {
   REPORT_SEED,
   ROLE_PERMISSION_SEED,
   ROLE_SEED,
+  ROLE_TAB_ACCESS_SEED,
 } from "../src/domain/seed";
 import { syncJobKindSql } from "../src/lib/jobs/kinds";
 
@@ -233,6 +234,22 @@ create table if not exists public.provider_app_credentials (
 
 create index if not exists provider_app_credentials_workspace_idx
   on public.provider_app_credentials (workspace_id, provider_key);
+
+-- The per-role tab access. The levels are the input; the feature
+-- permissions the database enforces are derived from them.
+
+create table if not exists public.role_tab_access (
+  role text not null references public.roles(key) on delete cascade,
+  tab text not null,
+  level text not null check (level in ('none','view','use','edit')),
+  updated_by uuid references auth.users(id) on delete set null,
+  updated_at timestamptz not null default now(),
+  primary key (role, tab)
+);
+
+create index if not exists role_tab_access_role_idx
+  on public.role_tab_access (role);
+
 -- --- Row Level Security helper functions -------------------------------------
 --
 -- SECURITY DEFINER with a pinned search_path. A policy that read
@@ -450,6 +467,24 @@ $$;
 revoke all on function public.has_provider_quota(uuid) from public;
 grant execute on function public.has_provider_quota(uuid) to service_role;
 
+-- --- Seed data: the per-role tab access ---------------------------------------
+--
+-- The levels the owner sees and edits. The permission set is derived from
+-- them, so the two cannot disagree.
+
+insert into public.role_tab_access (role, tab, level)
+values
+${Object.entries(ROLE_TAB_ACCESS_SEED)
+  .flatMap(([role, levels]) =>
+    Object.entries(levels).map(
+      ([tab, level]) => `  (${sql(role)}, ${sql(tab)}, ${sql(level)})`,
+    ),
+  )
+  .join(",\n")}
+on conflict (role, tab) do update
+  set level = excluded.level,
+      updated_at = now();
+
 -- --- Seed data: the role matrix ---------------------------------------------
 
 insert into public.roles (key, label, account_scoped, description) values
@@ -647,6 +682,11 @@ const POLICIES: Policy[] = [
 
   { table: "provider_app_credentials", name: "provider_app_credentials_read", command: "select", using: "public.has_permission(workspace_id, 'settings.manage')" },
   { table: "provider_app_credentials", name: "provider_app_credentials_write", command: "all", using: "public.has_permission(workspace_id, 'settings.manage')", check: "public.has_permission(workspace_id, 'settings.manage')" },
+  // The tab map is readable by any member: it describes how the product is
+  // organised, not anything private. It is written only by somebody who may
+  // change roles.
+  { table: "role_tab_access", name: "role_tab_access_read", command: "select", using: "true" },
+  { table: "role_tab_access", name: "role_tab_access_write", command: "all", using: "exists (select 1 from public.workspace_members m join public.role_permissions rp on rp.role = m.role where m.user_id = auth.uid() and m.status = 'active' and rp.permission = 'roles.manage')", check: "exists (select 1 from public.workspace_members m join public.role_permissions rp on rp.role = m.role where m.user_id = auth.uid() and m.status = 'active' and rp.permission = 'roles.manage')" },
   { table: "provider_connections", name: "provider_connections_read", command: "select", using: "public.has_permission(workspace_id, 'integrations.read')" },
   { table: "provider_connections", name: "provider_connections_write", command: "all", using: "public.has_permission(workspace_id, 'integrations.manage')", check: "public.has_permission(workspace_id, 'integrations.manage')" },
 

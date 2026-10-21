@@ -222,7 +222,7 @@ describe("the schema applies to a real PostgreSQL", () => {
   it("seeds the registry exactly", async () => {
     for (const [table, expected] of [
       ["roles", 8],
-      ["role_permissions", 102],
+      ["role_permissions", 103],
       ["provider_definitions", 13],
       ["metric_definitions", 22],
     ] as const) {

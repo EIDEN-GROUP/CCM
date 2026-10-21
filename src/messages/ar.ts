@@ -35,6 +35,7 @@ export const ar: Messages = {
     auditSecurity: "التدقيق والأمان",
     settings: "الإعدادات",
     providerApps: "تطبيقات المزوّدين",
+    people: "الأشخاص والأدوار",
     collapse: "طيّ قائمة التنقّل",
     expand: "توسيع قائمة التنقّل",
   },

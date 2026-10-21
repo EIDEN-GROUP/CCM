@@ -194,6 +194,27 @@ Three launch paths:
 See `docs/account-launcher.md`, `apps/ccm-browser-bridge/README.md` and
 `apps/ccm-helper/README.md`.
 
+## People and roles
+
+**Settings → People & roles** is where the owner controls access.
+
+- **Add a person** by email. The account is created with a generated
+  password that is shown **once** — it is never stored, logged or sent
+  anywhere.
+- **Give them a role**, and change it later.
+- **Edit any role**, including the administrator's: for each tab, choose
+  **none**, **view**, **use** or **edit**.
+
+Those levels are not a cosmetic label. They are **derived into the feature
+permissions the database enforces**, so what you see is what the Row Level
+Security policies will actually allow. The navigation is derived from the
+same registry, so a tab cannot exist without a navigation entry.
+
+Four things are protected from a mistake: the owner's own role is not
+editable, the people tab's permission comes from the role rather than the
+tab, the last owner cannot be demoted or suspended, and nobody can hand
+themselves or somebody else the owner role through the interface.
+
 ## Connecting a provider
 
 ### The first account

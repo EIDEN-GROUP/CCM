@@ -162,6 +162,22 @@ create table if not exists public.provider_app_credentials (
 
 create index if not exists provider_app_credentials_workspace_idx
   on public.provider_app_credentials (workspace_id, provider_key);
+
+-- The per-role tab access. The levels are the input; the feature
+-- permissions the database enforces are derived from them.
+
+create table if not exists public.role_tab_access (
+  role text not null references public.roles(key) on delete cascade,
+  tab text not null,
+  level text not null check (level in ('none','view','use','edit')),
+  updated_by uuid references auth.users(id) on delete set null,
+  updated_at timestamptz not null default now(),
+  primary key (role, tab)
+);
+
+create index if not exists role_tab_access_role_idx
+  on public.role_tab_access (role);
+
 -- --- Row Level Security helper functions -------------------------------------
 --
 -- SECURITY DEFINER with a pinned search_path. A policy that read
@@ -379,6 +395,153 @@ $$;
 revoke all on function public.has_provider_quota(uuid) from public;
 grant execute on function public.has_provider_quota(uuid) to service_role;
 
+-- --- Seed data: the per-role tab access ---------------------------------------
+--
+-- The levels the owner sees and edits. The permission set is derived from
+-- them, so the two cannot disagree.
+
+insert into public.role_tab_access (role, tab, level)
+values
+  ('owner', 'overview', 'edit'),
+  ('owner', 'websites', 'edit'),
+  ('owner', 'google-ads', 'edit'),
+  ('owner', 'analytics', 'edit'),
+  ('owner', 'gtm', 'edit'),
+  ('owner', 'seo', 'edit'),
+  ('owner', 'ux', 'edit'),
+  ('owner', 'social', 'edit'),
+  ('owner', 'inbox', 'edit'),
+  ('owner', 'launcher', 'edit'),
+  ('owner', 'alerts', 'edit'),
+  ('owner', 'reports', 'edit'),
+  ('owner', 'integrations', 'edit'),
+  ('owner', 'audit', 'edit'),
+  ('owner', 'settings', 'edit'),
+  ('owner', 'provider-apps', 'edit'),
+  ('owner', 'people', 'edit'),
+  ('admin', 'overview', 'edit'),
+  ('admin', 'websites', 'edit'),
+  ('admin', 'google-ads', 'edit'),
+  ('admin', 'analytics', 'edit'),
+  ('admin', 'gtm', 'edit'),
+  ('admin', 'seo', 'edit'),
+  ('admin', 'ux', 'edit'),
+  ('admin', 'social', 'edit'),
+  ('admin', 'inbox', 'edit'),
+  ('admin', 'launcher', 'edit'),
+  ('admin', 'alerts', 'edit'),
+  ('admin', 'reports', 'edit'),
+  ('admin', 'integrations', 'edit'),
+  ('admin', 'audit', 'edit'),
+  ('admin', 'settings', 'edit'),
+  ('admin', 'provider-apps', 'edit'),
+  ('admin', 'people', 'none'),
+  ('marketing_analyst', 'overview', 'view'),
+  ('marketing_analyst', 'websites', 'view'),
+  ('marketing_analyst', 'google-ads', 'use'),
+  ('marketing_analyst', 'analytics', 'use'),
+  ('marketing_analyst', 'gtm', 'use'),
+  ('marketing_analyst', 'seo', 'use'),
+  ('marketing_analyst', 'ux', 'use'),
+  ('marketing_analyst', 'social', 'use'),
+  ('marketing_analyst', 'inbox', 'none'),
+  ('marketing_analyst', 'launcher', 'use'),
+  ('marketing_analyst', 'alerts', 'use'),
+  ('marketing_analyst', 'reports', 'use'),
+  ('marketing_analyst', 'integrations', 'view'),
+  ('marketing_analyst', 'audit', 'none'),
+  ('marketing_analyst', 'settings', 'none'),
+  ('marketing_analyst', 'provider-apps', 'none'),
+  ('marketing_analyst', 'people', 'none'),
+  ('seo', 'overview', 'view'),
+  ('seo', 'websites', 'view'),
+  ('seo', 'google-ads', 'none'),
+  ('seo', 'analytics', 'use'),
+  ('seo', 'gtm', 'none'),
+  ('seo', 'seo', 'use'),
+  ('seo', 'ux', 'none'),
+  ('seo', 'social', 'none'),
+  ('seo', 'inbox', 'none'),
+  ('seo', 'launcher', 'use'),
+  ('seo', 'alerts', 'none'),
+  ('seo', 'reports', 'use'),
+  ('seo', 'integrations', 'view'),
+  ('seo', 'audit', 'none'),
+  ('seo', 'settings', 'none'),
+  ('seo', 'provider-apps', 'none'),
+  ('seo', 'people', 'none'),
+  ('ads_manager', 'overview', 'view'),
+  ('ads_manager', 'websites', 'view'),
+  ('ads_manager', 'google-ads', 'use'),
+  ('ads_manager', 'analytics', 'use'),
+  ('ads_manager', 'gtm', 'none'),
+  ('ads_manager', 'seo', 'none'),
+  ('ads_manager', 'ux', 'none'),
+  ('ads_manager', 'social', 'none'),
+  ('ads_manager', 'inbox', 'none'),
+  ('ads_manager', 'launcher', 'use'),
+  ('ads_manager', 'alerts', 'none'),
+  ('ads_manager', 'reports', 'use'),
+  ('ads_manager', 'integrations', 'view'),
+  ('ads_manager', 'audit', 'none'),
+  ('ads_manager', 'settings', 'none'),
+  ('ads_manager', 'provider-apps', 'none'),
+  ('ads_manager', 'people', 'none'),
+  ('social_manager', 'overview', 'view'),
+  ('social_manager', 'websites', 'none'),
+  ('social_manager', 'google-ads', 'none'),
+  ('social_manager', 'analytics', 'none'),
+  ('social_manager', 'gtm', 'none'),
+  ('social_manager', 'seo', 'none'),
+  ('social_manager', 'ux', 'none'),
+  ('social_manager', 'social', 'use'),
+  ('social_manager', 'inbox', 'view'),
+  ('social_manager', 'launcher', 'use'),
+  ('social_manager', 'alerts', 'none'),
+  ('social_manager', 'reports', 'use'),
+  ('social_manager', 'integrations', 'view'),
+  ('social_manager', 'audit', 'none'),
+  ('social_manager', 'settings', 'none'),
+  ('social_manager', 'provider-apps', 'none'),
+  ('social_manager', 'people', 'none'),
+  ('mailbox_user', 'overview', 'none'),
+  ('mailbox_user', 'websites', 'none'),
+  ('mailbox_user', 'google-ads', 'none'),
+  ('mailbox_user', 'analytics', 'none'),
+  ('mailbox_user', 'gtm', 'none'),
+  ('mailbox_user', 'seo', 'none'),
+  ('mailbox_user', 'ux', 'none'),
+  ('mailbox_user', 'social', 'none'),
+  ('mailbox_user', 'inbox', 'use'),
+  ('mailbox_user', 'launcher', 'view'),
+  ('mailbox_user', 'alerts', 'none'),
+  ('mailbox_user', 'reports', 'none'),
+  ('mailbox_user', 'integrations', 'none'),
+  ('mailbox_user', 'audit', 'none'),
+  ('mailbox_user', 'settings', 'none'),
+  ('mailbox_user', 'provider-apps', 'none'),
+  ('mailbox_user', 'people', 'none'),
+  ('read_only', 'overview', 'view'),
+  ('read_only', 'websites', 'view'),
+  ('read_only', 'google-ads', 'view'),
+  ('read_only', 'analytics', 'view'),
+  ('read_only', 'gtm', 'view'),
+  ('read_only', 'seo', 'view'),
+  ('read_only', 'ux', 'view'),
+  ('read_only', 'social', 'view'),
+  ('read_only', 'inbox', 'none'),
+  ('read_only', 'launcher', 'view'),
+  ('read_only', 'alerts', 'view'),
+  ('read_only', 'reports', 'view'),
+  ('read_only', 'integrations', 'view'),
+  ('read_only', 'audit', 'none'),
+  ('read_only', 'settings', 'none'),
+  ('read_only', 'provider-apps', 'none'),
+  ('read_only', 'people', 'none')
+on conflict (role, tab) do update
+  set level = excluded.level,
+      updated_at = now();
+
 -- --- Seed data: the role matrix ---------------------------------------------
 
 insert into public.roles (key, label, account_scoped, description) values
@@ -415,91 +578,92 @@ from (values
   ('owner', 'integrations.read'),
   ('owner', 'integrations.manage'),
   ('owner', 'settings.manage'),
+  ('owner', 'roles.manage'),
   ('owner', 'audit.read'),
   ('owner', 'launch.read'),
   ('owner', 'launch.execute'),
   ('owner', 'ai.query'),
-  ('admin', 'overview.read'),
-  ('admin', 'websites.read'),
   ('admin', 'ads.read'),
+  ('admin', 'ai.query'),
+  ('admin', 'alerts.manage'),
+  ('admin', 'alerts.read'),
   ('admin', 'analytics.read'),
+  ('admin', 'audit.read'),
   ('admin', 'gtm.read'),
-  ('admin', 'seo.read'),
-  ('admin', 'ux.read'),
-  ('admin', 'social.read'),
   ('admin', 'inbox.read'),
   ('admin', 'inbox.send'),
-  ('admin', 'alerts.read'),
-  ('admin', 'alerts.manage'),
-  ('admin', 'reports.read'),
-  ('admin', 'reports.export'),
-  ('admin', 'integrations.read'),
   ('admin', 'integrations.manage'),
-  ('admin', 'settings.manage'),
-  ('admin', 'audit.read'),
-  ('admin', 'launch.read'),
+  ('admin', 'integrations.read'),
   ('admin', 'launch.execute'),
-  ('admin', 'ai.query'),
-  ('marketing_analyst', 'overview.read'),
-  ('marketing_analyst', 'websites.read'),
-  ('marketing_analyst', 'integrations.read'),
+  ('admin', 'launch.read'),
+  ('admin', 'overview.read'),
+  ('admin', 'reports.export'),
+  ('admin', 'reports.read'),
+  ('admin', 'seo.read'),
+  ('admin', 'settings.manage'),
+  ('admin', 'social.read'),
+  ('admin', 'ux.read'),
+  ('admin', 'websites.read'),
   ('marketing_analyst', 'ads.read'),
+  ('marketing_analyst', 'ai.query'),
+  ('marketing_analyst', 'alerts.manage'),
+  ('marketing_analyst', 'alerts.read'),
   ('marketing_analyst', 'analytics.read'),
   ('marketing_analyst', 'gtm.read'),
-  ('marketing_analyst', 'seo.read'),
-  ('marketing_analyst', 'ux.read'),
-  ('marketing_analyst', 'social.read'),
-  ('marketing_analyst', 'alerts.read'),
-  ('marketing_analyst', 'alerts.manage'),
-  ('marketing_analyst', 'reports.read'),
-  ('marketing_analyst', 'reports.export'),
-  ('marketing_analyst', 'launch.read'),
+  ('marketing_analyst', 'integrations.read'),
   ('marketing_analyst', 'launch.execute'),
-  ('marketing_analyst', 'ai.query'),
-  ('seo', 'overview.read'),
-  ('seo', 'websites.read'),
-  ('seo', 'integrations.read'),
-  ('seo', 'seo.read'),
-  ('seo', 'analytics.read'),
-  ('seo', 'reports.read'),
-  ('seo', 'reports.export'),
-  ('seo', 'launch.read'),
-  ('seo', 'launch.execute'),
+  ('marketing_analyst', 'launch.read'),
+  ('marketing_analyst', 'overview.read'),
+  ('marketing_analyst', 'reports.export'),
+  ('marketing_analyst', 'reports.read'),
+  ('marketing_analyst', 'seo.read'),
+  ('marketing_analyst', 'social.read'),
+  ('marketing_analyst', 'ux.read'),
+  ('marketing_analyst', 'websites.read'),
   ('seo', 'ai.query'),
-  ('ads_manager', 'overview.read'),
-  ('ads_manager', 'websites.read'),
-  ('ads_manager', 'integrations.read'),
+  ('seo', 'analytics.read'),
+  ('seo', 'integrations.read'),
+  ('seo', 'launch.execute'),
+  ('seo', 'launch.read'),
+  ('seo', 'overview.read'),
+  ('seo', 'reports.export'),
+  ('seo', 'reports.read'),
+  ('seo', 'seo.read'),
+  ('seo', 'websites.read'),
   ('ads_manager', 'ads.read'),
-  ('ads_manager', 'analytics.read'),
-  ('ads_manager', 'reports.read'),
-  ('ads_manager', 'reports.export'),
-  ('ads_manager', 'launch.read'),
-  ('ads_manager', 'launch.execute'),
   ('ads_manager', 'ai.query'),
-  ('social_manager', 'overview.read'),
-  ('social_manager', 'integrations.read'),
-  ('social_manager', 'social.read'),
-  ('social_manager', 'inbox.read'),
-  ('social_manager', 'reports.read'),
-  ('social_manager', 'reports.export'),
-  ('social_manager', 'launch.read'),
-  ('social_manager', 'launch.execute'),
+  ('ads_manager', 'analytics.read'),
+  ('ads_manager', 'integrations.read'),
+  ('ads_manager', 'launch.execute'),
+  ('ads_manager', 'launch.read'),
+  ('ads_manager', 'overview.read'),
+  ('ads_manager', 'reports.export'),
+  ('ads_manager', 'reports.read'),
+  ('ads_manager', 'websites.read'),
   ('social_manager', 'ai.query'),
+  ('social_manager', 'inbox.read'),
+  ('social_manager', 'integrations.read'),
+  ('social_manager', 'launch.execute'),
+  ('social_manager', 'launch.read'),
+  ('social_manager', 'overview.read'),
+  ('social_manager', 'reports.export'),
+  ('social_manager', 'reports.read'),
+  ('social_manager', 'social.read'),
   ('mailbox_user', 'inbox.read'),
   ('mailbox_user', 'inbox.send'),
   ('mailbox_user', 'launch.read'),
-  ('read_only', 'overview.read'),
-  ('read_only', 'websites.read'),
-  ('read_only', 'integrations.read'),
   ('read_only', 'ads.read'),
+  ('read_only', 'alerts.read'),
   ('read_only', 'analytics.read'),
   ('read_only', 'gtm.read'),
-  ('read_only', 'seo.read'),
-  ('read_only', 'ux.read'),
-  ('read_only', 'social.read'),
-  ('read_only', 'alerts.read'),
+  ('read_only', 'integrations.read'),
+  ('read_only', 'launch.read'),
+  ('read_only', 'overview.read'),
   ('read_only', 'reports.read'),
-  ('read_only', 'launch.read')
+  ('read_only', 'seo.read'),
+  ('read_only', 'social.read'),
+  ('read_only', 'ux.read'),
+  ('read_only', 'websites.read')
 ) as r(role, permission)
 on conflict (role, permission) do nothing;
 
@@ -659,6 +823,7 @@ alter table public.website_pages enable row level security;
 alter table public.site_health_checks enable row level security;
 alter table public.provider_definitions enable row level security;
 alter table public.provider_app_credentials enable row level security;
+alter table public.role_tab_access enable row level security;
 alter table public.provider_connections enable row level security;
 alter table public.provider_connection_credentials enable row level security;
 alter table public.external_accounts enable row level security;
@@ -743,6 +908,10 @@ drop policy if exists provider_app_credentials_read on public.provider_app_crede
 create policy provider_app_credentials_read on public.provider_app_credentials for select to authenticated using (public.has_permission(workspace_id, 'settings.manage'));
 drop policy if exists provider_app_credentials_write on public.provider_app_credentials;
 create policy provider_app_credentials_write on public.provider_app_credentials for all to authenticated using (public.has_permission(workspace_id, 'settings.manage')) with check (public.has_permission(workspace_id, 'settings.manage'));
+drop policy if exists role_tab_access_read on public.role_tab_access;
+create policy role_tab_access_read on public.role_tab_access for select to authenticated using (true);
+drop policy if exists role_tab_access_write on public.role_tab_access;
+create policy role_tab_access_write on public.role_tab_access for all to authenticated using (exists (select 1 from public.workspace_members m join public.role_permissions rp on rp.role = m.role where m.user_id = auth.uid() and m.status = 'active' and rp.permission = 'roles.manage')) with check (exists (select 1 from public.workspace_members m join public.role_permissions rp on rp.role = m.role where m.user_id = auth.uid() and m.status = 'active' and rp.permission = 'roles.manage'));
 drop policy if exists provider_connections_read on public.provider_connections;
 create policy provider_connections_read on public.provider_connections for select to authenticated using (public.has_permission(workspace_id, 'integrations.read'));
 drop policy if exists provider_connections_write on public.provider_connections;
@@ -909,6 +1078,10 @@ grant update on public.report_definitions to authenticated;
 grant delete on public.report_definitions to authenticated;
 grant select on public.report_runs to authenticated;
 grant select on public.role_permissions to authenticated;
+grant select on public.role_tab_access to authenticated;
+grant insert on public.role_tab_access to authenticated;
+grant update on public.role_tab_access to authenticated;
+grant delete on public.role_tab_access to authenticated;
 grant select on public.roles to authenticated;
 grant select on public.site_health_checks to authenticated;
 grant insert on public.site_health_checks to authenticated;

@@ -91,6 +91,8 @@ export async function listLaunchableAccounts(
       launchMode: profile?.launch_mode ?? "direct",
       browserProfileLabel: profile?.browser_profile_label ?? null,
       browserProfileDirectory: profile?.browser_profile_directory ?? null,
+      extensionInstanceId: profile?.extension_instance_id ?? null,
+      helperEndpoint: profile?.helper_endpoint ?? null,
       status: profile?.status ?? "profile_unmapped",
       apiStatus: connection?.status ?? "needs_setup",
       lastOpenedAt: profile?.last_opened_at ?? null,

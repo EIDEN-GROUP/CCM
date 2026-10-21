@@ -96,6 +96,44 @@ window in which a table exists unprotected.
 | Reporting | `report_definitions`, `report_runs`, `ai_insight_requests`, `ai_insight_sources` |
 | Audit | `audit_events` |
 
+### The authorisation model
+
+There is one place where access is decided, and it is the database.
+
+The **owner** edits **tabs**: for each role, how far into each tab that role
+may go.
+
+| Level | What it allows |
+|---|---|
+| **none** | The tab is not shown and cannot be reached. |
+| **view** | The tab is shown and can be read. |
+| **use** | The tab's actions are available: export, refresh, open an account, send a message, run a digest. |
+| **edit** | The tab's configuration may be changed: register a site, connect a provider, change a rule. |
+
+The levels are the **input**. The feature permissions the database enforces
+are the **output**, derived from them:
+
+```
+src/domain/tabs.ts           the tab registry: what each tab needs to read, use, edit
+src/domain/roles.ts          the default levels of each role, and the derivation
+src/domain/permissions.ts    the derived permission set the interface uses
+supabase/migrations/0016_role_tab_access.sql   the tab map, the input, in the database
+```
+
+The derivation is one function, `deriveRolePermissions`. Nothing is written
+twice, so the interface cannot offer a permission the Row Level Security
+policies refuse.
+
+Two rules protect the workspace from a mistake:
+
+- **The owner's role is never derived.** It always holds every permission,
+  so the workspace can always be administered. It is not editable.
+- **The owner-only tab grants nothing by derivation.** `roles.manage` comes
+  from the role, not from a tab, so handing the people tab to the
+  administrator cannot hand over the authority to change roles.
+
+The navigation is **derived from the same registry**, so a tab cannot exist
+without a navigation entry.
 ### Authorisation model
 
 Two independent layers:
