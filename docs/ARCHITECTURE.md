@@ -69,6 +69,16 @@ same domain code can run on a VPS later.
 The dependency direction is one-way: `app → repositories → supabase`,
 `app → domain`, `app → providers`. `domain` imports nothing from the rest.
 
+Inside `src/domain/`, the modules that matter most:
+
+| Module | What it holds |
+|---|---|
+| `tabs.ts` | The tab registry: every tab, and what it needs to read, use and edit. The navigation is derived from it, so a tab cannot exist without a navigation entry. |
+| `roles.ts` | The default tab levels of each role, and `deriveRolePermissions` — the one function that turns levels into the permissions the database enforces. |
+| `permissions.ts` | The permission vocabulary and the derived set the interface uses. It reads the grants from the **database**, so an edit made in the interface takes effect at once. |
+| `metrics.ts` | Counting honestly: a missing number is never a zero, and a total that includes an unknown part is itself unknown. |
+| `kpi.ts` | The period-level aggregations, and the coverage each one actually covers. |
+
 ### Why a modular monolith, not microservices
 
 A single deployable unit with strict internal boundaries. There is one team,
@@ -78,7 +88,7 @@ failures and distributed transactions to problems that do not yet exist.
 
 ## 3. The data model
 
-28 tables across 12 migrations, plus a generated `supabase/repair.sql` that
+46 tables across 18 migrations, plus a generated `supabase/repair.sql` that
 can rebuild the authorisation layer on a partially applied database. Every
 tenant-owned table carries `workspace_id`, and **Row Level Security is
 enabled in the same migration that creates the table** — there is never a
@@ -86,7 +96,7 @@ window in which a table exists unprotected.
 
 | Group | Tables |
 |---|---|
-| Tenancy | `workspaces`, `workspace_members`, `roles`, `role_permissions`, `external_account_grants`, `user_preferences` |
+| Tenancy | `workspaces`, `workspace_members`, `roles`, `role_permissions`, `role_tab_access`, `external_account_grants`, `user_preferences` |
 | Websites | `websites`, `website_domains`, `website_pages`, `site_health_checks` |
 | Providers | `provider_definitions`, `provider_connections`, `provider_connection_credentials`, `external_accounts`, `external_account_identifiers`, `account_launch_profiles`, `launch_tickets`, `launch_events` |
 | Synchronisation | `sync_jobs`, `sync_runs`, `sync_cursors`, `sync_errors` |
@@ -123,6 +133,18 @@ supabase/migrations/0016_role_tab_access.sql   the tab map, the input, in the da
 The derivation is one function, `deriveRolePermissions`. Nothing is written
 twice, so the interface cannot offer a permission the Row Level Security
 policies refuse.
+
+**The grants belong to a workspace.** `role_permissions` and
+`role_tab_access` are keyed by `(workspace_id, role, …)`, and the
+authorisation helpers join on the workspace as well as the role. The role
+*catalogue* — the names and the labels — stays global, because the same
+eight roles mean the same thing everywhere; but who may do what is
+decided per workspace. Without that, the owner of one workspace could
+change what a role meant in another.
+
+A trigger on `workspaces` seeds a new workspace's grants, tab levels and
+report digests the moment the workspace is created, so a workspace is
+never born without a working role set.
 
 Two rules protect the workspace from a mistake:
 

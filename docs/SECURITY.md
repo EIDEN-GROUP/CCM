@@ -296,6 +296,19 @@ Adding a person creates a confirmed account with a generated password that
 is shown **once** and is never stored, logged or sent anywhere. The
 membership, the role and the password are all recorded in the audit log,
 because adding somebody to a workspace is a security event.
+
+**The grants belong to the workspace.** `role_permissions` and
+`role_tab_access` are keyed by `(workspace_id, role, …)`, and the
+authorisation helpers join on the workspace as well as the role. The role
+catalogue — the names and the labels — is global, because the same eight
+roles mean the same thing everywhere; who may do what is decided per
+workspace. Without that scoping, the owner of one workspace could change
+what a role meant in another.
+
+**The interface is not the authority.** The session reads the permissions
+from `role_permissions` in the database, not from a map in the code, so an
+edit made in the role editor takes effect at once and the interface and
+the policies cannot drift apart.
 ## 7. Session and access control
 - Invite-only. There is no sign-up path, and the sign-in failure message is
   deliberately generic so the form cannot be used to enumerate accounts.
@@ -394,13 +407,13 @@ hypothesis. The state below was measured against the live Supabase project on
 
 | Item | Status | Blocker |
 |---|---|---|
-| **The RLS authorisation layer on the live project** | **Installed**, and the tables all exist. Three policies were wrong and have been fixed since: an account-scoped role could not read the account it had been granted, and a read-only member could not see the connection catalogue. | Re-apply `supabase/repair.sql`. It is idempotent, so re-applying to a healthy project changes nothing. The fix adds `can_read_account` and grants `integrations.read` to the roles that may see the catalogue. |
-| **The RLS isolation suite** | 11 of 14 pass against the live project. The three failures are the three policies above, and they are proved fixed in `tests/contract/sql.test.ts`, which exercises the real policies against a real PostgreSQL. | Re-apply the repair, then the suite should be 14 of 14. |
+| **The RLS authorisation layer on the live project** | **Installed**, and the tables all exist. Five faults have been found and fixed since: an account-scoped role could not read the account it had been granted; a read-only member could not see the connection catalogue; the launch ticket had no UPDATE policy, so the update that marks a ticket consumed matched no rows and the replay guard never fired; the role grants were deployment-global, so one workspace's owner could change what a role meant in another; and the application read its permissions from a hard-coded map while the database enforced a different set, so an edit made in the role editor had no effect. | Re-apply `supabase/repair.sql`. It is idempotent, so re-applying to a healthy project changes nothing. The fix adds `can_read_account`, grants `integrations.read` to the roles that may see the catalogue, adds the missing `launch_tickets` UPDATE policy, and scopes the role grants to the workspace. |
+| **The RLS isolation suite** | 11 of 14 pass against the live project. The three failures are the first three faults above, and they are proved fixed in `tests/contract/sql.test.ts`, which exercises the real policies against a real PostgreSQL. | Re-apply the repair, then the suite should be 14 of 14. |
 | **The repair file itself** | **Proved.** Every migration and the repair are applied to a real PostgreSQL — PGlite, PostgreSQL compiled to WebAssembly — twice, and the seed counts, the helper functions, the policies and the privileges are checked. The same check runs in the test suite. | Nothing. It has caught four SQL faults that no TypeScript test could see. |
 | **The launch signing key** | **Truncated.** The public key in `.env` carries 60 base64 characters where P-256 needs 124, so it cannot be imported. | Regenerate with `npm run keys:launch` and paste the result. The loader now rebuilds the PEM from its BEGIN/END markers, so quotes, escaped newlines and stray backslashes are all tolerated — but a *truncated* body cannot be recovered. |
 | **The OAuth round trip** | Not exercised. The state sealing, PKCE pair generation, constant-time `state` comparison and scope selection are unit-tested; the live exchange with Google is not. | Needs the Google Cloud project and an OAuth client. |
 | **The browser bridge extension in a browser** | Not loaded. Its verification logic is unit-testable and the ticket path is covered, but `chrome.runtime` needs a manual pass. | Load `apps/ccm-browser-bridge` unpacked and run the launch acceptance tests. |
-| **The local helper** | Written and reviewed; **never started against a real browser profile.** | Run `apps/ccm-helper`, pair it, and confirm a cross-profile launch actually opens the intended profile. |
+| **The local helper** | **Started and proved** in isolation: it boots, prints a pairing code, refuses a wrong code, pins the origin and the public key on a correct one, and refuses a launch from another origin or with no origin at all. It had never been started at all before — a TypeScript annotation in a `.mjs` file made it impossible to run. | It has still never opened an account in a real browser profile. Run `apps/ccm-helper`, pair it, and confirm a cross-profile launch opens the intended profile. |
 | **The migrations against a live database** | The repair file is generated and reviewed, but DDL cannot be applied from this environment. | `supabase db push` with project access, or the SQL editor. |
 | **Supabase's own security and performance advisors** | Not run. | Run them after the repair, and record the findings. |
 | **The provider connectors against live accounts** | Contract-tested only. | The Google, Meta, LinkedIn and Ahrefs credentials are not yet populated in `.env`. |

@@ -26,9 +26,9 @@ See `docs/PRIVACY-DATA-FLOWS.md`.
 
 | Area | State |
 |---|---|
-| Design system, app shell, 15 workspaces | Implemented, with real loading / empty / error / permission states |
+| Design system, app shell, 19 screens | Implemented, with real loading / empty / error / permission states |
 | Auth, invite-only access, role + account-grant model | Implemented |
-| Database schema, 12 migrations, RLS, seed data | Written. **The live project needs `supabase/repair.sql` — see below.** |
+| Database schema, 18 migrations, RLS, seed data | Written. **The live project needs `supabase/repair.sql` — see below.** |
 | Connector framework, durable job queue, backoff, dead-letter | Implemented, and the worker **runs the adapters** |
 | Adapters: GA4, Search Console, Google Ads, GTM, Ahrefs, Meta, Instagram, LinkedIn, Gmail, PageSpeed, uptime/SSL | Implemented; GA4, Search Console and Google Ads are contract-tested against recorded provider responses |
 | Google OAuth (PKCE, sealed state, server-side exchange, encrypted token) | Implemented |
@@ -38,7 +38,8 @@ See `docs/PRIVACY-DATA-FLOWS.md`.
 | Unified inbox: provider-side search, paging, thread reading, drafts, reply, confirm-before-send, audit trail | Implemented; message bodies are fetched on demand and never stored |
 | Account launcher: registry, tickets, URL validation | Implemented and unit-tested |
 | Browser bridge extension (Manifest V3) | Implemented, **not yet loaded in a browser** |
-| Local helper (cross-profile launches) | Implemented, **not yet run** |
+| Local helper (cross-profile launches) | Implemented; **now boots and its pairing and origin checks are proved** — it had never been started, because of a stray TypeScript annotation in a `.mjs` file |
+| **Owner-managed people, roles and per-tab access** — add a person, give them a role, and set each role to none / view / use / edit per tab | Implemented. The levels are derived into the permissions the database enforces, so they are the real control, not a label |
 | RLS authorisation suite | Written; **fails loudly** until the authorisation layer is applied |
 | Reports, CSV export, print/PDF | Implemented |
 | Scheduled digests — daily, weekly, monthly — built by the worker and stored | Implemented |
@@ -46,6 +47,10 @@ See `docs/PRIVACY-DATA-FLOWS.md`.
 | Alerts, rules, evaluation, action queue | Implemented |
 | Provider quota: checked before the call, deferred rather than failed | Implemented |
 | Demo mode with labelled fixtures | Implemented, off by default |
+| **English, French and Arabic, all actually used** — the screens were wired to the catalogue | Implemented; 19 screens, right-to-left verified in a browser |
+| **A phone layout** — the rail was a fixed 248px column, leaving 95px of content on a 375px phone | Implemented: an off-canvas drawer, a working mobile search, a topbar that wraps |
+| **WCAG AA colour** — sixteen pairings failed, including every primary button | Fixed; the brand teals are unchanged, the *text* and *focus* colours were re-derived |
+| **Honest metrics** — a missing number read as zero, and a failed query read as "no data" | Fixed: unknown reads as unavailable, a partial period says so, and a failed query shows an error |
 | Arabic RTL, verified in the browser; visual regression baselines | Implemented |
 | Docker / VPS profile | Documented and scaffolded |
 
@@ -53,14 +58,17 @@ See `docs/PRIVACY-DATA-FLOWS.md`.
 `Needs setup` with its own checklist, because that is the truth. Nothing in
 this product reports synthetic data as if it were real.
 
-### Two things must be applied before CCM is usable
+### Three things must be applied before CCM is usable
 
 Both are one command each, and `npm run doctor` reports on both.
 
 **1. The database authorisation layer.** The live Supabase project has the
-tables and the authorisation layer, but three of the policies were wrong and
-have been fixed since. Re-apply the repair — it is idempotent, so running it
-against a healthy project changes nothing:
+tables and the authorisation layer, but several faults have been found and
+fixed since — three wrong policies, a missing policy that stopped the
+launch ticket's replay guard from firing, role grants that were scoped to
+the deployment rather than to the workspace, and a missing tab map. Re-apply
+the repair — it is idempotent, so running it against a healthy project
+changes nothing:
 
 ```bash
 # paste supabase/repair.sql into the Supabase SQL editor and run it, or:
@@ -72,10 +80,11 @@ npm run db:repair:apply:direct
 ```
 
 `supabase/repair.sql` is generated from `src/domain/seed.ts`, so the SQL and
-the application cannot drift. It creates the alert tables, the seven helper
-functions, all 67 policies, the table privileges those policies need and the
-seed data, and ends with `notify pgrst, 'reload schema'` so PostgREST picks
-the change up immediately.
+the application cannot drift. It creates the alert tables, the provider-app
+credentials table, the per-role tab map, the helper functions, all the
+policies, the table privileges those policies need and the seed data, and
+ends with `notify pgrst, 'reload schema'` so PostgREST picks the change up
+immediately.
 
 **Before you run it, the file is proved.** `npm run db:validate` applies
 every migration and then the repair — twice — to a real PostgreSQL
@@ -98,6 +107,14 @@ Then check everything at once:
 ```bash
 npm run doctor
 ```
+
+**3. A provider's own app.** The connectors call the providers' APIs
+directly, so each one needs credentials that only the provider can issue.
+The quickest is a Google OAuth client: one app unlocks Search Console,
+GA4, Tag Manager, Google Ads and Gmail, and it needs no review. Enter it in
+**Settings → Provider apps** — the client id and the secret are encrypted
+before they are stored, so no redeploy is needed. See "Connecting a
+provider" below.
 
 ## Quick start
 
@@ -154,6 +171,15 @@ Browser ── CCM web app (Next.js)          ──► Vercel or a container
 - **A metric registry.** Every number states its formula, source field,
   grain, currency, timezone, attribution caveats and freshness. Missing
   data is `null`, never `0`.
+- **Three languages, actually used.** English, French and Arabic, with
+  right-to-left verified in a browser. The catalogue is split per group so
+  it can be edited by more than one person; the three locales must have
+  the same shape, and the type system says so.
+- **A daily Vercel cron by default.** The Hobby plan allows only one cron
+  invocation a day, so `vercel.json` runs the dispatcher at 03:00 UTC. The
+  dispatcher reports its backlog, and `docs/deployment/vercel-supabase.md`
+  has the Supabase scheduler recipe for a fifteen-minute cadence on the
+  same plan.
 
 Full detail: `docs/ARCHITECTURE.md`.
 
@@ -315,12 +341,12 @@ keys.
 src/
   app/            routes, server components, route handlers
   components/     shell, design system, launcher, charts, reports, AI
-  domain/         pure logic — dates, currency, KPI math, alerts, permissions, seed
+  domain/         pure logic — dates, currency, metrics, KPI math, tabs, roles, permissions, seed
   lib/            supabase clients, crypto, launch, jobs, oauth, ai, reports, demo
-  messages/       en / fr / ar
+  messages/       en / fr / ar, with the `pages` namespace split per group
   providers/      connector contract, registry, adapters (google, meta, linkedin, ahrefs)
 supabase/
-  migrations/     12 SQL migrations
+  migrations/     18 SQL migrations
   repair.sql      generated: rebuilds the authorisation layer + the seed
 apps/
   ccm-browser-bridge/   Manifest V3 extension
@@ -351,3 +377,6 @@ was copied from them.
    destination-country transfer rules.
 5. Load the browser bridge extension and complete the launch acceptance
    tests in `docs/account-launcher.md`.
+6. If you are on the Vercel Hobby plan, set up the Supabase scheduler for
+   the fifteen-minute cadence — the Vercel cron can only run once a day
+   there. `docs/deployment/vercel-supabase.md` has the exact SQL.
