@@ -27,7 +27,8 @@ export const TICKET_TTL_SECONDS = 60;
 /** Origins the extension accepts messages from, mirrored from the manifest. */
 export const ALLOWED_SENDER_ORIGINS = [
   "http://localhost:3000",
-  "https://ccm.medicalbay.ma",
+  "https://ccm.medicalbay.ma",      // the production domain in the original brief
+  "https://ccm.eiden-group.com",    // the deployment in use
 ];
 
 export async function getConfig() {
