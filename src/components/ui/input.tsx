@@ -1,4 +1,14 @@
-import { forwardRef, type InputHTMLAttributes, type LabelHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from "react";
+import {
+  cloneElement,
+  forwardRef,
+  isValidElement,
+  type InputHTMLAttributes,
+  type LabelHTMLAttributes,
+  type ReactElement,
+  type ReactNode,
+  type SelectHTMLAttributes,
+  type TextareaHTMLAttributes,
+} from "react";
 import { cn } from "@/lib/cn";
 
 /**
@@ -41,7 +51,7 @@ export const Select = forwardRef<
   SelectHTMLAttributes<HTMLSelectElement>
 >(function Select({ className, children, ...props }, ref) {
   return (
-    <select ref={ref} className={cn(FIELD_BASE, "pr-9", className)} {...props}>
+    <select ref={ref} className={cn(FIELD_BASE, "pe-9", className)} {...props}>
       {children}
     </select>
   );
@@ -68,6 +78,10 @@ export function Label({
 /**
  * A labelled field. The label is always associated with the control so the
  * relationship survives a screen reader's form-navigation mode.
+ *
+ * The hint and the error are also associated. Without `aria-describedby`
+ * the ids are decoration: a screen reader reads the label, stops, and never
+ * mentions that the field has a hint or that the last attempt was refused.
  */
 export function Field({
   label,
@@ -86,6 +100,22 @@ export function Field({
   children: ReactNode;
   className?: string;
 }) {
+  const describedBy =
+    [error ? `${htmlFor}-error` : null, hint && !error ? `${htmlFor}-hint` : null]
+      .filter(Boolean)
+      .join(" ") || undefined;
+
+  // The control is the child, so the association is made on the child
+  // itself. A child that is not a single element is left alone rather than
+  // guessed at.
+  const control =
+    isValidElement(children) && describedBy
+      ? cloneElement(children as ReactElement<Record<string, unknown>>, {
+          "aria-describedby": describedBy,
+          ...(error ? { "aria-invalid": true } : {}),
+        })
+      : children;
+
   return (
     <div className={cn("space-y-1.5", className)}>
       <Label htmlFor={htmlFor}>
@@ -96,7 +126,7 @@ export function Field({
           </span>
         ) : null}
       </Label>
-      {children}
+      {control}
       {hint && !error ? (
         <p id={`${htmlFor}-hint`} className="text-body-sm text-muted-text">
           {hint}

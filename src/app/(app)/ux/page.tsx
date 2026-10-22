@@ -10,13 +10,18 @@ import { createClient } from "@/lib/supabase/server";
 import { requirePermission } from "@/lib/auth/guard";
 import {
   computeFreshness,
-  formatAge,
   SYNC_INTERVALS,
   type FreshnessState,
 } from "@/domain/freshness";
+import { formatMessage, intlLocale, type Translator } from "@/lib/i18n";
+import { getLocale, getTranslator } from "@/lib/i18n-server";
 
-export const metadata: Metadata = { title: "Heatmaps & UX" };
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslator();
+  return { title: t("pages.ux.title") };
+}
 
 interface ClarityConnection {
   id: string;
@@ -34,10 +39,35 @@ interface ClarityProject {
   identifiers: Record<string, unknown>;
 }
 
-/** The connection status, in words. */
-function statusLabel(status: string): string {
-  const words = status.replace(/_/g, " ");
-  return words.charAt(0).toUpperCase() + words.slice(1);
+/**
+ * The connection status, in words.
+ *
+ * The catalogue carries every status a provider connection can hold. An
+ * unknown status keeps its raw value rather than an invented label.
+ */
+function statusLabel(status: string, t: Translator): string {
+  switch (status) {
+    case "connected":
+      return t("api.connected");
+    case "needs_setup":
+      return t("api.needsSetup");
+    case "token_refresh_failed":
+      return t("api.tokenRefreshFailed");
+    case "permission_revoked":
+      return t("api.permissionRevoked");
+    case "provider_outage":
+      return t("api.providerOutage");
+    case "rate_limited":
+      return t("api.rateLimited");
+    case "sync_stale":
+      return t("api.syncStale");
+    case "not_configured":
+      return t("api.notConfigured");
+    default: {
+      const words = status.replace(/_/g, " ");
+      return words.charAt(0).toUpperCase() + words.slice(1);
+    }
+  }
 }
 
 /** The tone a connection status carries. */
@@ -48,13 +78,66 @@ function statusTone(status: string): Tone {
 }
 
 /** The short name of a freshness state, for a tile. */
-const FRESHNESS_LABEL: Record<FreshnessState, string> = {
-  fresh: "Up to date",
-  aging: "Refresh overdue",
-  stale: "Data is stale",
-  failing: "Sync failing",
-  never: "Never synced",
-};
+function freshnessLabel(state: FreshnessState, t: Translator): string {
+  switch (state) {
+    case "fresh":
+      return t("pages.ux.freshnessFresh");
+    case "aging":
+      return t("pages.ux.freshnessAging");
+    case "stale":
+      return t("pages.ux.freshnessStale");
+    case "failing":
+      return t("pages.ux.freshnessFailing");
+    default:
+      return t("pages.ux.neverSynced");
+  }
+}
+
+/**
+ * The freshness explanation.
+ *
+ * "Failing" covers two different situations — a connector that never ran and
+ * one that ran and broke — so the state alone is not enough to pick the
+ * sentence.
+ */
+function freshnessDetail(
+  state: FreshnessState,
+  lastSuccessAt: string | null,
+  t: Translator,
+): string {
+  switch (state) {
+    case "fresh":
+      return t("pages.ux.freshnessFresh");
+    case "aging":
+      return t("pages.ux.freshnessAging");
+    case "stale":
+      return t("pages.ux.freshnessStale");
+    case "failing":
+      return lastSuccessAt
+        ? t("pages.ux.freshnessDetailLastGood")
+        : t("pages.ux.freshnessDetailFailingNoRun");
+    default:
+      return t("pages.ux.freshnessDetailNever");
+  }
+}
+
+/**
+ * Relative age, in the interface language.
+ *
+ * The shared domain formatter speaks English only, and a half-translated
+ * screen is worse than an untranslated one.
+ */
+function formatAgeLabel(ageSeconds: number, locale: string): string {
+  const relative = new Intl.RelativeTimeFormat(locale, { numeric: "always" });
+  if (ageSeconds < 60) {
+    return relative.format(-Math.max(1, Math.round(ageSeconds)), "second");
+  }
+  const minutes = ageSeconds / 60;
+  if (minutes < 60) return relative.format(-Math.round(minutes), "minute");
+  const hours = minutes / 60;
+  if (hours < 24) return relative.format(-Math.round(hours), "hour");
+  return relative.format(-Math.round(hours / 24), "day");
+}
 
 /** The newest of a set of timestamps, or null when there is none. */
 function newestTimestamp(values: Array<string | null>): string | null {
@@ -111,6 +194,8 @@ export default async function UxPage() {
 
   const supabase = await createClient();
   const workspaceId = session.workspaceId!;
+  const t = await getTranslator();
+  const locale = intlLocale(await getLocale());
 
   // A failed query is **not** an empty result. "We could not read the
   // connections" and "there are no connections" are different facts, and
@@ -128,7 +213,9 @@ export default async function UxPage() {
     .eq("provider_key", "clarity");
 
   if (connectionResult.error) {
-    failure = `The Clarity connections could not be read: ${connectionResult.error.message}`;
+    failure = formatMessage(t("pages.ux.connectionsReadError"), {
+      message: connectionResult.error.message,
+    });
   } else {
     connections = (connectionResult.data ?? []) as ClarityConnection[];
   }
@@ -141,7 +228,9 @@ export default async function UxPage() {
       .eq("provider_key", "clarity");
 
     if (projectResult.error) {
-      failure = `The Clarity projects could not be read: ${projectResult.error.message}`;
+      failure = formatMessage(t("pages.ux.projectsReadError"), {
+        message: projectResult.error.message,
+      });
     } else {
       projects = (projectResult.data ?? []) as ClarityProject[];
     }
@@ -172,56 +261,54 @@ export default async function UxPage() {
 
   const tiles = [
     {
-      label: "Connection",
+      label: t("pages.ux.connectionTile"),
       value: canReadConnections
         ? connection
-          ? statusLabel(connection.status)
-          : "Not connected"
+          ? statusLabel(connection.status, t)
+          : t("pages.ux.notConnected")
         : "—",
       detail: canReadConnections
         ? connection
-          ? `Status of the Clarity connection "${connection.display_label}": ${statusLabel(connection.status).toLowerCase()}.`
-          : "CCM holds no Clarity connection for this workspace."
-        : "Reading provider connections needs the Integrations permission, so this role cannot see whether Clarity is connected.",
+          ? formatMessage(t("pages.ux.connectionStatusDetail"), {
+              label: connection.display_label,
+              status: statusLabel(connection.status, t),
+            })
+          : t("pages.ux.noConnectionDetail")
+        : t("pages.ux.connectionsNotVisibleDetail"),
     },
     {
-      label: "Last sync",
-      value: ageSeconds === null ? "—" : formatAge(ageSeconds),
+      label: t("pages.ux.lastSyncTile"),
+      value: ageSeconds === null ? "—" : formatAgeLabel(ageSeconds, locale),
       detail:
         ageSeconds === null
           ? lastSync
-            ? "The recorded sync time could not be read, so its age is unknown."
-            : "No Clarity sync has ever succeeded, so there is no last sync to show."
-          : "The last successful Clarity sync. The target is one a day.",
+            ? t("pages.ux.unknownAgeDetail")
+            : t("pages.ux.neverSyncedDetail")
+          : t("pages.ux.lastSyncDetail"),
     },
     {
-      label: "Sync state",
-      value: FRESHNESS_LABEL[freshness.state],
-      detail: freshness.label,
+      label: t("pages.ux.syncStateTile"),
+      value: freshnessLabel(freshness.state, t),
+      detail: freshnessDetail(freshness.state, lastSync, t),
     },
     {
-      label: "Projects",
+      label: t("pages.ux.projectsTile"),
       value: canReadConnections ? String(projects.length) : "—",
       detail: canReadConnections
-        ? "Clarity projects linked in the account catalogue. Recordings and heatmaps stay in Clarity."
-        : "Reading the account catalogue needs the Integrations permission, so the number of Clarity projects is unknown.",
+        ? t("pages.ux.projectsDetail")
+        : t("pages.ux.projectsUnknownDetail"),
     },
   ];
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Heatmaps & UX"
-        subtitle="Behaviour signals and friction points."
+        title={t("pages.ux.title")}
+        subtitle={t("pages.ux.subtitle")}
       />
 
-      <Notice tone="info" title="What CCM stores">
-        CCM holds the Clarity connection and links to the native project for
-        replay and heatmaps. No behaviour metric has been read from Clarity:
-        there is no Clarity sync in this release, and no session recording,
-        heatmap, form field, page text or private identifier is stored.
-        Playback happens in Clarity, under the provider&apos;s own privacy and
-        masking controls.
+      <Notice tone="info" title={t("pages.ux.storageNoticeTitle")}>
+        {t("pages.ux.storageNoticeBody")}
       </Notice>
 
       {failure ? (
@@ -246,21 +333,21 @@ export default async function UxPage() {
 
           <Card>
             <CardHeader
-              title="Clarity connections"
-              subtitle="The connection state and the link to the native project"
+              title={t("pages.ux.connectionsCardTitle")}
+              subtitle={t("pages.ux.connectionsCardSubtitle")}
             />
             <CardBody className="p-0">
               {!canReadConnections ? (
                 <EmptyState
-                  title="Clarity connections are not visible to this role"
-                  description="Reading provider connections needs the Integrations permission. Ask an administrator for it to see whether Clarity is connected."
+                  title={t("pages.ux.notVisibleTitle")}
+                  description={t("pages.ux.notVisibleDescription")}
                   icon={<Eye className="size-5" />}
                   className="border-0"
                 />
               ) : connections.length === 0 ? (
                 <EmptyState
-                  title="No Clarity connection"
-                  description="Connect a Microsoft Clarity project to link the native replay and heatmaps. CCM keeps the connection and its sync state; it stores no recordings and reads no behaviour metrics yet."
+                  title={t("pages.ux.noConnectionTitle")}
+                  description={t("pages.ux.noConnectionDescription")}
                   icon={<Eye className="size-5" />}
                   className="border-0"
                 />
@@ -283,18 +370,22 @@ export default async function UxPage() {
                           </p>
                           <p className="text-body-sm text-muted-text">
                             {item.last_success_at
-                              ? `Last sync ${item.last_success_at.slice(0, 10)}`
-                              : "Never synced"}
+                              ? formatMessage(t("pages.ux.lastSyncOn"), {
+                                  date: item.last_success_at.slice(0, 10),
+                                })
+                              : t("pages.ux.neverSynced")}
                           </p>
                           <p className="text-body-sm text-muted-text">
                             {projectIds.length > 0
-                              ? `Clarity project ${projectIds.join(", ")}`
-                              : "No Clarity project linked"}
+                              ? formatMessage(t("pages.ux.clarityProject"), {
+                                  ids: projectIds.join(", "),
+                                })
+                              : t("pages.ux.noClarityProject")}
                           </p>
                         </div>
                         <div className="flex items-center gap-3">
                           <Chip tone={statusTone(item.status)}>
-                            {statusLabel(item.status)}
+                            {statusLabel(item.status, t)}
                           </Chip>
                           <a
                             href="https://clarity.microsoft.com/projects"
@@ -302,7 +393,7 @@ export default async function UxPage() {
                             rel="noopener noreferrer"
                             className="text-label-md font-semibold text-primary-ink hover:underline"
                           >
-                            Open Clarity
+                            {t("pages.ux.openClarity")}
                           </a>
                         </div>
                       </li>

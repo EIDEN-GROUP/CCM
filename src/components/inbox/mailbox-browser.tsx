@@ -1,6 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  Fragment,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import {
   ArrowLeft,
   Inbox,
@@ -13,6 +20,7 @@ import {
   TriangleAlert,
   X,
 } from "lucide-react";
+import { useI18n } from "@/components/providers/i18n-provider";
 import { Button } from "@/components/ui/button";
 import { Input, Textarea } from "@/components/ui/input";
 import { Chip } from "@/components/ui/chip";
@@ -81,13 +89,29 @@ interface PreparedSend {
   expiresInSeconds: number;
 }
 
+/** The mailbox sections, in the order Gmail shows them. */
 const LABELS = [
-  { key: "inbox", label: "Inbox" },
-  { key: "unread", label: "Unread" },
-  { key: "starred", label: "Starred" },
-  { key: "drafts", label: "Drafts" },
-  { key: "sent", label: "Sent" },
+  { key: "inbox", label: "pages.inbox.inbox" },
+  { key: "unread", label: "pages.inbox.unread" },
+  { key: "starred", label: "pages.inbox.starred" },
+  { key: "drafts", label: "pages.inbox.drafts" },
+  { key: "sent", label: "pages.inbox.sent" },
 ] as const;
+
+/**
+ * Fill a translated template with React nodes.
+ *
+ * The catalogue holds the sentence; the values — the sending identity, the
+ * subject — stay React nodes so they keep the emphasis the screen gives
+ * them.
+ */
+function fill(template: string, parts: Record<string, ReactNode>): ReactNode[] {
+  return template.split(/(\{\w+\})/g).map((chunk, index) => {
+    const name = /^\{(\w+)\}$/.exec(chunk)?.[1];
+    const content = name ? (parts[name] ?? chunk) : chunk;
+    return <Fragment key={index}>{content}</Fragment>;
+  });
+}
 
 export function MailboxBrowser({
   mailboxes,
@@ -96,6 +120,7 @@ export function MailboxBrowser({
   mailboxes: MailboxSummary[];
   canSend: boolean;
 }) {
+  const { t, tp, intlLocale, dir } = useI18n();
   const [mailboxId, setMailboxId] = useState(mailboxes[0]?.id ?? "");
   const [label, setLabel] = useState<(typeof LABELS)[number]["key"]>("inbox");
   const [search, setSearch] = useState("");
@@ -121,6 +146,10 @@ export function MailboxBrowser({
   const [sentNotice, setSentNotice] = useState<string | null>(null);
 
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // The section tabs. Only the one on screen is in the tab order; the
+  // arrow keys move the focus from one to the next.
+  const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
   // --- Listing --------------------------------------------------------------
 
@@ -160,7 +189,8 @@ export function MailboxBrowser({
 
       if (!response.ok || !body) {
         throw new Error(
-          body?.error ?? `The request failed (HTTP ${response.status}).`,
+          body?.error ??
+            tp("pages.inbox.requestFailed", { status: response.status }),
         );
       }
 
@@ -170,7 +200,7 @@ export function MailboxBrowser({
         resultSizeEstimate: body.resultSizeEstimate ?? null,
       };
     },
-    [mailboxId, label, query],
+    [mailboxId, label, query, tp],
   );
 
   /** Load a page and put it on screen. Used by the buttons. */
@@ -193,13 +223,13 @@ export function MailboxBrowser({
         setError(
           requestError instanceof Error
             ? requestError.message
-            : "CCM could not reach the server.",
+            : t("pages.inbox.serverUnreachable"),
         );
       } finally {
         setLoading(false);
       }
     },
-    [fetchThreads],
+    [fetchThreads, t],
   );
 
   useEffect(() => {
@@ -219,7 +249,7 @@ export function MailboxBrowser({
         setError(
           requestError instanceof Error
             ? requestError.message
-            : "CCM could not reach the server.",
+            : t("pages.inbox.serverUnreachable"),
         );
       })
       .finally(() => {
@@ -229,7 +259,7 @@ export function MailboxBrowser({
     return () => {
       cancelled = true;
     };
-  }, [fetchThreads]);
+  }, [fetchThreads, t]);
 
   // The search box is debounced, so a long query is not a request per key.
   function onSearchChange(value: string) {
@@ -262,24 +292,67 @@ export function MailboxBrowser({
       } | null;
 
       if (!response.ok || !body) {
-        setError(body?.error ?? `The request failed (HTTP ${response.status}).`);
+        setError(
+          body?.error ?? tp("pages.inbox.requestFailed", { status: response.status }),
+        );
         setMessages([]);
         return;
       }
 
       setMessages(body.messages ?? []);
     } catch {
-      setError("CCM could not reach the server.");
+      setError(t("pages.inbox.serverUnreachable"));
       setMessages([]);
     } finally {
       setLoadingThread(false);
     }
   }
 
+  /**
+   * Move between the sections with the arrow keys.
+   *
+   * The tab strip is a single stop in the tab order, so the arrow keys
+   * carry the focus from one section to the next and the section that
+   * takes the focus is the one that is then on screen. The direction
+   * follows the writing direction, so the keys do the same thing in
+   * Arabic as they do in English.
+   */
+  function onTabKeyDown(
+    event: React.KeyboardEvent<HTMLButtonElement>,
+    index: number,
+  ) {
+    const last = LABELS.length - 1;
+    const forward = dir === "rtl" ? "ArrowLeft" : "ArrowRight";
+    const backward = dir === "rtl" ? "ArrowRight" : "ArrowLeft";
+
+    let next: number | null = null;
+    if (event.key === forward) {
+      next = index === last ? 0 : index + 1;
+    } else if (event.key === backward) {
+      next = index === 0 ? last : index - 1;
+    } else if (event.key === "Home") {
+      next = 0;
+    } else if (event.key === "End") {
+      next = last;
+    }
+
+    if (next === null) return;
+
+    const target = LABELS[next];
+    if (!target) return;
+
+    event.preventDefault();
+    setLoading(true);
+    setLabel(target.key);
+    tabRefs.current[next]?.focus();
+  }
+
   async function toggleStar(message: MailMessage) {
+    setError(null);
+
     try {
       const params = new URLSearchParams({ mailboxId });
-      await fetch(
+      const response = await fetch(
         `/api/mailbox/messages/${encodeURIComponent(message.id)}?${params.toString()}`,
         {
           method: "PATCH",
@@ -287,6 +360,15 @@ export function MailboxBrowser({
           body: JSON.stringify({ starred: !message.isStarred }),
         },
       );
+
+      // The star is only flipped once the provider has accepted it.
+      if (!response.ok) {
+        setError(
+          tp("pages.inbox.starFailed", { status: response.status }),
+        );
+        return;
+      }
+
       setMessages((current) =>
         current.map((item) =>
           item.id === message.id
@@ -295,7 +377,7 @@ export function MailboxBrowser({
         ),
       );
     } catch {
-      setError("CCM could not reach the server.");
+      setError(t("pages.inbox.serverUnreachable"));
     }
   }
 
@@ -345,13 +427,15 @@ export function MailboxBrowser({
         | null;
 
       if (!response.ok || !body) {
-        setError(body?.error ?? `The request failed (HTTP ${response.status}).`);
+        setError(
+          body?.error ?? tp("pages.inbox.requestFailed", { status: response.status }),
+        );
         return;
       }
 
       setPrepared(body);
     } catch {
-      setError("CCM could not reach the server.");
+      setError(t("pages.inbox.serverUnreachable"));
     } finally {
       setSending(false);
     }
@@ -378,12 +462,17 @@ export function MailboxBrowser({
       } | null;
 
       if (!response.ok || !body?.ok) {
-        setError(body?.error ?? `The send failed (HTTP ${response.status}).`);
+        setError(
+          body?.error ?? tp("pages.inbox.sendFailed", { status: response.status }),
+        );
         return;
       }
 
       setSentNotice(
-        `Sent to ${(body.to ?? []).join(", ")} — “${body.subject}”.`,
+        tp("pages.inbox.sentNotice", {
+          to: (body.to ?? []).join(", "),
+          subject: body.subject ?? "",
+        }),
       );
       setComposing(false);
       setPrepared(null);
@@ -391,7 +480,7 @@ export function MailboxBrowser({
       setMessages([]);
       void load(page, cursors[page] ?? null);
     } catch {
-      setError("CCM could not reach the server.");
+      setError(t("pages.inbox.serverUnreachable"));
     } finally {
       setSending(false);
     }
@@ -402,8 +491,8 @@ export function MailboxBrowser({
   if (mailboxes.length === 0) {
     return (
       <EmptyState
-        title="No mailbox connected"
-        description="Connect a mailbox with the Gmail API in Integrations to bring the inbox into CCM."
+        title={t("pages.inbox.noMailboxTitle")}
+        description={t("pages.inbox.noMailboxClientDescription")}
         icon={<Inbox aria-hidden="true" className="size-5" />}
       />
     );
@@ -412,13 +501,13 @@ export function MailboxBrowser({
   return (
     <div className="space-y-4">
       {sentNotice ? (
-        <Notice tone="success" title="Message sent">
+        <Notice tone="success" title={t("pages.inbox.messageSentTitle")}>
           {sentNotice}
         </Notice>
       ) : null}
 
       {error ? (
-        <Notice tone="danger" title="The mailbox request failed">
+        <Notice tone="danger" title={t("pages.inbox.requestFailedTitle")}>
           {error}
         </Notice>
       ) : null}
@@ -429,7 +518,7 @@ export function MailboxBrowser({
             htmlFor="mailbox-select"
             className="mb-1 block text-label-md font-semibold text-secondary"
           >
-            Mailbox
+            {t("pages.inbox.mailbox")}
           </label>
           <select
             id="mailbox-select"
@@ -455,19 +544,19 @@ export function MailboxBrowser({
             htmlFor="mailbox-search"
             className="mb-1 block text-label-md font-semibold text-secondary"
           >
-            Search
+            {t("common.search")}
           </label>
           <div className="relative">
             <Search
               aria-hidden="true"
-              className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-text"
+              className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-text"
             />
             <Input
               id="mailbox-search"
               value={search}
               onChange={(event) => onSearchChange(event.target.value)}
-              placeholder="from:, subject:, is:unread, or a term"
-              className="pl-9"
+              placeholder={t("pages.inbox.searchPlaceholder")}
+              className="ps-9"
             />
           </div>
         </div>
@@ -477,68 +566,89 @@ export function MailboxBrowser({
           size="md"
           onClick={() => void load(page, cursors[page] ?? null)}
           disabled={loading}
-          title="Refresh"
+          title={t("common.refresh")}
         >
           {loading ? (
             <LoaderCircle aria-hidden="true" className="size-4 animate-spin" />
           ) : (
             <RefreshCw aria-hidden="true" className="size-4" />
           )}
-          <span className="sr-only">Refresh</span>
+          <span className="sr-only">{t("common.refresh")}</span>
         </Button>
 
         {canSend ? (
           <Button variant="primary" size="md" onClick={startCompose}>
             <Send aria-hidden="true" className="size-4" />
-            Compose
+            {t("pages.inbox.compose")}
           </Button>
         ) : null}
       </div>
 
+      {/*
+        The section tabs.
+
+        A complete tab set: the tabs name the panel they control, the
+        panel names the tab that is on it, and the arrow keys move between
+        them. Only the section on screen is in the tab order, so the strip
+        costs one keystroke rather than five.
+      */}
       <div
         role="tablist"
-        aria-label="Mailbox sections"
+        aria-label={t("pages.inbox.sectionsLabel")}
         className="flex flex-wrap gap-2"
       >
-        {LABELS.map((entry) => (
+        {LABELS.map((entry, index) => (
           <button
             key={entry.key}
+            ref={(node) => {
+              tabRefs.current[index] = node;
+            }}
+            id={`mailbox-tab-${entry.key}`}
             role="tab"
             type="button"
             aria-selected={label === entry.key}
+            aria-controls="mailbox-tabpanel"
+            tabIndex={label === entry.key ? 0 : -1}
+            onKeyDown={(event) => onTabKeyDown(event, index)}
             onClick={() => {
               setLoading(true);
               setLabel(entry.key);
             }}
             className={cn(
               "rounded-full border px-3.5 py-1.5 text-label-md font-semibold transition-colors",
+              "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-ink",
               label === entry.key
                 ? "border-primary/40 bg-pale text-primary-ink"
                 : "border-border bg-surface text-muted-text hover:bg-surface-muted",
             )}
           >
-            {entry.label}
+            {t(entry.label)}
           </button>
         ))}
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)]">
         {/* The list */}
-        <div className="rounded-lg border border-border bg-surface">
+        <div
+          id="mailbox-tabpanel"
+          role="tabpanel"
+          aria-labelledby={`mailbox-tab-${label}`}
+          className="rounded-lg border border-border bg-surface"
+        >
           <div className="flex items-center justify-between border-b border-border px-4 py-3">
             <h3 className="text-label-lg font-semibold text-secondary">
-              {LABELS.find((entry) => entry.key === label)?.label}
+              {t(LABELS.find((entry) => entry.key === label)?.label ?? "pages.inbox.inbox")}
             </h3>
             {loading ? <InlineSpinner /> : null}
           </div>
 
           {threads.length === 0 && !loading ? (
             <EmptyState
-              title="Nothing here"
+              title={t("pages.inbox.nothingHereTitle")}
               description={
                 query
-                  ? "No message matched that search."
-                  : "This mailbox section is empty."
+                  ? t("pages.inbox.noSearchMatchDescription")
+                  : t("pages.inbox.sectionEmptyDescription")
               }
               icon={<MailOpen aria-hidden="true" className="size-5" />}
               className="border-0"
@@ -558,7 +668,7 @@ export function MailboxBrowser({
                     <div className="flex items-start gap-2">
                       {thread.isUnread ? (
                         <span
-                          aria-label="Unread"
+                          aria-label={t("pages.inbox.unread")}
                           className="mt-1.5 size-2 shrink-0 rounded-full bg-primary"
                         />
                       ) : (
@@ -573,7 +683,7 @@ export function MailboxBrowser({
                               : "font-semibold text-secondary",
                           )}
                         >
-                          {thread.subject ?? "(no subject)"}
+                          {thread.subject ?? t("pages.inbox.noSubject")}
                         </p>
                         <p className="truncate text-body-sm text-muted-text">
                           {thread.participants.slice(0, 2).join(", ") || "—"}
@@ -609,11 +719,13 @@ export function MailboxBrowser({
                 }}
               >
                 <ArrowLeft aria-hidden="true" className="size-4" />
-                Previous
+                {t("common.previous")}
               </Button>
               <span className="text-body-sm text-muted-text">
-                Page {page + 1}
-                {estimate !== null ? ` · about ${estimate} in total` : ""}
+                {tp("pages.inbox.pageNumber", { page: page + 1 })}
+                {estimate !== null
+                  ? tp("pages.inbox.totalEstimate", { count: estimate })
+                  : ""}
               </span>
               <Button
                 variant="ghost"
@@ -629,7 +741,7 @@ export function MailboxBrowser({
                   void load(next, nextCursor);
                 }}
               >
-                Next
+                {t("common.next")}
               </Button>
             </div>
           ) : null}
@@ -641,7 +753,7 @@ export function MailboxBrowser({
             <div className="space-y-3 p-4">
               <div className="flex items-center justify-between">
                 <h3 className="text-label-lg font-semibold text-secondary">
-                  {replyTo ? "Reply" : "New message"}
+                  {replyTo ? t("pages.inbox.reply") : t("pages.inbox.newMessage")}
                 </h3>
                 <Button
                   variant="ghost"
@@ -652,33 +764,41 @@ export function MailboxBrowser({
                   }}
                 >
                   <X aria-hidden="true" className="size-4" />
-                  <span className="sr-only">Close</span>
+                  <span className="sr-only">{t("common.close")}</span>
                 </Button>
               </div>
 
               {prepared ? (
                 <div className="space-y-3">
-                  <Notice tone="warning" title="Confirm before sending">
+                  <Notice tone="warning" title={t("pages.inbox.confirmBeforeSendingTitle")}>
                     <p>
-                      This will send from{" "}
-                      <strong className="font-semibold">{prepared.from}</strong>{" "}
-                      ({prepared.fromLabel}) to{" "}
-                      <strong className="font-semibold">
-                        {prepared.to.join(", ")}
-                      </strong>
-                      {prepared.cc.length > 0
-                        ? `, cc ${prepared.cc.join(", ")}`
-                        : ""}
-                      , with the subject{" "}
-                      <strong className="font-semibold">
-                        “{prepared.subject}”
-                      </strong>
-                      .
+                      {fill(t("pages.inbox.confirmSendSummary"), {
+                        from: (
+                          <strong className="font-semibold">{prepared.from}</strong>
+                        ),
+                        label: prepared.fromLabel,
+                        to: (
+                          <strong className="font-semibold">
+                            {prepared.to.join(", ")}
+                          </strong>
+                        ),
+                        cc:
+                          prepared.cc.length > 0
+                            ? tp("pages.inbox.confirmSendCc", {
+                                cc: prepared.cc.join(", "),
+                              })
+                            : "",
+                        subject: (
+                          <strong className="font-semibold">
+                            “{prepared.subject}”
+                          </strong>
+                        ),
+                      })}
                     </p>
                     <p className="mt-2">
-                      A draft has been saved in the mailbox. It expires in{" "}
-                      {prepared.expiresInSeconds} seconds if it is not
-                      confirmed.
+                      {tp("pages.inbox.draftExpiry", {
+                        seconds: prepared.expiresInSeconds,
+                      })}
                     </p>
                   </Notice>
 
@@ -697,7 +817,7 @@ export function MailboxBrowser({
                       ) : (
                         <Send aria-hidden="true" className="size-4" />
                       )}
-                      Confirm and send
+                      {t("pages.inbox.confirmAndSend")}
                     </Button>
                     <Button
                       variant="ghost"
@@ -705,7 +825,7 @@ export function MailboxBrowser({
                       onClick={() => setPrepared(null)}
                       disabled={sending}
                     >
-                      Edit instead
+                      {t("pages.inbox.editInstead")}
                     </Button>
                   </div>
                 </div>
@@ -719,7 +839,7 @@ export function MailboxBrowser({
                       htmlFor="compose-to"
                       className="mb-1 block text-label-md font-semibold text-secondary"
                     >
-                      To
+                      {t("pages.inbox.to")}
                     </label>
                     <Input
                       id="compose-to"
@@ -735,13 +855,13 @@ export function MailboxBrowser({
                       htmlFor="compose-cc"
                       className="mb-1 block text-label-md font-semibold text-secondary"
                     >
-                      Cc
+                      {t("pages.inbox.cc")}
                     </label>
                     <Input
                       id="compose-cc"
                       name="cc"
                       type="email"
-                      placeholder="Optional"
+                      placeholder={t("pages.inbox.optional")}
                     />
                   </div>
                   <div>
@@ -749,7 +869,7 @@ export function MailboxBrowser({
                       htmlFor="compose-subject"
                       className="mb-1 block text-label-md font-semibold text-secondary"
                     >
-                      Subject
+                      {t("pages.inbox.subject")}
                     </label>
                     <Input
                       id="compose-subject"
@@ -767,7 +887,7 @@ export function MailboxBrowser({
                       htmlFor="compose-body"
                       className="mb-1 block text-label-md font-semibold text-secondary"
                     >
-                      Message
+                      {t("pages.inbox.message")}
                     </label>
                     <Textarea
                       id="compose-body"
@@ -783,7 +903,7 @@ export function MailboxBrowser({
                         className="size-4 animate-spin"
                       />
                     ) : null}
-                    Prepare to send
+                    {t("pages.inbox.prepareToSend")}
                   </Button>
                 </form>
               )}
@@ -793,7 +913,7 @@ export function MailboxBrowser({
               <div className="flex items-start justify-between gap-3 border-b border-border px-4 py-3">
                 <div className="min-w-0">
                   <h3 className="truncate text-label-lg font-semibold text-secondary">
-                    {openThread.subject ?? "(no subject)"}
+                    {openThread.subject ?? t("pages.inbox.noSubject")}
                   </h3>
                   <p className="text-body-sm text-muted-text">
                     {openThread.participants.join(", ")}
@@ -807,7 +927,7 @@ export function MailboxBrowser({
                       onClick={() => startReply(openThread)}
                     >
                       <Send aria-hidden="true" className="size-4" />
-                      Reply
+                      {t("pages.inbox.reply")}
                     </Button>
                   ) : null}
                   <Button
@@ -819,7 +939,7 @@ export function MailboxBrowser({
                     }}
                   >
                     <X aria-hidden="true" className="size-4" />
-                    <span className="sr-only">Close the thread</span>
+                    <span className="sr-only">{t("pages.inbox.closeThread")}</span>
                   </Button>
                 </div>
               </div>
@@ -830,8 +950,8 @@ export function MailboxBrowser({
                 </div>
               ) : messages.length === 0 ? (
                 <EmptyState
-                  title="Nothing to read"
-                  description="The provider returned no messages for this thread."
+                  title={t("pages.inbox.nothingToReadTitle")}
+                  description={t("pages.inbox.nothingToReadDescription")}
                   className="border-0"
                 />
               ) : (
@@ -841,7 +961,7 @@ export function MailboxBrowser({
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
                           <p className="text-body-md font-semibold text-tertiary">
-                            {message.fromName ?? message.from ?? "Unknown sender"}
+                            {message.fromName ?? message.from ?? t("pages.inbox.unknownSender")}
                           </p>
                           <p className="truncate text-body-sm text-muted-text">
                             {message.from ?? ""}
@@ -850,7 +970,7 @@ export function MailboxBrowser({
                         <div className="flex shrink-0 items-center gap-2">
                           {message.date ? (
                             <span className="text-body-sm text-muted-text">
-                              {new Date(message.date).toLocaleString()}
+                              {new Date(message.date).toLocaleString(intlLocale)}
                             </span>
                           ) : null}
                           <button
@@ -858,8 +978,8 @@ export function MailboxBrowser({
                             onClick={() => void toggleStar(message)}
                             aria-label={
                               message.isStarred
-                                ? "Remove the star"
-                                : "Star this message"
+                                ? t("pages.inbox.removeStar")
+                                : t("pages.inbox.starMessage")
                             }
                             className="rounded p-1 text-muted-text transition-colors hover:bg-surface-muted hover:text-warning-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-ink"
                           >
@@ -884,13 +1004,13 @@ export function MailboxBrowser({
                             aria-hidden="true"
                             className="size-4 shrink-0"
                           />
-                          The body could not be read from the provider.
+                          {t("pages.inbox.bodyUnreadable")}
                         </p>
                       )}
 
                       {message.hasAttachments ? (
                         <p className="mt-2">
-                          <Chip tone="neutral">Has attachments</Chip>
+                          <Chip tone="neutral">{t("pages.inbox.hasAttachments")}</Chip>
                         </p>
                       ) : null}
                     </li>
@@ -900,8 +1020,8 @@ export function MailboxBrowser({
             </div>
           ) : (
             <EmptyState
-              title="Select a conversation"
-              description="Choose a message on the left to read it, or search the mailbox."
+              title={t("pages.inbox.selectConversationTitle")}
+              description={t("pages.inbox.selectConversationDescription")}
               icon={<MailOpen aria-hidden="true" className="size-5" />}
               className="border-0"
             />

@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState, type ReactNode } from "react";
 import { CircleCheck, LoaderCircle, TriangleAlert } from "lucide-react";
+import { useI18n } from "@/components/providers/i18n-provider";
 import { Button } from "@/components/ui/button";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { Field, Input, Select } from "@/components/ui/input";
@@ -19,6 +20,21 @@ type SaveState =
   | { kind: "error"; message: string };
 
 /**
+ * Fill a translated template with React nodes.
+ *
+ * The catalogue holds the sentence; the values — a file path, a command — stay
+ * React nodes so they keep the code formatting the screen gives them, and a
+ * command stays copyable.
+ */
+function fill(template: string, parts: Record<string, ReactNode>): ReactNode[] {
+  return template.split(/(\{\w+\})/g).map((chunk, index) => {
+    const name = /^\{(\w+)\}$/.exec(chunk)?.[1];
+    const content = name ? (parts[name] ?? chunk) : chunk;
+    return <Fragment key={index}>{content}</Fragment>;
+  });
+}
+
+/**
  * The pairing step of the launcher setup.
  *
  * The extension's instance id identifies one browser profile. The operator
@@ -26,6 +42,7 @@ type SaveState =
  * profile.
  */
 export function LauncherSetup({ accounts }: { accounts: LaunchableAccount[] }) {
+  const { t } = useI18n();
   const [extensionPresent, setExtensionPresent] = useState<boolean | null>(null);
   const [detected, setDetected] = useState<string | null>(null);
   const [accountId, setAccountId] = useState(accounts[0]?.id ?? "");
@@ -52,31 +69,35 @@ export function LauncherSetup({ accounts }: { accounts: LaunchableAccount[] }) {
     <div className="space-y-4">
       <Card>
         <CardHeader
-          title="Step 1 — install the browser bridge"
-          subtitle="Optional, but it adds verified launches and profile mapping"
+          title={t("pages.launcher.step1Title")}
+          subtitle={t("pages.launcher.step1Subtitle")}
         />
         <CardBody className="space-y-3">
           {extensionPresent === null ? (
             <p className="flex items-center gap-2 text-body-sm text-muted-text">
               <LoaderCircle aria-hidden="true" className="size-4 animate-spin" />
-              Checking for the extension…
+              {t("pages.launcher.checkingExtension")}
             </p>
           ) : extensionPresent ? (
             <p className="flex items-center gap-2 text-body-sm text-primary-ink">
               <CircleCheck aria-hidden="true" className="size-4" />
-              The browser bridge is installed in this browser profile.
+              {t("pages.launcher.extensionInstalled")}
             </p>
           ) : (
-            <Notice tone="warning" title="Extension not detected">
+            <Notice tone="warning" title={t("pages.launcher.extensionNotDetectedTitle")}>
               <p>
-                Load the unpacked extension from{" "}
-                <code className="rounded bg-surface px-1.5 py-0.5 text-[13px]">
-                  apps/ccm-browser-bridge
-                </code>{" "}
-                in <code className="rounded bg-surface px-1.5 py-0.5 text-[13px]">chrome://extensions</code>,
-                open its options page and enter this CCM origin. Account
-                launching still works without it — the tab simply opens in the
-                current profile.
+                {fill(t("pages.launcher.loadExtensionBody"), {
+                  bridgePath: (
+                    <code className="rounded bg-surface px-1.5 py-0.5 text-label-sm">
+                      apps/ccm-browser-bridge
+                    </code>
+                  ),
+                  extensionsUrl: (
+                    <code className="rounded bg-surface px-1.5 py-0.5 text-label-sm">
+                      chrome://extensions
+                    </code>
+                  ),
+                })}
               </p>
             </Notice>
           )}
@@ -84,7 +105,7 @@ export function LauncherSetup({ accounts }: { accounts: LaunchableAccount[] }) {
           {detected ? (
             <div className="space-y-1.5">
               <p className="text-label-md font-semibold text-secondary">
-                This profile&apos;s instance id
+                {t("pages.launcher.instanceIdLabel")}
               </p>
               <code className="block select-all rounded-md border border-border bg-surface-muted px-3 py-2 font-mono text-body-sm text-secondary">
                 {detected}
@@ -96,18 +117,17 @@ export function LauncherSetup({ accounts }: { accounts: LaunchableAccount[] }) {
 
       <Card>
         <CardHeader
-          title="Step 2 — map a browser profile"
-          subtitle="Tie an account to the profile that holds its provider session"
+          title={t("pages.launcher.step2Title")}
+          subtitle={t("pages.launcher.step2Subtitle")}
         />
         <CardBody className="space-y-4">
           {accounts.length === 0 ? (
-            <Notice tone="info" title="No accounts yet">
-              Register a provider account from Integrations first, then come
-              back to map it to a browser profile.
+            <Notice tone="info" title={t("pages.launcher.noAccountsTitle")}>
+              {t("pages.launcher.noAccountsBody")}
             </Notice>
           ) : (
             <>
-              <Field label="Account" htmlFor="account" required>
+              <Field label={t("pages.launcher.accountLabel")} htmlFor="account" required>
                 <Select
                   id="account"
                   value={accountId}
@@ -135,72 +155,73 @@ export function LauncherSetup({ accounts }: { accounts: LaunchableAccount[] }) {
 
       <Card>
         <CardHeader
-          title="Multiple browser profiles"
-          subtitle="What is and is not possible"
+          title={t("pages.launcher.multiProfileTitle")}
+          subtitle={t("pages.launcher.multiProfileSubtitle")}
         />
         <CardBody className="space-y-3 text-body-sm text-secondary">
-          <p>
-            A normal web page cannot force Chrome, Edge or Firefox to open a
-            different profile. The bridge extension can, because it opens the
-            tab in the profile where it is installed — so the reliable
-            workflow for a second identity is to install the extension in that
-            profile and map the account to that instance id.
-          </p>
+          <p>{t("pages.launcher.multiProfileBody")}</p>
           <p className="flex items-start gap-2">
             <TriangleAlert aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-warning-ink" />
-            The optional local helper exists for the case where the account
-            lives in a profile you cannot install the extension into. It is
-            explicitly installed and paired by you, it only accepts
-            allow-listed hosts and configured profile directories, and it never
-            reads, exports or modifies cookies or passwords.
+            {t("pages.launcher.multiProfileHelperBody")}
           </p>
         </CardBody>
       </Card>
 
       <Card>
         <CardHeader
-          title="The local helper"
-          subtitle="For a profile the extension cannot be installed in"
+          title={t("pages.launcher.helperTitle")}
+          subtitle={t("pages.launcher.helperSubtitle")}
         />
         <CardBody className="space-y-3 text-body-sm text-secondary">
-          <p>
-            The helper is a small program that runs on your own machine. It
-            opens the account in a named browser profile — the one case a web
-            page and the extension both cannot cover.
-          </p>
-          <ol className="ml-4 list-decimal space-y-1.5">
+          <p>{t("pages.launcher.helperIntro")}</p>
+          <ol className="ms-4 list-decimal space-y-1.5">
             <li>
-              Run it from the repository:{" "}
-              <code className="rounded bg-surface px-1.5 py-0.5 text-[13px]">
-                cd apps/ccm-helper &amp;&amp; npm install &amp;&amp; npm start
-              </code>
+              {fill(t("pages.launcher.helperRunCommand"), {
+                command: (
+                  <code className="rounded bg-surface px-1.5 py-0.5 text-label-sm">
+                    cd apps/ccm-helper &amp;&amp; npm install &amp;&amp; npm start
+                  </code>
+                ),
+              })}
             </li>
             <li>
-              Pair it with this deployment. The helper prints a{" "}
-              <strong>pairing code</strong> on its own console when it
-              starts; that code is required, so no other page can re-point
-              the helper at a site of its choosing:{" "}
-              <code className="rounded bg-surface px-1.5 py-0.5 text-[13px]">
-                {
-                  'curl -X POST http://127.0.0.1:8787/pair -H "Content-Type: application/json" -d \'{"origin":"https://your-ccm-origin","pairingToken":"<the code it printed>"}\''
-                }
-              </code>
+              {fill(t("pages.launcher.helperPairBody"), {
+                code: <strong>{t("pages.launcher.pairingCode")}</strong>,
+                command: (
+                  <code className="rounded bg-surface px-1.5 py-0.5 text-label-sm">
+                    {
+                      'curl -X POST http://127.0.0.1:8787/pair -H "Content-Type: application/json" -d \'{"origin":"https://your-ccm-origin","pairingToken":"<the code it printed>"}\''
+                    }
+                  </code>
+                ),
+              })}
             </li>
             <li>
-              Choose <strong>Local helper</strong> as the launch mode above
-              and name the browser profile directory — the one shown in{" "}
-              <code className="rounded bg-surface px-1.5 py-0.5 text-[13px]">
-                chrome://version
-              </code>
-              , for example <code>Profile 1</code> or <code>Default</code>.
+              {fill(t("pages.launcher.helperChooseBody"), {
+                mode: (
+                  <strong>{t("pages.launcher.modeHelperShort")}</strong>
+                ),
+                version: (
+                  <code className="rounded bg-surface px-1.5 py-0.5 text-label-sm">
+                    chrome://version
+                  </code>
+                ),
+                example: (
+                  <code className="rounded bg-surface px-1.5 py-0.5 text-label-sm">
+                    Profile 1
+                  </code>
+                ),
+                fallback: (
+                  <code className="rounded bg-surface px-1.5 py-0.5 text-label-sm">
+                    Default
+                  </code>
+                ),
+              })}
             </li>
           </ol>
           <p className="flex items-start gap-2">
             <TriangleAlert aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-warning-ink" />
-            The helper accepts only a signed launch ticket, checks the
-            destination against the provider allowlist, and opens the browser
-            with the browser&apos;s own cookie store. It never reads a cookie,
-            a password or an MFA code.
+            {t("pages.launcher.helperWarning")}
           </p>
         </CardBody>
       </Card>
@@ -221,6 +242,8 @@ function MappingForm({
   account: LaunchableAccount;
   detectedInstanceId: string | null;
 }) {
+  const { t, tp } = useI18n();
+
   // The saved mapping is the starting point. Without this, saving the form
   // would silently wipe the instance id the operator had already recorded.
   const [instanceId, setInstanceId] = useState(
@@ -260,7 +283,8 @@ function MappingForm({
         setState({
           kind: "error",
           message:
-            body?.error ?? `The mapping could not be saved (HTTP ${response.status}).`,
+            body?.error ??
+            tp("pages.launcher.mappingSaveFailed", { status: response.status }),
         });
         return;
       }
@@ -268,7 +292,7 @@ function MappingForm({
     } catch {
       setState({
         kind: "error",
-        message: "CCM could not reach the server to save the mapping.",
+        message: t("pages.launcher.serverUnreachable"),
       });
     }
   }
@@ -276,9 +300,9 @@ function MappingForm({
   return (
     <div className="space-y-4">
       <Field
-        label="Extension instance id"
+        label={t("pages.launcher.instanceIdLabelField")}
         htmlFor="instance-id"
-        hint="Paste the id from the extension's options page, or use the button above."
+        hint={t("pages.launcher.instanceIdHint")}
       >
         <Input
           id="instance-id"
@@ -300,14 +324,14 @@ function MappingForm({
             setState({ kind: "idle" });
           }}
         >
-          Use this browser profile&apos;s instance id
+          {t("pages.launcher.useDetectedInstance")}
         </Button>
       ) : null}
 
       <Field
-        label="Profile label"
+        label={t("pages.launcher.profileLabelLabel")}
         htmlFor="profile-label"
-        hint="How this profile appears to your team, e.g. “Chrome — Work”."
+        hint={t("pages.launcher.profileLabelHint")}
       >
         <Input
           id="profile-label"
@@ -321,9 +345,9 @@ function MappingForm({
       </Field>
 
       <Field
-        label="Profile directory"
+        label={t("pages.launcher.profileDirectoryLabel")}
         htmlFor="profile-directory"
-        hint="The Chrome/Edge profile directory (for example “Profile 1”). Only used by the optional local helper; leave blank for a direct launch."
+        hint={t("pages.launcher.profileDirectoryHint")}
       >
         <Input
           id="profile-directory"
@@ -337,9 +361,9 @@ function MappingForm({
       </Field>
 
       <Field
-        label="Launch mode"
+        label={t("pages.launcher.launchModeLabel")}
         htmlFor="launch-mode"
-        hint="How the account should be opened."
+        hint={t("pages.launcher.launchModeHint")}
       >
         <Select
           id="launch-mode"
@@ -349,13 +373,9 @@ function MappingForm({
             setState({ kind: "idle" });
           }}
         >
-          <option value="direct">Direct — open a tab in this browser</option>
-          <option value="extension">
-            Extension — open in the profile where the bridge is installed
-          </option>
-          <option value="helper">
-            Local helper — open in a specific browser profile
-          </option>
+          <option value="direct">{t("pages.launcher.modeDirect")}</option>
+          <option value="extension">{t("pages.launcher.modeExtension")}</option>
+          <option value="helper">{t("pages.launcher.modeHelper")}</option>
         </Select>
       </Field>
 
@@ -368,13 +388,13 @@ function MappingForm({
         {state.kind === "saving" ? (
           <LoaderCircle aria-hidden="true" className="size-4 animate-spin" />
         ) : null}
-        Save mapping
+        {t("pages.launcher.saveMapping")}
       </Button>
 
       {state.kind === "saved" ? (
         <p className="flex items-center gap-2 text-body-sm text-primary-ink">
           <CircleCheck aria-hidden="true" className="size-4" />
-          Mapping saved. The account tile now shows this profile.
+          {t("pages.launcher.mappingSaved")}
         </p>
       ) : null}
 

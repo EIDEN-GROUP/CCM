@@ -16,12 +16,16 @@ import { coverageOf, computeCpa, computeCtr, computeRoas, describeChange, sumSer
 import { formatMoney, formatPercent, microsToAmount } from "@/domain/currency";
 import { formatAge } from "@/domain/freshness";
 import { addNullable, formatCount } from "@/domain/metrics";
-import { getLocale } from "@/lib/i18n-server";
+import { getLocale, getTranslator } from "@/lib/i18n-server";
 import { intlLocale } from "@/lib/i18n";
 import { ErrorState } from "@/components/ui/states";
 
-export const metadata: Metadata = { title: "Google Ads" };
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslator();
+  return { title: t("nav.googleAds") };
+}
 
 /**
  * Google Ads, read-only.
@@ -46,6 +50,7 @@ export default async function GoogleAdsPage({
   const today = getTodayInTimezone(session.workspaceTimezone);
   const { current, previous } = resolveRangeFromParams(params, today);
   const workspaceId = session.workspaceId!;
+  const t = await getTranslator();
   const locale = intlLocale(await getLocale());
 
   // A failed query is **not** an empty result. The difference is the whole
@@ -61,7 +66,7 @@ export default async function GoogleAdsPage({
     failure =
       error instanceof Error
         ? error.message
-        : "The Google Ads metrics could not be read.";
+        : t("pages.googleAds.metricsError");
   }
 
   if (!failure) {
@@ -152,14 +157,12 @@ export default async function GoogleAdsPage({
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Google Ads"
-        subtitle="Spend, campaigns, conversions and pacing."
+        title={t("pages.googleAds.title")}
+        subtitle={t("pages.googleAds.subtitle")}
       />
 
-      <Notice tone="warning" title="Read-only">
-        Campaign edits, budget changes, pauses and bulk operations are disabled
-        in this release. They require a preview, an explicit approval, an audit
-        record and a reversible version reference before they can be offered.
+      <Notice tone="warning" title={t("pages.googleAds.readOnlyTitle")}>
+        {t("pages.googleAds.readOnlyBody")}
       </Notice>
 
       {failure ? (
@@ -171,7 +174,7 @@ export default async function GoogleAdsPage({
         <>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         <KpiCard
-          label="Spend"
+          label={t("pages.googleAds.spend")}
            coverage={coverageOf(spend)}
           value={formatMoney(spendMoney)}
           change={describeChange(spend.value, previousSpend.value)}
@@ -188,39 +191,39 @@ export default async function GoogleAdsPage({
           }
         />
         <KpiCard
-          label="Impressions"
+          label={t("pages.googleAds.impressions")}
            coverage={coverageOf(impressions)}
           value={
             impressions.value === null
               ? "—"
-              : new Intl.NumberFormat("en-GB", { notation: "compact" }).format(
+              : new Intl.NumberFormat(locale, { notation: "compact" }).format(
                   impressions.value,
                 )
           }
         />
         <KpiCard
-          label="Clicks"
+          label={t("pages.googleAds.clicks")}
            coverage={coverageOf(clicks)}
           value={
             clicks.value === null
               ? "—"
-              : new Intl.NumberFormat("en-GB", { notation: "compact" }).format(
+              : new Intl.NumberFormat(locale, { notation: "compact" }).format(
                   clicks.value,
                 )
           }
         />
         <KpiCard
-          label="Conversions"
+          label={t("pages.googleAds.conversions")}
            coverage={coverageOf(conversions)}
           value={
             conversions.value === null
               ? "—"
-              : new Intl.NumberFormat("en-GB").format(conversions.value)
+              : new Intl.NumberFormat(locale).format(conversions.value)
           }
           change={describeChange(conversions.value, previousConversions.value)}
         />
         <KpiCard
-          label="ROAS"
+          label={t("pages.googleAds.roas")}
            coverage={coverageOf(spend)}
           value={roas?.value === null || roas === null ? "—" : `${roas.value.toFixed(2)}x`}
         />
@@ -228,7 +231,7 @@ export default async function GoogleAdsPage({
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <KpiCard
-          label="CTR"
+          label={t("pages.googleAds.ctr")}
            coverage={coverageOf(clicks)}
           value={formatPercent(
             computeCtr(
@@ -238,7 +241,7 @@ export default async function GoogleAdsPage({
           )}
         />
         <KpiCard
-          label="Avg. CPC"
+          label={t("pages.googleAds.avgCpc")}
            coverage={coverageOf(clicks)}
           value={formatMoney(
             clicks.value === null || clicks.value === 0 || spendMoney === null
@@ -247,14 +250,14 @@ export default async function GoogleAdsPage({
           )}
         />
         <KpiCard
-          label="CPA"
+          label={t("pages.googleAds.cpa")}
            coverage={coverageOf(conversions)}
           value={formatMoney(
             cpa ? { amount: cpa.value ?? 0, currency } : null,
           )}
         />
         <KpiCard
-          label="Conversion value"
+          label={t("pages.googleAds.convValue")}
            coverage={coverageOf(conversionValue)}
           value={formatMoney(
             conversionValue.value === null
@@ -269,26 +272,26 @@ export default async function GoogleAdsPage({
 
       <Card>
         <CardHeader
-          title="Campaigns"
-          subtitle="Account performance for the selected period"
+          title={t("pages.googleAds.campaigns")}
+          subtitle={t("pages.googleAds.campaignsSubtitle")}
         />
         <CardBody className="p-0">
-          {campaigns.size === 0 ? (
-            <EmptyState
-              title="No campaign data yet"
-              description="Connect a Google Ads account. The Google Ads API access level is granted on the Google Cloud project — see Integrations for the setup steps."
-              icon={<BadgeDollarSign className="size-5" />}
-              className="border-0"
-            />
-          ) : (
             <DataTable
-              label="Campaigns"
+              label={t("pages.googleAds.campaigns")}
               rows={[...campaigns.values()]}
+              empty={
+                <EmptyState
+                  title={t("pages.googleAds.noCampaignsTitle")}
+                  description={t("pages.googleAds.noCampaignsBody")}
+                  icon={<BadgeDollarSign className="size-5" />}
+                  className="border-0"
+                />
+              }
               rowKey={(row) => row.id}
               columns={[
                 {
                   key: "name",
-                  header: "Campaign",
+                  header: t("common.campaign"),
                   mobile: "primary",
                   render: (row) => (
                     <span className="font-semibold text-tertiary">{row.label}</span>
@@ -296,21 +299,21 @@ export default async function GoogleAdsPage({
                 },
                 {
                   key: "impressions",
-                  header: "Impressions",
+                  header: t("pages.googleAds.impressions"),
                   numeric: true,
                   mobile: "secondary",
                   render: (row) => formatCount(row.impressions, locale),
                 },
                 {
                   key: "clicks",
-                  header: "Clicks",
+                  header: t("pages.googleAds.clicks"),
                   numeric: true,
                   mobile: "secondary",
                   render: (row) => formatCount(row.clicks, locale),
                 },
                 {
                   key: "spend",
-                  header: "Spend",
+                  header: t("pages.googleAds.spend"),
                   numeric: true,
                   mobile: "secondary",
                   render: (row) =>
@@ -323,16 +326,16 @@ export default async function GoogleAdsPage({
                 },
                 {
                   key: "conversions",
-                  header: "Conversions",
+                  header: t("pages.googleAds.conversions"),
                   numeric: true,
                   mobile: "secondary",
                   render: (row) => formatCount(row.conversions, locale),
                 },
                 {
                   key: "cpa",
-                  header: "CPA",
+                  header: t("pages.googleAds.cpa"),
                   numeric: true,
-                  mobile: "hidden",
+                  mobile: "secondary",
                   render: (row) =>
                     row.conversions === null || row.cost === null || row.conversions === 0
                       ? "—"
@@ -343,7 +346,6 @@ export default async function GoogleAdsPage({
                 },
               ]}
             />
-          )}
         </CardBody>
       </Card>
         </>

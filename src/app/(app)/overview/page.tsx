@@ -26,12 +26,16 @@ import { formatMoney, formatPercent, microsToAmount } from "@/domain/currency";
 import { addNullable, formatCount } from "@/domain/metrics";
 import { eachDay } from "@/domain/dates";
 import { SYNC_INTERVALS, computeFreshness, formatAge } from "@/domain/freshness";
-import { getLocale } from "@/lib/i18n-server";
-import { intlLocale } from "@/lib/i18n";
+import { getLocale, getTranslator } from "@/lib/i18n-server";
+import { formatMessage, intlLocale, type Translator } from "@/lib/i18n";
 import { ErrorState } from "@/components/ui/states";
 
-export const metadata: Metadata = { title: "Overview" };
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslator();
+  return { title: t("nav.overview") };
+}
 
 /**
  * The Executive Command Center.
@@ -54,6 +58,7 @@ export default async function OverviewPage({
   const today = getTodayInTimezone(session.workspaceTimezone);
   const { current, previous } = resolveRangeFromParams(params, today);
   const workspaceId = session.workspaceId!;
+  const t = await getTranslator();
   const locale = intlLocale(await getLocale());
 
   // A failed query is **not** an empty result. The difference is the whole
@@ -74,7 +79,7 @@ export default async function OverviewPage({
     failure =
       error instanceof Error
         ? error.message
-        : "The metrics could not be read.";
+        : t("pages.overview.metricsError");
   }
 
   // The comparison period is optional. Losing it means no trend, not a
@@ -253,7 +258,7 @@ export default async function OverviewPage({
   const series = [
     {
       key: "organic",
-      label: "Organic search",
+      label: t("pages.overview.organicSearch"),
       color: "#4bbdbd",
       points: days.map((day) => ({
         day,
@@ -271,7 +276,7 @@ export default async function OverviewPage({
     },
     {
       key: "paid",
-      label: "Paid search",
+      label: t("pages.overview.paidSearch"),
       color: "#6ccaca",
       points: days.map((day) => ({
         day,
@@ -289,7 +294,7 @@ export default async function OverviewPage({
     },
     {
       key: "sessions",
-      label: "Sessions",
+      label: t("pages.analytics.sessions"),
       color: "#8ad6d6",
       points: days.map((day) => ({
         day,
@@ -364,29 +369,51 @@ export default async function OverviewPage({
   const ga4FetchedAt = latestFetchedAt(ga4Rows);
   const gscFetchedAt = latestFetchedAt(gscRows);
 
+  // The freshness wording is produced by the domain layer, which only speaks
+  // English. The page maps the state onto the catalogue so the chip reads in
+  // the signed-in language; the tone decision stays exactly as it was.
+  const freshnessText = (
+    row: (typeof connectionRows)[number],
+    translate: Translator,
+  ): string => {
+    if (row.freshness.state === "never") {
+      return row.connection.status !== "connected"
+        ? translate("pages.overview.freshnessSyncFailing")
+        : translate("pages.overview.freshnessNotConnected");
+    }
+    switch (row.freshness.state) {
+      case "fresh":
+        return translate("pages.overview.freshnessUpToDate");
+      case "aging":
+        return translate("pages.overview.freshnessRefreshOverdue");
+      case "stale":
+        return translate("pages.overview.freshnessStale");
+      default:
+        return translate("pages.overview.freshnessLastSyncFailed");
+    }
+  };
+
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Welcome to CCM"
-        subtitle="Your central hub for marketing, growth and digital operations."
+        title={t("pages.overview.title")}
+        subtitle={t("pages.overview.subtitle")}
         actions={
           <Link
             href="/integrations"
             className="inline-flex h-[47px] items-center justify-center gap-2 rounded-md bg-primary px-[25px] text-button-text font-semibold text-tertiary transition-colors hover:bg-primary-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-ink"
           >
             <Plug aria-hidden="true" className="size-4" />
-            Connect a source
+            {t("pages.overview.connectSource")}
           </Link>
         }
       />
 
       {!hasData && !failure ? (
-        <Notice tone="info" title="No live data yet">
-          CCM is connected to your workspace but no provider has reported yet.
-          The figures below stay empty until a source syncs — CCM does not
-          substitute zeros for missing data. Connect a provider from{" "}
+        <Notice tone="info" title={t("pages.overview.noLiveDataTitle")}>
+          {t("pages.overview.noLiveDataBody")}{" "}
           <Link href="/integrations" className="font-semibold underline">
-            Integrations
+            {t("nav.integrations")}
           </Link>
           .
         </Notice>
@@ -402,14 +429,14 @@ export default async function OverviewPage({
       {/* KPI row */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-6">
         <KpiCard
-          label="Ad spend"
+          label={t("pages.overview.adSpend")}
            coverage={coverageOf(adsTotals)}
           value={formatMoney(spendMoney, locale)}
           change={describeChange(adsTotals.value, previousAdsTotals.value)}
           source={adsFetchedAt ? { label: "Google Ads", fetchedAt: adsFetchedAt, ageLabel: formatAge((now.getTime() - Date.parse(adsFetchedAt)) / 1000) } : null}
         />
         <KpiCard
-          label="Conversions"
+          label={t("pages.overview.conversions")}
            coverage={coverageOf(adsConversions)}
           value={formatCount(adsConversions.value, locale)}
           change={describeChange(
@@ -419,7 +446,7 @@ export default async function OverviewPage({
           source={adsFetchedAt ? { label: "Google Ads", fetchedAt: adsFetchedAt, ageLabel: formatAge((now.getTime() - Date.parse(adsFetchedAt)) / 1000) } : null}
         />
         <KpiCard
-          label="Organic clicks"
+          label={t("pages.overview.organicClicks")}
            coverage={coverageOf(gscClicks)}
           value={
             gscClicks.value === null
@@ -442,7 +469,7 @@ export default async function OverviewPage({
           }
         />
         <KpiCard
-          label="GA4 sessions"
+          label={t("pages.overview.sessions")}
            coverage={coverageOf(ga4Sessions)}
           value={
             ga4Sessions.value === null
@@ -455,13 +482,13 @@ export default async function OverviewPage({
           source={ga4FetchedAt ? { label: "GA4", fetchedAt: ga4FetchedAt, ageLabel: formatAge((now.getTime() - Date.parse(ga4FetchedAt)) / 1000) } : null}
         />
         <KpiCard
-          label="GA4 key events"
+          label={t("pages.overview.ga4KeyEvents")}
            coverage={coverageOf(ga4KeyEvents)}
           value={formatCount(ga4KeyEvents.value, locale)}
           source={ga4FetchedAt ? { label: "GA4", fetchedAt: ga4FetchedAt, ageLabel: formatAge((now.getTime() - Date.parse(ga4FetchedAt)) / 1000) } : null}
         />
         <KpiCard
-          label="Cost per conversion"
+          label={t("pages.overview.costPerConversion")}
            coverage={coverageOf(adsConversions)}
           value={formatMoney(
             cpa && cpa.value !== null
@@ -477,16 +504,19 @@ export default async function OverviewPage({
       <div className="grid gap-4 xl:grid-cols-3">
         <Card className="xl:col-span-2">
           <CardHeader
-            title="Channel trends"
-            subtitle="Performance across all channels"
+            title={t("pages.overview.channelTrends")}
+            subtitle={t("pages.overview.channelTrendsSubtitle")}
           />
           <CardBody>
             {hasData ? (
-              <ChannelTrendChart series={series} valueLabel="Clicks" />
+              <ChannelTrendChart
+                series={series}
+                valueLabel={t("pages.overview.clicks")}
+              />
             ) : (
               <EmptyState
-                title="No trend data yet"
-                description="The chart fills in as soon as the first sync lands."
+                title={t("pages.overview.noTrendDataTitle")}
+                description={t("pages.overview.noTrendDataBody")}
               />
             )}
           </CardBody>
@@ -494,67 +524,66 @@ export default async function OverviewPage({
 
         <Card>
           <CardHeader
-            title="Top campaigns"
-            subtitle="By spend in the selected period"
+            title={t("pages.overview.topCampaigns")}
+            subtitle={t("pages.overview.topCampaignsSubtitle")}
             actions={
               <Link
                 href="/google-ads"
                 className="inline-flex items-center gap-1 text-label-md font-semibold text-primary-ink hover:underline"
               >
-                View all
+                {t("common.viewAll")}
                 <ArrowRight aria-hidden="true" className="size-3.5" />
               </Link>
             }
           />
           <CardBody className="p-0">
-            {topCampaigns.length === 0 ? (
-              <EmptyState
-                title="No campaigns"
-                description="Connect Google Ads to see campaign performance."
-                className="border-0"
-              />
-            ) : (
-              <DataTable
-                label="Top campaigns"
-                rows={topCampaigns}
-                rowKey={(row) => row.dimension_id}
-                columns={[
-                  {
-                    key: "name",
-                    header: "Campaign",
-                    mobile: "primary",
-                    render: (row) => (
-                      <span className="font-semibold text-tertiary">
-                        {row.dimension_label ?? row.dimension_id}
-                      </span>
-                    ),
-                  },
-                  {
-                    key: "spend",
-                    header: "Spend",
-                    numeric: true,
-                    mobile: "secondary",
-                    render: (row) =>
-                      row.cost_micros === null
-                        ? "—"
-                        : formatMoney(
-                            {
-                              amount: microsToAmount(row.cost_micros, "MAD"),
-                              currency: "MAD",
-                            },
-                            locale,
-                          ),
-                  },
-                  {
-                    key: "conversions",
-                    header: "Conversions",
-                    numeric: true,
-                    mobile: "secondary",
-                    render: (row) => formatCount(row.conversions, locale),
-                  },
-                ]}
-              />
-            )}
+            <DataTable
+              label={t("pages.overview.topCampaigns")}
+              rows={topCampaigns}
+              empty={
+                <EmptyState
+                  title={t("pages.overview.noCampaignsTitle")}
+                  description={t("pages.overview.noCampaignsBody")}
+                  className="border-0"
+                />
+              }
+              rowKey={(row) => row.dimension_id}
+              columns={[
+                {
+                  key: "name",
+                  header: t("common.campaign"),
+                  mobile: "primary",
+                  render: (row) => (
+                    <span className="font-semibold text-tertiary">
+                      {row.dimension_label ?? row.dimension_id}
+                    </span>
+                  ),
+                },
+                {
+                  key: "spend",
+                  header: t("pages.googleAds.spend"),
+                  numeric: true,
+                  mobile: "secondary",
+                  render: (row) =>
+                    row.cost_micros === null
+                      ? "—"
+                      : formatMoney(
+                          {
+                            amount: microsToAmount(row.cost_micros, "MAD"),
+                            currency: "MAD",
+                          },
+                          locale,
+                        ),
+                },
+                {
+                  key: "conversions",
+                  header: t("pages.overview.conversions"),
+                  numeric: true,
+                  mobile: "secondary",
+                  render: (row) => formatCount(row.conversions, locale),
+                },
+              ]}
+            />
           </CardBody>
         </Card>
       </div>
@@ -562,7 +591,9 @@ export default async function OverviewPage({
       {/* Secondary metrics */}
       <div className="grid gap-4 lg:grid-cols-3">
         <StatCard>
-          <h3 className="text-label-md font-semibold text-secondary">CTR</h3>
+          <h3 className="text-label-md font-semibold text-secondary">
+            {t("pages.overview.ctr")}
+          </h3>
           <p className="mt-1 text-headline-md font-bold text-tertiary">
             {formatPercent(
               computeCtr(
@@ -576,7 +607,9 @@ export default async function OverviewPage({
         </StatCard>
 
         <StatCard>
-          <h3 className="text-label-md font-semibold text-secondary">ROAS</h3>
+          <h3 className="text-label-md font-semibold text-secondary">
+            {t("pages.overview.roas")}
+          </h3>
           <p className="mt-1 text-headline-md font-bold text-tertiary">
             {roas?.value === null || roas === null
               ? "—"
@@ -584,14 +617,14 @@ export default async function OverviewPage({
           </p>
           <p className="mt-1 text-body-sm text-muted-text">
             {conversionValue.value === null
-              ? "No conversion value reported"
-              : "Conversion value ÷ spend"}
+              ? t("pages.overview.noConversionValue")
+              : t("pages.overview.conversionValueOverSpend")}
           </p>
         </StatCard>
 
         <StatCard>
           <h3 className="text-label-md font-semibold text-secondary">
-            Average position
+            {t("pages.overview.averagePosition")}
           </h3>
           <p className="mt-1 text-headline-md font-bold text-tertiary">
             {gscPosition.value === null
@@ -599,7 +632,7 @@ export default async function OverviewPage({
               : gscPosition.value.toFixed(1)}
           </p>
           <p className="mt-1 text-body-sm text-muted-text">
-            Impression-weighted, Search Console
+            {t("pages.overview.impressionWeighted")}
           </p>
         </StatCard>
       </div>
@@ -609,14 +642,14 @@ export default async function OverviewPage({
       {/* Connections */}
       <Card>
         <CardHeader
-          title="Data freshness & connections"
-          subtitle="Every source, its state and how old its data is"
+          title={t("pages.overview.connections")}
+          subtitle={t("pages.overview.connectionsSubtitle")}
           actions={
             <Link
               href="/integrations"
               className="inline-flex items-center gap-1 text-label-md font-semibold text-primary-ink hover:underline"
             >
-              Manage
+              {t("pages.overview.manageConnections")}
               <ArrowRight aria-hidden="true" className="size-3.5" />
             </Link>
           }
@@ -624,32 +657,35 @@ export default async function OverviewPage({
         <CardBody className="p-0">
           {connectionsError ? (
             <ErrorState
-              detail={`Could not read provider connections: ${connectionsError.message}`}
+              detail={formatMessage(t("pages.overview.connectionsError"), {
+                message: connectionsError.message,
+              })}
               className="border-0"
-            />
-          ) : connectionRows.length === 0 ? (
-            <EmptyState
-              title="No providers connected"
-              description="Connect Google Ads, GA4, Search Console, GTM or a mailbox to start reporting."
-              icon={<Plug className="size-5" />}
-              className="border-0"
-              action={
-                <Link href="/integrations">
-                  <Button variant="primary" size="sm">
-                    Go to integrations
-                  </Button>
-                </Link>
-              }
             />
           ) : (
             <DataTable
-              label="Connections"
+              label={t("pages.overview.connections")}
               rows={connectionRows}
+              empty={
+                <EmptyState
+                  title={t("pages.overview.noProvidersTitle")}
+                  description={t("pages.overview.noProvidersBody")}
+                  icon={<Plug className="size-5" />}
+                  className="border-0"
+                  action={
+                    <Link href="/integrations">
+                      <Button variant="primary" size="sm">
+                        {t("pages.overview.goToIntegrations")}
+                      </Button>
+                    </Link>
+                  }
+                />
+              }
               rowKey={(row) => row.connection.id}
               columns={[
                 {
                   key: "provider",
-                  header: "Provider",
+                  header: t("common.provider"),
                   mobile: "primary",
                   render: (row) => (
                     <span className="font-semibold text-tertiary">
@@ -659,7 +695,7 @@ export default async function OverviewPage({
                 },
                 {
                   key: "status",
-                  header: "Status",
+                  header: t("common.status"),
                   mobile: "secondary",
                   render: (row) => (
                     <Chip
@@ -671,13 +707,13 @@ export default async function OverviewPage({
                             : "warning"
                       }
                     >
-                      {row.freshness.label}
+                      {freshnessText(row, t)}
                     </Chip>
                   ),
                 },
                 {
                   key: "lastSync",
-                  header: "Last sync",
+                  header: t("common.lastSync"),
                   mobile: "secondary",
                   render: (row) =>
                     row.connection.last_success_at

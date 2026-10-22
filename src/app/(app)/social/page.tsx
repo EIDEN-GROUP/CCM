@@ -10,16 +10,21 @@ import { getSession } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { requirePermission } from "@/lib/auth/guard";
 import { getTodayInTimezone } from "@/domain/timezone";
+import { addDays } from "@/domain/dates";
 import { resolveRangeFromParams } from "@/lib/range-params";
 import { getAccountIds } from "@/lib/repositories/metrics";
 import { formatCount, formatRatio } from "@/domain/metrics";
-import { getLocale } from "@/lib/i18n-server";
-import { intlLocale } from "@/lib/i18n";
+import { formatMessage, intlLocale } from "@/lib/i18n";
+import { getLocale, getTranslator } from "@/lib/i18n-server";
 import { ErrorState } from "@/components/ui/states";
 import { sumSeries } from "@/domain/kpi";
 
-export const metadata: Metadata = { title: "Social Media" };
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslator();
+  return { title: t("pages.social.title") };
+}
 
 /**
  * Social accounts and content performance.
@@ -41,6 +46,7 @@ export default async function SocialPage({
   const today = getTodayInTimezone(session.workspaceTimezone);
   const { current } = resolveRangeFromParams(params, today);
   const locale = intlLocale(await getLocale());
+  const t = await getTranslator();
 
   // A failed query is **not** an empty result. "There are no connected
   // accounts" and "we could not read the connected accounts" are different
@@ -54,7 +60,7 @@ export default async function SocialPage({
     accountsFailure =
       error instanceof Error
         ? error.message
-        : "The connected accounts could not be read.";
+        : t("pages.social.accountsReadError");
   }
 
   const socialAccounts = accounts.filter((account) =>
@@ -87,12 +93,16 @@ export default async function SocialPage({
     source_fetched_at: string;
   }>;
 
+  // The posts are scoped to the same window as the KPIs above them, so a
+  // card and the figures beside it never describe different periods.
   const { data: postRows, error: postsError } = await supabase
     .from("social_post_metrics")
     .select(
       "id, account_id, platform, post_id, posted_at, format, link, reach, impressions, engagements, clicks, video_views",
     )
     .eq("workspace_id", session.workspaceId!)
+    .gte("posted_at", current.start)
+    .lt("posted_at", addDays(current.end, 1))
     .order("posted_at", { ascending: false })
     .limit(50);
 
@@ -109,23 +119,49 @@ export default async function SocialPage({
   const reach = aggregate("reach");
   const engagements = aggregate("engagements");
 
+  // The engagements tile carries the engagement rate instead of the usual
+  // coverage line, so each tile states its own detail.
+  const coverageDetail =
+    rows.length > 0
+      ? t("pages.social.acrossConnectedAccounts")
+      : t("pages.social.noSocialDataYet");
+
+  const tiles = [
+    { label: t("pages.social.reach"), value: reach.value, detail: coverageDetail },
+    {
+      label: t("pages.social.impressions"),
+      value: aggregate("impressions").value,
+      detail: coverageDetail,
+    },
+    {
+      label: t("pages.social.engagements"),
+      value: engagements.value,
+      detail: formatMessage(t("pages.social.engagementRateOfReach"), {
+        rate: formatRatio(engagements.value, reach.value, locale),
+      }),
+    },
+    {
+      label: t("pages.social.followers"),
+      value: aggregate("followers").value,
+      detail: coverageDetail,
+    },
+  ];
+
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Social Media"
-        subtitle="Accounts, content performance and publishing."
+        title={t("pages.social.title")}
+        subtitle={t("pages.social.subtitle")}
       />
 
-      <Notice tone="info" title="Organic and paid are separate">
-        Organic profile analytics and paid social campaign results come from
-        different surfaces with different permissions. They are shown as
-        separate categories and are never combined into a single number.
+      <Notice tone="info" title={t("pages.social.organicPaidNoticeTitle")}>
+        {t("pages.social.organicPaidNoticeBody")}
       </Notice>
 
       <Card>
         <CardHeader
-          title="Connected accounts"
-          subtitle="Identities, permissions and data freshness"
+          title={t("pages.social.connectedAccountsTitle")}
+          subtitle={t("pages.social.connectedAccountsSubtitle")}
         />
         <CardBody className="p-0">
           {accountsFailure ? (
@@ -133,22 +169,23 @@ export default async function SocialPage({
               detail={accountsFailure}
               className="border-0"
             />
-          ) : socialAccounts.length === 0 ? (
-            <EmptyState
-              title="No social accounts connected"
-              description="Connect Instagram, Meta, LinkedIn or YouTube. Medical Bay's public site links Instagram (medicalbay.maroc), Facebook, LinkedIn (medical-bay-agadir) and TikTok."
-              icon={<Users className="size-5" />}
-              className="border-0"
-            />
           ) : (
             <DataTable
-              label="Social accounts"
+              label={t("pages.social.accountsTableLabel")}
               rows={socialAccounts}
+              empty={
+                <EmptyState
+                  title={t("pages.social.noAccountsTitle")}
+                  description={t("pages.social.noAccountsDescription")}
+                  icon={<Users className="size-5" />}
+                  className="border-0"
+                />
+              }
               rowKey={(row) => row.id}
               columns={[
                 {
                   key: "label",
-                  header: "Account",
+                  header: t("common.account"),
                   mobile: "primary",
                   render: (row) => (
                     <span className="font-semibold text-tertiary">{row.label}</span>
@@ -156,7 +193,7 @@ export default async function SocialPage({
                 },
                 {
                   key: "provider",
-                  header: "Provider",
+                  header: t("common.provider"),
                   mobile: "secondary",
                   render: (row) => (
                     <Chip tone="teal">{row.providerKey}</Chip>
@@ -170,17 +207,14 @@ export default async function SocialPage({
 
       {metricsError ? (
         <ErrorState
-          detail={`Could not read social account metrics: ${metricsError.message}`}
+          detail={formatMessage(t("pages.social.metricsReadError"), {
+            message: metricsError.message,
+          })}
           className="border-0"
         />
       ) : (
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {[
-          { label: "Reach", value: reach.value },
-          { label: "Impressions", value: aggregate("impressions").value },
-          { label: "Engagements", value: engagements.value },
-          { label: "Followers", value: aggregate("followers").value },
-        ].map((card) => (
+        {tiles.map((card) => (
           <Card key={card.label} className="p-4">
             <h3 className="text-label-md font-semibold text-secondary">
               {card.label}
@@ -192,17 +226,7 @@ export default async function SocialPage({
                     card.value,
                   )}
             </p>
-            <p className="mt-1 text-body-sm text-muted-text">
-              {card.label === "Engagements"
-                ? `Engagement rate ${formatRatio(
-                    engagements.value,
-                    reach.value,
-                    locale,
-                  )} of reach`
-                : rows.length > 0
-                  ? "Across the connected accounts"
-                  : "No social data synced yet"}
-            </p>
+            <p className="mt-1 text-body-sm text-muted-text">{card.detail}</p>
           </Card>
         ))}
       </div>
@@ -210,30 +234,33 @@ export default async function SocialPage({
 
       <Card>
         <CardHeader
-          title="Content performance"
-          subtitle="Top and declining posts"
+          title={t("pages.social.contentPerformanceTitle")}
+          subtitle={t("pages.social.contentPerformanceSubtitle")}
         />
         <CardBody className="p-0">
           {postsError ? (
             <ErrorState
-              detail={`Could not read social post metrics: ${postsError.message}`}
-              className="border-0"
-            />
-          ) : (postRows ?? []).length === 0 ? (
-            <EmptyState
-              title="No post metrics"
-              description="Post-level performance appears once a social account reports."
+              detail={formatMessage(t("pages.social.postsReadError"), {
+                message: postsError.message,
+              })}
               className="border-0"
             />
           ) : (
             <DataTable
-              label="Social posts"
+              label={t("pages.social.postsTableLabel")}
               rows={postRows ?? []}
+              empty={
+                <EmptyState
+                  title={t("pages.social.noPostMetricsTitle")}
+                  description={t("pages.social.noPostMetricsDescription")}
+                  className="border-0"
+                />
+              }
               rowKey={(row) => (row as { id: string }).id}
               columns={[
                 {
                   key: "platform",
-                  header: "Platform",
+                  header: t("pages.social.platformColumn"),
                   mobile: "primary",
                   render: (row) => (
                     <span className="font-semibold text-tertiary">
@@ -243,14 +270,26 @@ export default async function SocialPage({
                 },
                 {
                   key: "format",
-                  header: "Format",
+                  header: t("pages.social.formatColumn"),
                   mobile: "secondary",
                   render: (row) =>
                     (row as { format: string | null }).format ?? "—",
                 },
                 {
+                  key: "posted",
+                  header: t("pages.social.postedColumn"),
+                  mobile: "secondary",
+                  render: (row) => {
+                    const postedAt = (row as { posted_at: string | null })
+                      .posted_at;
+                    return postedAt
+                      ? new Date(postedAt).toLocaleDateString(locale)
+                      : "—";
+                  },
+                },
+                {
                   key: "reach",
-                  header: "Reach",
+                  header: t("pages.social.reach"),
                   numeric: true,
                   mobile: "secondary",
                   render: (row) =>
@@ -258,7 +297,7 @@ export default async function SocialPage({
                 },
                 {
                   key: "engagements",
-                  header: "Engagements",
+                  header: t("pages.social.engagements"),
                   numeric: true,
                   mobile: "secondary",
                   render: (row) =>
@@ -269,8 +308,8 @@ export default async function SocialPage({
                 },
                 {
                   key: "link",
-                  header: "Link",
-                  mobile: "hidden",
+                  header: t("pages.social.linkColumn"),
+                  mobile: "secondary",
                   render: (row) => {
                     const link = (row as { link: string | null }).link;
                     return link ? (
@@ -280,7 +319,7 @@ export default async function SocialPage({
                         rel="noopener noreferrer"
                         className="text-primary-ink underline-offset-2 hover:underline"
                       >
-                        Open
+                        {t("common.open")}
                       </a>
                     ) : (
                       "—"

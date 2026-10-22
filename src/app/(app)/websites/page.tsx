@@ -17,9 +17,15 @@ import {
   latestHealthChecks,
 } from "@/lib/repositories/websites";
 import { formatAge } from "@/domain/freshness";
+import { getTranslator } from "@/lib/i18n-server";
+import { formatMessage } from "@/lib/i18n";
 
-export const metadata: Metadata = { title: "Websites" };
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslator();
+  return { title: t("nav.websites") };
+}
 
 /**
  * The website portfolio.
@@ -38,6 +44,7 @@ export default async function WebsitesPage({
 
   const supabase = await createClient();
   const params = await searchParams;
+  const t = await getTranslator();
   const siteFilter =
     typeof params.site === "string" ? params.site : undefined;
 
@@ -67,8 +74,8 @@ export default async function WebsitesPage({
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Websites"
-        subtitle="Portfolio of sites, pages, traffic and health."
+        title={t("pages.websites.title")}
+        subtitle={t("pages.websites.subtitle")}
         actions={
           <RegisterWebsiteButton
             canManage={session.permissions.has("integrations.manage")}
@@ -76,192 +83,195 @@ export default async function WebsitesPage({
         }
       />
 
-      <Notice tone="info" title="Adding a site">
-        Registering a site links it to a Google Search Console property, a GA4
-        property and optionally a GTM container. The registry stores only the
-        domain and the provider identifiers — never a page snapshot of the
-        site.
+      <Notice tone="info" title={t("pages.websites.addingSiteTitle")}>
+        {t("pages.websites.addingSiteBody")}
       </Notice>
 
       <Card>
         <CardHeader
-          title="Portfolio"
-          subtitle={`${websites.length} site${websites.length === 1 ? "" : "s"}`}
+          title={t("pages.websites.portfolio")}
+          subtitle={
+            websites.length === 1
+              ? formatMessage(t("pages.websites.portfolioCountOne"), {
+                  count: websites.length,
+                })
+              : formatMessage(t("pages.websites.portfolioCountMany"), {
+                  count: websites.length,
+                })
+          }
         />
         <CardBody className="p-0">
-          {websites.length === 0 ? (
-            <EmptyState
-              title="No sites registered"
-              description="Register medicalbay.ma to start reporting on traffic, search and site health."
-              icon={<Globe className="size-5" />}
-              className="border-0"
-            />
-          ) : (
-            <DataTable
-              label="Websites"
-              rows={websites}
-              rowKey={(row) => row.id}
-              columns={[
-                {
-                  key: "name",
-                  header: "Site",
-                  mobile: "primary",
-                  render: (row) => (
-                    <span className="font-semibold text-tertiary">{row.name}</span>
-                  ),
+          <DataTable
+            label={t("pages.websites.title")}
+            rows={websites}
+            empty={
+              <EmptyState
+                title={t("pages.websites.noSitesTitle")}
+                description={t("pages.websites.noSitesBody")}
+                icon={<Globe className="size-5" />}
+                className="border-0"
+              />
+            }
+            rowKey={(row) => row.id}
+            columns={[
+              {
+                key: "name",
+                header: t("pages.websites.site"),
+                mobile: "primary",
+                render: (row) => (
+                  <span className="font-semibold text-tertiary">{row.name}</span>
+                ),
+              },
+              {
+                key: "domain",
+                header: t("pages.websites.domain"),
+                mobile: "secondary",
+                render: (row) => (
+                  <a
+                    href={`https://${row.domain}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary-ink underline-offset-2 hover:underline"
+                  >
+                    {row.domain}
+                  </a>
+                ),
+              },
+              {
+                key: "hostnames",
+                header: t("pages.websites.hostnames"),
+                mobile: "secondary",
+                render: (row) => {
+                  const list = hostnamesFor((row as { id: string }).id);
+                  return list.length > 0 ? list.join(", ") : "—";
                 },
-                {
-                  key: "domain",
-                  header: "Domain",
-                  mobile: "secondary",
-                  render: (row) => (
-                    <a
-                      href={`https://${row.domain}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-primary-ink underline-offset-2 hover:underline"
-                    >
-                      {row.domain}
-                    </a>
-                  ),
-                },
-                {
-                  key: "hostnames",
-                  header: "Hostnames",
-                  mobile: "hidden",
-                  render: (row) => {
-                    const list = hostnamesFor((row as { id: string }).id);
-                    return list.length > 0 ? list.join(", ") : "—";
-                  },
-                },
-                {
-                  key: "locales",
-                  header: "Languages",
-                  mobile: "secondary",
-                  render: (row) => (
-                    <span className="flex flex-wrap gap-1">
-                      {row.locales.map((locale) => (
-                        <Chip key={locale} tone="teal">
-                          {locale.toUpperCase()}
-                        </Chip>
-                      ))}
-                    </span>
-                  ),
-                },
-                {
-                  key: "services",
-                  header: "Services",
-                  mobile: "hidden",
-                  render: (row) =>
-                    row.service_lines.length > 0
-                      ? row.service_lines.join(", ")
-                      : "—",
-                },
-                {
-                  key: "health",
-                  header: "Health",
-                  mobile: "secondary",
-                  render: (row) => {
-                    const check = healthFor(row.id);
-                    if (!check) return <span className="text-muted-text">—</span>;
-                    return (
-                      <Chip
-                        tone={
-                          check.status === "ok"
-                            ? "success"
-                            : check.status === "critical"
-                              ? "danger"
-                              : "warning"
-                        }
-                      >
-                        {check.status}
+              },
+              {
+                key: "locales",
+                header: t("pages.websites.languages"),
+                mobile: "secondary",
+                render: (row) => (
+                  <span className="flex flex-wrap gap-1">
+                    {row.locales.map((locale) => (
+                      <Chip key={locale} tone="teal">
+                        {locale.toUpperCase()}
                       </Chip>
-                    );
-                  },
+                    ))}
+                  </span>
+                ),
+              },
+              {
+                key: "services",
+                header: t("pages.websites.services"),
+                mobile: "secondary",
+                render: (row) =>
+                  row.service_lines.length > 0
+                    ? row.service_lines.join(", ")
+                    : "—",
+              },
+              {
+                key: "health",
+                header: t("pages.websites.health"),
+                mobile: "secondary",
+                render: (row) => {
+                  const check = healthFor(row.id);
+                  if (!check) return <span className="text-muted-text">—</span>;
+                  return (
+                    <Chip
+                      tone={
+                        check.status === "ok"
+                          ? "success"
+                          : check.status === "critical"
+                            ? "danger"
+                            : "warning"
+                      }
+                    >
+                      {check.status}
+                    </Chip>
+                  );
                 },
-                {
-                  key: "lastSync",
-                  header: "Last check",
-                  mobile: "secondary",
-                  render: (row) => {
-                    const check = healthFor(row.id);
-                    return check
-                      ? formatAge(
-                          (now.getTime() - Date.parse(check.checked_at)) / 1000,
-                        )
-                      : "—";
-                  },
+              },
+              {
+                key: "lastSync",
+                header: t("pages.websites.lastCheck"),
+                mobile: "secondary",
+                render: (row) => {
+                  const check = healthFor(row.id);
+                  return check
+                    ? formatAge(
+                        (now.getTime() - Date.parse(check.checked_at)) / 1000,
+                      )
+                    : "—";
                 },
-              ]}
-            />
-          )}
+              },
+            ]}
+          />
         </CardBody>
       </Card>
 
       <Card>
         <CardHeader
-          title="Pages & landing pages"
-          subtitle="Inventory grouped by language, service and page class"
+          title={t("pages.websites.pagesLandingTitle")}
+          subtitle={t("pages.websites.pagesLandingSubtitle")}
         />
         <CardBody className="p-0">
-          {pages.length === 0 ? (
-            <EmptyState
-              title="No pages inventoried yet"
-              description="The technical crawl fills this in. CCM records the URL, locale, page class and metadata — not a copy of the page."
-              className="border-0"
-            />
-          ) : (
-            <DataTable
-              label="Website pages"
-              rows={pages}
-              rowKey={(row) => row.id}
-              columns={[
-                {
-                  key: "url",
-                  header: "URL",
-                  mobile: "primary",
-                  render: (row) => (
-                    <a
-                      href={row.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-primary-ink underline-offset-2 hover:underline"
-                    >
-                      {row.path}
-                    </a>
-                  ),
-                },
-                {
-                  key: "locale",
-                  header: "Locale",
-                  mobile: "secondary",
-                  render: (row) => row.locale ?? "—",
-                },
-                {
-                  key: "class",
-                  header: "Class",
-                  mobile: "secondary",
-                  render: (row) => (
-                    <Chip tone="neutral">{row.page_class}</Chip>
-                  ),
-                },
-                {
-                  key: "service",
-                  header: "Service",
-                  mobile: "hidden",
-                  render: (row) => row.service_line ?? "—",
-                },
-                {
-                  key: "status",
-                  header: "Status",
-                  numeric: true,
-                  mobile: "secondary",
-                  render: (row) =>
-                    row.status_code === null ? "—" : String(row.status_code),
-                },
-              ]}
-            />
-          )}
+          <DataTable
+            label={t("pages.websites.websitePages")}
+            rows={pages}
+            empty={
+              <EmptyState
+                title={t("pages.websites.noPagesTitle")}
+                description={t("pages.websites.noPagesBody")}
+                className="border-0"
+              />
+            }
+            rowKey={(row) => row.id}
+            columns={[
+              {
+                key: "url",
+                header: "URL",
+                mobile: "primary",
+                render: (row) => (
+                  <a
+                    href={row.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary-ink underline-offset-2 hover:underline"
+                  >
+                    {row.path}
+                  </a>
+                ),
+              },
+              {
+                key: "locale",
+                header: t("pages.websites.locale"),
+                mobile: "secondary",
+                render: (row) => row.locale ?? "—",
+              },
+              {
+                key: "class",
+                header: t("pages.websites.pageClass"),
+                mobile: "secondary",
+                render: (row) => (
+                  <Chip tone="neutral">{row.page_class}</Chip>
+                ),
+              },
+              {
+                key: "service",
+                header: t("pages.websites.service"),
+                mobile: "secondary",
+                render: (row) => row.service_line ?? "—",
+              },
+              {
+                key: "status",
+                header: t("common.status"),
+                numeric: true,
+                mobile: "secondary",
+                render: (row) =>
+                  row.status_code === null ? "—" : String(row.status_code),
+              },
+            ]}
+          />
         </CardBody>
       </Card>
     </div>

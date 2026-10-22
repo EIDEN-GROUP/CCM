@@ -9,6 +9,7 @@ import { getSession } from "@/lib/auth/session";
 import { getTodayInTimezone } from "@/domain/timezone";
 import { createClient } from "@/lib/supabase/server";
 import { countOpenAlerts } from "@/lib/repositories/alerts";
+import { getTranslator } from "@/lib/i18n-server";
 
 export const metadata: Metadata = {
   title: "Command Center",
@@ -42,6 +43,7 @@ export default async function AppLayout({
   }
 
   const today = getTodayInTimezone(session.workspaceTimezone);
+  const t = await getTranslator();
 
   // The number of open alerts. `null` means it could not be read, which is
   // different from zero, and the interface says so rather than showing an
@@ -54,6 +56,20 @@ export default async function AppLayout({
 
   return (
     <ShellProvider today={today} timezone={session.workspaceTimezone}>
+      {/*
+        The skip link.
+
+        It is the first thing in the page, so a keyboard user reaches the
+        content in one keystroke instead of tabbing through the whole
+        navigation on every screen. It is invisible until it takes focus,
+        and it never intercepts a click while it is hidden.
+      */}
+      <a
+        href="#main-content"
+        className="pointer-events-none absolute start-4 top-4 z-50 rounded-md border border-border bg-surface px-4 py-2 text-label-md font-semibold text-primary-ink opacity-0 shadow-overlay transition-opacity focus:pointer-events-auto focus:opacity-100 focus:outline-2 focus:outline-offset-2 focus:outline-primary-ink"
+      >
+        {t("shell.skipToContent")}
+      </a>
       <div className="flex h-dvh flex-col overflow-hidden bg-surface">
         <DemoBanner />
         <div className="flex min-h-0 flex-1">
@@ -68,6 +84,7 @@ export default async function AppLayout({
             />
             <main
               id="main-content"
+              tabIndex={-1}
               className="scrollbar-calm flex-1 overflow-y-auto bg-surface-muted/40"
             >
               <div className="mx-auto w-full max-w-[1440px] px-4 py-6 md:px-6 md:py-8">

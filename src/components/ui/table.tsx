@@ -8,8 +8,17 @@ export interface Column<T> {
   header: ReactNode;
   /** Cell renderer. */
   render: (row: T) => ReactNode;
-  /** Show this column in the stacked mobile card view. */
-  mobile?: "primary" | "secondary" | "hidden";
+  /**
+   * How the column appears in the stacked mobile card view.
+   *
+   * `primary` is the row's title. `secondary` is a labelled value — the
+   * header is shown beside it. `plain` is a value that speaks for itself,
+   * such as a link, and is shown without a label.
+   *
+   * Every column is shown on a phone. A column that simply disappears
+   * takes its data with it, and a value with no label is a mystery.
+   */
+  mobile?: "primary" | "secondary" | "plain";
   /** Right-align numeric columns. */
   numeric?: boolean;
   /** Extra classes for the cell. */
@@ -23,8 +32,14 @@ export interface DataTableProps<T> {
   rows: T[];
   rowKey: (row: T) => string;
   caption?: ReactNode;
-  /** Rendered when there are no rows. */
-  empty?: ReactNode;
+  /**
+   * Rendered when there are no rows.
+   *
+   * Required on purpose. A table with no rows must still say so: a bare
+   * header row reads as "the page has not loaded", which is a different
+   * fact from "there is nothing here yet".
+   */
+  empty: ReactNode;
   /** Accessible label for the table region. */
   label: string;
   className?: string;
@@ -47,21 +62,21 @@ export function DataTable<T>({
   label,
   className,
 }: DataTableProps<T>) {
-  if (rows.length === 0 && empty) {
+  if (rows.length === 0) {
     return <>{empty}</>;
   }
 
   const primary = columns.filter((c) => c.mobile === "primary");
   const secondary = columns.filter((c) => c.mobile === "secondary");
-  const hiddenOnMobile = columns.filter((c) => c.mobile === "hidden");
+  const plain = columns.filter((c) => c.mobile === "plain");
 
   return (
     <>
       {/* Wide layout */}
       <div className={cn("hidden overflow-x-auto md:block", className)}>
-        <table className="w-full border-collapse text-left">
+        <table className="w-full border-collapse text-start">
           {caption ? (
-            <caption className="pb-2 text-left text-body-sm text-muted-text">
+            <caption className="pb-2 text-start text-body-sm text-muted-text">
               {caption}
             </caption>
           ) : null}
@@ -127,7 +142,7 @@ export function DataTable<T>({
                   <span className="text-secondary">{column.render(row)}</span>
                 </div>
               ))}
-              {hiddenOnMobile.map((column) => (
+              {plain.map((column) => (
                 <div key={column.key} className="text-body-sm text-secondary">
                   {column.render(row)}
                 </div>

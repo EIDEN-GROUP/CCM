@@ -1,13 +1,48 @@
 import type { Metadata } from "next";
+import { Fragment, type ReactNode } from "react";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardBody } from "@/components/ui/card";
 import { Notice } from "@/components/ui/notice";
 import { PeopleManager } from "@/components/settings/people-manager";
 import { getSession } from "@/lib/auth/session";
 import { requirePermission } from "@/lib/auth/guard";
+import { getTranslator } from "@/lib/i18n-server";
 
-export const metadata: Metadata = { title: "People & roles" };
 export const dynamic = "force-dynamic";
+
+/**
+ * Render a translated sentence with some of its placeholders emphasised.
+ *
+ * The access-model sentence names three levels in bold. The words move
+ * around in French and Arabic, so the emphasis follows the placeholder
+ * rather than a fixed position in the sentence.
+ */
+function emphasise(
+  template: string,
+  values: Record<string, string>,
+  bold: readonly string[],
+): ReactNode[] {
+  return template.split(/(\{\w+\})/).map((part, index) => {
+    const name = /^\{(\w+)\}$/.exec(part)?.[1];
+    if (!name) return part;
+
+    const value = values[name] ?? part;
+    return (
+      <Fragment key={index}>
+        {bold.includes(name) ? (
+          <strong className="font-semibold">{value}</strong>
+        ) : (
+          value
+        )}
+      </Fragment>
+    );
+  });
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslator();
+  return { title: t("pages.people.title") };
+}
 
 /**
  * People and roles.
@@ -22,19 +57,27 @@ export default async function PeoplePage() {
   const guard = await requirePermission(session, "roles.manage");
   if (!guard.allowed) return guard.response;
 
+  const t = await getTranslator();
+
+  const accessBody = emphasise(
+    t("pages.people.howAccessWorksBody"),
+    {
+      view: t("pages.people.levelView"),
+      use: t("pages.people.levelUse"),
+      edit: t("pages.people.levelEdit"),
+    },
+    ["view", "use", "edit"],
+  );
+
   return (
     <div className="space-y-6">
       <PageHeader
-        title="People & roles"
-        subtitle="Who is in the workspace, and how far into each tab they may go."
+        title={t("pages.people.title")}
+        subtitle={t("pages.people.subtitle")}
       />
 
-      <Notice tone="info" title="How access works">
-        A role says how far into a tab it may go: <strong>view</strong> to
-        read it, <strong>use</strong> for its actions, and <strong>edit</strong> to
-        change its configuration. Those levels are derived into the feature
-        permissions the database enforces, so what you see here is what the
-        Row Level Security policies will actually allow.
+      <Notice tone="info" title={t("pages.people.howAccessWorksTitle")}>
+        {accessBody}
       </Notice>
 
       <Card>

@@ -1,0 +1,287 @@
+/**
+ * The `pages.channels` strings, in Arabic.
+ *
+ * Hand-written; never machine-translated at render time. Typed against the
+ * English shape, so a missing key fails the build.
+ */
+import type { DeepStringify } from "../../en";
+import type { channels as english } from "../en/channels";
+
+/** The shape this file must satisfy. */
+export type ChannelsShape = DeepStringify<typeof english>;
+
+export const channels: ChannelsShape = {
+  overview: {
+    title: "مرحباً بك في CCM",
+    subtitle: "مركزك الموحّد للتسويق والنمو والعمليات الرقمية.",
+    portfolioKpis: "أداء المحفظة",
+    channelTrends: "اتجاهات القنوات",
+    topCampaigns: "أبرز الحملات",
+    topKeywords: "ترتيب الكلمات المفتاحية",
+    alerts: "التنبيهات والإجراءات",
+    connections: "حداثة البيانات والاتصالات",
+    viewAllCampaigns: "عرض كل الحملات",
+    viewAllKeywords: "عرض كل الكلمات المفتاحية",
+    flow: "تدفّق CCM",
+    flowBody: "من المنصّات الخارجية إلى رؤى قابلة للتنفيذ.",
+    adSpend: "الإنفاق الإعلاني",
+    conversions: "التحويلات",
+    organicClicks: "النقرات المجانية",
+    socialEngagement: "التفاعل الاجتماعي",
+    siteHealth: "صحة الموقع",
+    sessions: "جلسات GA4",
+    costPerConversion: "تكلفة التحويل",
+    roas: "العائد على الإنفاق",
+    impressions: "الظهورات",
+    ctr: "نسبة النقر",
+    averagePosition: "المتوسط الموضعي",
+    connectSource: "ربط مصدر",
+    noLiveDataTitle: "لا توجد بيانات حيّة بعد",
+    noLiveDataBody:
+      "CCM متصل بمساحة العمل الخاصة بك، لكن لم يُبلّغ أي مزوّد حتى الآن. تبقى الأرقام أدناه فارغة حتى تتم مزامنة أحد المصادر — ولا يستبدل CCM البيانات الناقصة بأصفار. اربط مزوّداً من",
+    ga4KeyEvents: "الأحداث الرئيسية في GA4",
+    clicks: "النقرات",
+    channelTrendsSubtitle: "الأداء عبر جميع القنوات",
+    noTrendDataTitle: "لا توجد بيانات اتجاه بعد",
+    noTrendDataBody: "يمتلئ الرسم البياني بمجرد وصول أوّل مزامنة.",
+    organicSearch: "البحث المجاني",
+    paidSearch: "البحث المدفوع",
+    chartSummarySeries: "{value} يوميًا — {series} — من {firstDay} إلى {lastDay}.",
+    chartDataTableCaption: "القيم اليومية المرسومة في مخطط تطوّر القنوات.",
+    topCampaignsSubtitle: "حسب الإنفاق في الفترة المحدّدة",
+    noCampaignsTitle: "لا توجد حملات",
+    noCampaignsBody: "اربط إعلانات Google لعرض أداء الحملات.",
+    noConversionValue: "لم يتم الإبلاغ عن قيمة تحويل",
+    conversionValueOverSpend: "قيمة التحويلات ÷ الإنفاق",
+    impressionWeighted: "مرجّحة بالظهورات، Search Console",
+    connectionsSubtitle: "كل مصدر وحالته وقدم بياناته",
+    manageConnections: "إدارة",
+    connectionsError: "تعذّرت قراءة اتصالات المزوّدين: {message}",
+    noProvidersTitle: "لا يوجد مزوّدون مرتبطون",
+    noProvidersBody:
+      "اربط إعلانات Google أو GA4 أو Search Console أو GTM أو صندوق بريد لبدء التقارير.",
+    goToIntegrations: "الانتقال إلى التكاملات",
+    metricsError: "تعذّرت قراءة المؤشّرات.",
+    freshnessUpToDate: "محدَّث",
+    freshnessRefreshOverdue: "التحديث متأخّر",
+    freshnessStale: "البيانات قديمة",
+    freshnessSyncFailing: "المزامنة فاشلة — لا توجد عملية ناجحة حتى الآن",
+    freshnessNotConnected: "غير مرتبط — لا توجد بيانات بعد",
+    freshnessLastSyncFailed: "آخر مزامنة فاشلة — يتم عرض آخر بيانات سليمة",
+  },
+  websites: {
+    title: "المواقع الإلكترونية",
+    subtitle: "محفظة المواقع والصفحات وحركة المرور والصحة.",
+    register: "تسجيل موقع إلكتروني",
+    domain: "النطاق",
+    owner: "المسؤول",
+    services: "الخدمات",
+    languages: "اللغات",
+    health: "الصحة",
+    pages: "الصفحات",
+    lastSync: "آخر مزامنة",
+    addingSiteTitle: "إضافة موقع",
+    addingSiteBody:
+      "يسجّل الموقع ضمن خاصية Google Search Console وخاصية GA4، ومعه حاوية GTM اختيارياً. لا يخزّن السجل سوى النطاق ومعرّفات المزوّدين — ولا يخزّن أبداً نسخة من صفحات الموقع.",
+    portfolio: "المحفظة",
+    portfolioCountOne: "{count} موقع",
+    portfolioCountMany: "{count} مواقع",
+    noSitesTitle: "لا توجد مواقع مسجّلة",
+    noSitesBody:
+      "سجّل medicalbay.ma لبدء التقارير عن حركة المرور والبحث وصحة الموقع.",
+    site: "الموقع",
+    hostnames: "أسماء المضيف",
+    lastCheck: "آخر فحص",
+    pagesLandingTitle: "الصفحات وصفحات الهبوط",
+    pagesLandingSubtitle: "الجرد مجمّعاً حسب اللغة والخدمة وفئة الصفحة",
+    noPagesTitle: "لم يتم جرد أي صفحة بعد",
+    noPagesBody:
+      "يملأ المسح التقني هذا الجدول. يسجّل CCM عنوان URL واللغة وفئة الصفحة والبيانات الوصفية — لا نسخة من الصفحة.",
+    websitePages: "صفحات الموقع",
+    locale: "الإعدادات المحلية",
+    pageClass: "الفئة",
+    service: "الخدمة",
+  },
+  googleAds: {
+    title: "إعلانات Google",
+    subtitle: "الإنفاق والحملات والتحويلات ووتيرة الصرف.",
+    account: "الحساب",
+    campaigns: "الحملات",
+    adGroups: "مجموعات الإعلانات",
+    keywords: "الكلمات المفتاحية",
+    searchTerms: "عبارات البحث",
+    spend: "الإنفاق",
+    impressions: "الظهورات",
+    clicks: "النقرات",
+    ctr: "نسبة النقر",
+    avgCpc: "متوسط تكلفة النقرة",
+    conversions: "التحويلات",
+    convValue: "قيمة التحويلات",
+    cpa: "تكلفة التحويل",
+    roas: "العائد على الإنفاق",
+    budget: "الميزانية",
+    pacing: "وتيرة الصرف",
+    readOnlyNotice:
+      "للقراءة فقط. تعديلات الحملات والميزانيات والإيقاف معطّلة، وتتطلب موافقة صريحة ومعاينة وسجلّ تدقيق.",
+    readOnlyTitle: "للقراءة فقط",
+    readOnlyBody:
+      "تعديلات الحملات والميزانيات والإيقاف والعمليات الجماعية معطّلة في هذه النسخة. تتطلّب معاينةً وموافقةً صريحةً وسجلّ تدقيق ومرجعاً قابلاً للتراجع عن الإصدار قبل أن يمكن تقديمها.",
+    campaignsSubtitle: "أداء الحساب في الفترة المحدّدة",
+    noCampaignsTitle: "لا توجد بيانات حملات بعد",
+    noCampaignsBody:
+      "اربط حساب إعلانات Google. يُمنح مستوى الوصول إلى واجهة برمجة Google Ads على مشروع Google Cloud — راجع التكاملات لخطوات الإعداد.",
+    metricsError: "تعذّرت قراءة مؤشّرات إعلانات Google.",
+  },
+  analytics: {
+    title: "GA4 والإسناد",
+    subtitle: "مصادر الزيارات والأحداث ومسارات التحويل والأحداث الرئيسية.",
+    property: "الخاصية",
+    sessions: "الجلسات",
+    activeUsers: "المستخدمون النشطون",
+    newUsers: "المستخدمون الجدد",
+    keyEvents: "الأحداث الرئيسية",
+    revenue: "الإيرادات",
+    landingPages: "صفحات الهبوط",
+    sources: "مصادر الزيارات",
+    funnel: "مسار التحويل",
+    engagement: "التفاعل",
+    content: "أداء المحتوى",
+    discrepancyNotice:
+      "تحويلات إعلانات Google والأحداث الرئيسية في GA4 تستخدم نوافذ وتعريفات إسناد مختلفة. تُعرض جنباً إلى جنب ولا تُدمج أبداً.",
+    comparabilityTitle: "قابلية المقارنة",
+    comparabilityBody:
+      "تحويلات إعلانات Google والأحداث الرئيسية في GA4 تستخدم نوافذ إسناد وتعريفات تحويل مختلفة. يعرضها CCM جنباً إلى جنب ويبرز الاختلاف؛ وهو لا يوفّق بينهما بصمت.",
+    keyEventRate: "معدّل الأحداث الرئيسية",
+    pageViews: "مشاهدات الصفحات",
+    landingPagesSubtitle: "الجلسات حسب صفحة الهبوط",
+    noLandingDataTitle: "لا توجد بيانات صفحات هبوط",
+    noLandingDataBody:
+      "اربط خاصية GA4 لتعرف الصفحات التي تولّد الجلسات.",
+    sourcesSubtitle: "الجلسات حسب المصدر / الوساطة",
+    noSourceDataTitle: "لا توجد بيانات مصادر",
+    noSourceDataBody: "تظهر بيانات مصادر الزيارات بمجرد أن يبلّغ GA4.",
+    funnelSubtitle: "الجلسات ← الجلسات المتفاعلة ← الأحداث الرئيسية",
+    noFunnelDataTitle: "لا توجد بيانات مسار تحويل",
+    noFunnelDataBody:
+      "يُبنى مسار التحويل من بيانات جلسات GA4 وأحداثه الرئيسية.",
+    engagedSessions: "الجلسات المتفاعلة",
+    metricsError: "تعذّرت قراءة مؤشّرات GA4.",
+  },
+  gtm: {
+    title: "GTM والتتبّع",
+    subtitle: "جرد الحاويات والوسوم والمشغّلات والتحقّق.",
+    container: "الحاوية",
+    workspace: "مساحة العمل",
+    tags: "الوسوم",
+    triggers: "المشغّلات",
+    variables: "المتغيّرات",
+    versions: "الإصدارات",
+    environments: "البيئات",
+    expectedMeasurementId: "معرّف القياس المتوقّع في GA4",
+    verification: "التحقّق",
+    publishNotice:
+      "نشر إصدار حاوية يتطلّب معاينةً وموافقاً مخوّلاً ومرجعاً للإصدار قبل وبعد وسجلّ تدقيق.",
+    publishingUnavailableTitle: "النشر غير متاح",
+    publishingUnavailableBody:
+      "يجرد CCM الحاوية ويتحقّق من معرّف القياس المتوقّع في GA4. ينشر إصدار جديد معاينةً وموافقاً مخوّلاً ومرجعاً للإصدار قبل وبعد وسجلّ تدقيق، لذا يكون إجراء النشر غائباً لا معطّلاً فحسب.",
+    inventoryError: "تعذّرت قراءة جرد الحاويات: {message}",
+    containerVersions: "إصدارات الحاويات",
+    containerVersionsSubtitle: "أحدث جرد لكل حاوية",
+    noInventoryTitle: "لا يوجد جرد للحاويات بعد",
+    noInventoryBody:
+      "اربط حاوية Tag Manager. يعتمد موقع Medical Bay حالياً على GTM-WF77DFJD.",
+    version: "الإصدار",
+    expectedGa4Id: "معرّف GA4 المتوقّع",
+    captured: "وقت الالتقاط",
+    trackingChecklist: "قائمة تحقّق التتبّع",
+    trackingChecklistSubtitle:
+      "يُقرَّر كل سطر بناءً على اللقطة التي قُرئت، ويقول الفحص الذي يتعذّر حسابه ذلك صراحةً",
+    containerLabel: "الحاوية {container}",
+    capturedSuffix: "· وقت الالتقاط {age}",
+    captureCounted: "أحصّت اللقطة {tags} و{triggers}.",
+    unknownCountOf: "عدد غير معروف من",
+    tagSingular: "وسم",
+    tagsPlural: "وسوم",
+    triggerSingular: "مشغّل",
+    triggersPlural: "مشغّلات",
+    notChecked: "لم يُفحص",
+    pass: "مطابق",
+    fail: "غير مطابق",
+    stale: "قديم",
+    captureNoDate:
+      "لا تحمل اللقطة تاريخ التقاط قابلاً للقراءة، لذا لا يمكن مقارنتها بالإصدار المنشور.",
+    captureNoPublishedVersion:
+      "لا تسجّل اللقطة أي إصدار منشور، فلا يوجد تاريخ تُقارن به اللقطة.",
+    capturePredatesPublished:
+      "اللقطة ({captured}) تسبق الإصدار المنشور ({published}).",
+    captureNewerThanPublished:
+      "اللقطة ({captured}) أحدث من الإصدار المنشور ({published}).",
+    measurementNoDefinitions:
+      "سجّلت اللقطة عدد الوسوم بدل تعريفاتها، لذا لا يمكن لـ CCM تحديد معرّف القياس الذي تشير إليه.",
+    measurementNoExpectedId:
+      "لا تسجّل اللقطة أي معرّف قياس متوقّع في GA4، فلا يوجد ما تُقارن به الوسوم.",
+    measurementMissingIds: "لا يشير أي وسم في اللقطة إلى {ids}.",
+    measurementAllIds:
+      "يشير وسم في اللقطة إلى كل معرّفات القياس المتوقّعة ({ids}).",
+    duplicateNoDefinitions:
+      "سجّلت اللقطة عدد الوسوم بدل تعريفاتها، لذا لا يمكن استبعاد التكرار.",
+    duplicateNoTags:
+      "لا تحتوي اللقطة على أي وسم GA4، فلا يوجد تكرار يمكن استبعاده.",
+    duplicateSharedIdOne: "يشير {ids} إلى أكثر من وسم واحد في اللقطة.",
+    duplicateSharedIdMany: "تشير {ids} إلى أكثر من وسم واحد في اللقطة.",
+    duplicateSharedTriggerOne:
+      "يُطلق {count} مشغّل واحد أكثر من وسم GA4 في اللقطة.",
+    duplicateSharedTriggerMany:
+      "تُطلق {count} مشغّلات أكثر من وسم GA4 في اللقطة.",
+    duplicateCleanOne:
+      "لا يشترك أي معرّف قياس أو مشغّل مع وسم GA4 الوحيد ({count}) في اللقطة.",
+    duplicateCleanMany:
+      "لا يشترك أي معرّف قياس أو مشغّل مع وسوم GA4 البالغة {count} في اللقطة.",
+    trackingPlanMissing:
+      "لا يحتفظ CCM بخطة تتبّع أحداث معتمدة، فلا توجد قائمة أحداث تُقارن بالحاوية.",
+    noCaptureNoDate:
+      "لم تُسجَّل أي لقطة لحاوية، فلا يوجد تاريخ التقاط يُقارن بإصدار منشور.",
+    noCaptureNoMeasurement:
+      "لم تُسجَّل أي لقطة لحاوية، لذا لا يمكن لـ CCM تحديد ما إذا كان وسم GA4 يشير إلى معرّف القياس المتوقّع.",
+    noCaptureNoDuplicates:
+      "لم تُسجَّل أي لقطة لحاوية، لذا لا يمكن استبعاد وسوم GA4 المكرّرة.",
+  },
+  seo: {
+    title: "تحسين محركات البحث والترتيب",
+    subtitle: "Search Console والفحوص الفنية والترتيب المتتبَّع.",
+    clicks: "النقرات",
+    impressions: "الظهورات",
+    ctr: "نسبة النقر",
+    position: "المتوسط الموضعي",
+    queries: "الاستعلامات",
+    pages: "الصفحات",
+    countries: "البلدان",
+    devices: "الأجهزة",
+    technical: "الجانب الفني لتحسين محركات البحث",
+    backlinks: "الروابط الواردة",
+    content: "فرص المحتوى",
+    sourceNotice:
+      "أرقام Search Console صادرة عن Google. أما ملاحظات الترتيب من أطراف أخرى فتُعرض منفصلة ولا تُدمج معها أبداً.",
+    twoMeasurementsTitle: "قياسان مختلفان",
+    twoMeasurementsBody:
+      "النقرات والظهورات والمتوسط الموضعي في Search Console صادرة عن Google. أما ملاحظات الترتيب فتأتي من مزوّد طرف ثالث وتُعرض في جدول خاص بها. لا يدمج CCM بينهما أبداً لأنهما يقيسان أشياء مختلفة.",
+    organicImpressions: "الظهورات المجانية",
+    topQueries: "أبرز الاستعلامات",
+    topQueriesSubtitle: "حسب النقرات، من Search Console",
+    noQueryDataTitle: "لا توجد بيانات استعلامات",
+    noQueryDataBody:
+      "اربط خاصية Search Console موثّقة لرؤية أداء الاستعلامات الحقيقي.",
+    query: "الاستعلام",
+    rankPosition: "الموضع",
+    trackedRankings: "الترتيبات المتتبَّعة",
+    trackedRankingsSubtitle:
+      "ملاحظات من طرف ثالث، تبقى منفصلة عن Search Console",
+    rankError: "تعذّرت قراءة لقطات الترتيب: {message}",
+    noRankSnapshotsTitle: "لا توجد لقطات ترتيب",
+    noRankSnapshotsBody:
+      "تظهر ملاحظات الترتيب بمجرد ربط مزوّد تتبّع الترتيب وضبط مشروع.",
+    rankSnapshots: "لقطات الترتيب",
+    observed: "تاريخ الرصد",
+    metricsError: "تعذّرت قراءة مؤشّرات Search Console.",
+  },
+} as const;

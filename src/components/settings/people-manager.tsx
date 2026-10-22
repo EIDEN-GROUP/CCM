@@ -1,8 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { Fragment, useCallback, useEffect, useState } from "react";
 import {
-  Check,
   Copy,
   LoaderCircle,
   ShieldCheck,
@@ -18,6 +17,7 @@ import { Notice } from "@/components/ui/notice";
 import { EmptyState } from "@/components/ui/states";
 import { useI18n } from "@/components/providers/i18n-provider";
 import type { NavLabelKey } from "@/domain/tabs";
+import type { MessagePathRoot, Translator } from "@/lib/i18n";
 
 /**
  * People and roles.
@@ -30,6 +30,12 @@ import type { NavLabelKey } from "@/domain/tabs";
  * of the real authorisation. The owner sees tabs; the database sees
  * permissions; there is only one of each.
  */
+
+/** A message key inside the `pages.people` namespace. */
+type PeoplePath = Extract<MessagePathRoot, `pages.people.${string}`>;
+
+/** A message key inside the shared role-label vocabulary. */
+type RoleLabelPath = Extract<MessagePathRoot, `pages.people.roleLabels.${string}`>;
 
 interface Member {
   id: string;
@@ -58,22 +64,76 @@ interface TabSummary {
   immutable: boolean;
 }
 
+/**
+ * The role labels.
+ *
+ * The role *key* stays in English — it is what the database and the
+ * permissions are keyed on — while the label a person reads is translated.
+ */
+const ROLE_LABEL: Record<string, RoleLabelPath> = {
+  owner: "pages.people.roleLabels.owner",
+  admin: "pages.people.roleLabels.admin",
+  marketing_analyst: "pages.people.roleLabels.marketing_analyst",
+  seo: "pages.people.roleLabels.seo",
+  ads_manager: "pages.people.roleLabels.ads_manager",
+  social_manager: "pages.people.roleLabels.social_manager",
+  mailbox_user: "pages.people.roleLabels.mailbox_user",
+  read_only: "pages.people.roleLabels.read_only",
+};
+
+const MEMBER_STATUS: Record<string, PeoplePath> = {
+  active: "pages.people.statusActive",
+  invited: "pages.people.statusInvited",
+  suspended: "pages.people.statusSuspended",
+};
+
+/**
+ * The access levels.
+ *
+ * The key is what the database stores; the label is what the owner reads.
+ */
 const LEVELS = [
-  { key: "none", label: "No access" },
-  { key: "view", label: "View" },
-  { key: "use", label: "Use" },
-  { key: "edit", label: "Edit" },
+  { key: "none", path: "pages.people.levelNone" },
+  { key: "view", path: "pages.people.levelView" },
+  { key: "use", path: "pages.people.levelUse" },
+  { key: "edit", path: "pages.people.levelEdit" },
 ] as const;
 
+/** The navigation sections the tabs are grouped under. */
 const SECTIONS = [
-  { key: "overview", label: "Overview" },
-  { key: "channels", label: "Channels" },
-  { key: "operations", label: "Operations" },
-  { key: "admin", label: "Administration" },
+  { key: "overview", path: "nav.sectionOverview" },
+  { key: "channels", path: "nav.sectionChannels" },
+  { key: "operations", path: "nav.sectionOperations" },
+  { key: "admin", path: "nav.sectionAdmin" },
 ] as const;
+
+/**
+ * The API reports its failures in English, because it is a developer-facing
+ * surface. The screen translates the messages it knows and keeps the
+ * developer's own detail — the file name, the table — untouched.
+ */
+function serverError(
+  t: Translator,
+  message: string,
+  fallback: PeoplePath,
+): string {
+  if (message.includes("role_tab_access")) {
+    return t("pages.people.tabMapMissing");
+  }
+  if (message.includes("supabase/repair.sql")) {
+    return t("pages.people.repairRequired");
+  }
+  return t(fallback);
+}
+
+/** The translated name of a role, with the stored label as the fallback. */
+function roleLabelFor(t: Translator, key: string, fallback: string): string {
+  const path = ROLE_LABEL[key];
+  return path ? t(path) : fallback;
+}
 
 export function PeopleManager({ currentUserId }: { currentUserId: string }) {
-  const { t } = useI18n();
+  const { t, tp } = useI18n();
 
   const [members, setMembers] = useState<Member[]>([]);
   const [roles, setRoles] = useState<RoleDefinition[]>([]);
@@ -93,6 +153,7 @@ export function PeopleManager({ currentUserId }: { currentUserId: string }) {
   const [created, setCreated] = useState<{
     email: string;
     password: string;
+    role: string;
     roleLabel: string;
   } | null>(null);
 
@@ -131,11 +192,17 @@ export function PeopleManager({ currentUserId }: { currentUserId: string }) {
 
     if (!membersResponse.ok || !membersBody?.members) {
       errors.push(
-        membersBody?.error ?? "The people could not be read.",
+        serverError(
+          t,
+          membersBody?.error ?? "",
+          "pages.people.membersReadFailed",
+        ),
       );
     }
     if (!rolesResponse.ok || !rolesBody?.roles) {
-      errors.push(rolesBody?.error ?? "The roles could not be read.");
+      errors.push(
+        serverError(t, rolesBody?.error ?? "", "pages.people.rolesReadFailed"),
+      );
     }
 
     return {
@@ -144,7 +211,7 @@ export function PeopleManager({ currentUserId }: { currentUserId: string }) {
       tabs: rolesBody?.tabs ?? [],
       error: errors.length > 0 ? errors.join(" ") : null,
     };
-  }, []);
+  }, [t]);
 
   /** Reload, for a refresh after an action. */
   const load = useCallback(async () => {
@@ -158,11 +225,11 @@ export function PeopleManager({ currentUserId }: { currentUserId: string }) {
       setTabs(data.tabs);
       setError(data.error);
     } catch {
-      setError("CCM could not reach the server.");
+      setError(t("pages.people.serverUnreachable"));
     } finally {
       setLoading(false);
     }
-  }, [fetchData]);
+  }, [fetchData, t]);
 
   useEffect(() => {
     let cancelled = false;
@@ -176,7 +243,7 @@ export function PeopleManager({ currentUserId }: { currentUserId: string }) {
         setError(data.error);
       })
       .catch(() => {
-        if (!cancelled) setError("CCM could not reach the server.");
+        if (!cancelled) setError(t("pages.people.serverUnreachable"));
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -185,7 +252,7 @@ export function PeopleManager({ currentUserId }: { currentUserId: string }) {
     return () => {
       cancelled = true;
     };
-  }, [fetchData]);
+  }, [fetchData, t]);
 
   const current = roles.find((role) => role.key === selectedRole);
 
@@ -214,17 +281,23 @@ export function PeopleManager({ currentUserId }: { currentUserId: string }) {
       } | null;
 
       if (!response.ok) {
-        setError(body?.error ?? `The request failed (HTTP ${response.status}).`);
+        setError(
+          body?.error ??
+            tp("pages.people.requestFailed", { status: response.status }),
+        );
         return;
       }
 
       setNotice(
-        `The ${current?.label ?? selectedRole} role now holds ${body?.permissions?.length ?? 0} permission(s).`,
+        tp("pages.people.roleSaved", {
+          role: roleLabelFor(t, selectedRole, current?.label ?? selectedRole),
+          count: body?.permissions?.length ?? 0,
+        }),
       );
       setDirty(false);
       await load();
     } catch {
-      setError("CCM could not reach the server.");
+      setError(t("pages.people.serverUnreachable"));
     } finally {
       setSaving(false);
     }
@@ -250,20 +323,24 @@ export function PeopleManager({ currentUserId }: { currentUserId: string }) {
       } | null;
 
       if (!response.ok || !body?.password) {
-        setError(body?.error ?? `The request failed (HTTP ${response.status}).`);
+        setError(
+          body?.error ??
+            tp("pages.people.requestFailed", { status: response.status }),
+        );
         return;
       }
 
       setCreated({
         email: body.email ?? newEmail,
         password: body.password,
+        role: newRole,
         roleLabel: body.roleLabel ?? newRole,
       });
       setNewEmail("");
       setAdding(false);
       await load();
     } catch {
-      setError("CCM could not reach the server.");
+      setError(t("pages.people.serverUnreachable"));
     } finally {
       setSaving(false);
     }
@@ -284,14 +361,17 @@ export function PeopleManager({ currentUserId }: { currentUserId: string }) {
       } | null;
 
       if (!response.ok) {
-        setError(body?.error ?? `The request failed (HTTP ${response.status}).`);
+        setError(
+          body?.error ??
+            tp("pages.people.requestFailed", { status: response.status }),
+        );
         return;
       }
 
-      setNotice("Updated.");
+      setNotice(t("pages.people.updated"));
       await load();
     } catch {
-      setError("CCM could not reach the server.");
+      setError(t("pages.people.serverUnreachable"));
     }
   }
 
@@ -307,25 +387,26 @@ export function PeopleManager({ currentUserId }: { currentUserId: string }) {
   return (
     <div className="space-y-6">
       {notice ? (
-        <Notice tone="success" title="Done">
+        <Notice tone="success" title={t("pages.people.doneTitle")}>
           {notice}
         </Notice>
       ) : null}
       {error ? (
-        <Notice tone="danger" title="That did not work">
+        <Notice tone="danger" title={t("pages.people.errorTitle")}>
           {error}
         </Notice>
       ) : null}
 
       {created ? (
-        <Notice tone="warning" title="Save this password now">
+        <Notice tone="warning" title={t("pages.people.passwordTitle")}>
           <p>
-            <strong className="font-semibold">{created.email}</strong> can sign in
-            with the password below, as {created.roleLabel}. It is shown once
-            and is not stored anywhere.
+            <strong className="font-semibold">{created.email}</strong>{" "}
+            {tp("pages.people.passwordBody", {
+              role: roleLabelFor(t, created.role, created.roleLabel),
+            })}
           </p>
           <p className="mt-2 flex flex-wrap items-center gap-2">
-            <code className="rounded bg-surface px-2 py-1 font-mono text-[13px] text-tertiary">
+            <code className="rounded bg-surface px-2 py-1 font-mono text-label-sm text-tertiary">
               {created.password}
             </code>
             <button
@@ -338,7 +419,7 @@ export function PeopleManager({ currentUserId }: { currentUserId: string }) {
               className="inline-flex items-center gap-1 font-semibold text-primary-ink hover:underline"
             >
               <Copy aria-hidden="true" className="size-3.5" />
-              Copy
+              {t("common.copy")}
             </button>
           </p>
         </Notice>
@@ -346,8 +427,8 @@ export function PeopleManager({ currentUserId }: { currentUserId: string }) {
 
       <Card>
         <CardHeader
-          title="People"
-          subtitle="Everybody in this workspace, and what they may do"
+          title={t("pages.people.peopleTitle")}
+          subtitle={t("pages.people.peopleSubtitle")}
           actions={
             <Button
               variant="primary"
@@ -356,7 +437,7 @@ export function PeopleManager({ currentUserId }: { currentUserId: string }) {
               disabled={saving}
             >
               <UserPlus aria-hidden="true" className="size-4" />
-              Add a person
+              {t("pages.people.addPerson")}
             </Button>
           }
         />
@@ -372,7 +453,7 @@ export function PeopleManager({ currentUserId }: { currentUserId: string }) {
                     htmlFor="member-email"
                     className="mb-1 block text-label-md font-semibold text-secondary"
                   >
-                    Work email
+                    {t("pages.people.workEmail")}
                   </label>
                   <Input
                     id="member-email"
@@ -388,7 +469,7 @@ export function PeopleManager({ currentUserId }: { currentUserId: string }) {
                     htmlFor="member-role"
                     className="mb-1 block text-label-md font-semibold text-secondary"
                   >
-                    Role
+                    {t("pages.people.role")}
                   </label>
                   <Select
                     id="member-role"
@@ -399,7 +480,7 @@ export function PeopleManager({ currentUserId }: { currentUserId: string }) {
                       .filter((role) => role.key !== "owner")
                       .map((role) => (
                         <option key={role.key} value={role.key}>
-                          {role.label}
+                          {roleLabelFor(t, role.key, role.label)}
                         </option>
                       ))}
                   </Select>
@@ -412,21 +493,20 @@ export function PeopleManager({ currentUserId }: { currentUserId: string }) {
                         className="size-4 animate-spin"
                       />
                     ) : null}
-                    Create
+                    {t("pages.people.create")}
                   </Button>
                 </div>
               </div>
               <p className="mt-2 text-body-sm text-muted-text">
-                A password is generated and shown once. The person signs in
-                with it and can be given a new one at any time.
+                {t("pages.people.passwordHint")}
               </p>
             </form>
           ) : null}
 
           {members.length === 0 ? (
             <EmptyState
-              title="Nobody here yet"
-              description="Add the first person and give them a role."
+              title={t("pages.people.emptyTitle")}
+              description={t("pages.people.emptyBody")}
               icon={<Users className="size-5" />}
               className="border-0"
             />
@@ -446,12 +526,12 @@ export function PeopleManager({ currentUserId }: { currentUserId: string }) {
                         {member.email ?? member.userId.slice(0, 8)}
                         {isSelf ? (
                           <span className="ms-2 text-body-sm font-normal text-muted-text">
-                            (you)
+                            {t("pages.people.you")}
                           </span>
                         ) : null}
                       </p>
                       <p className="text-body-sm text-muted-text">
-                        Joined{" "}
+                        {t("pages.people.joined")}{" "}
                         {new Date(member.createdAt).toLocaleDateString()}
                       </p>
                     </div>
@@ -465,18 +545,22 @@ export function PeopleManager({ currentUserId }: { currentUserId: string }) {
                             : "warning"
                       }
                     >
-                      {member.status}
+                      {MEMBER_STATUS[member.status]
+                        ? t(MEMBER_STATUS[member.status]!)
+                        : member.status}
                     </Chip>
 
                     {isOwner ? (
                       <Chip tone="teal">
                         <ShieldCheck aria-hidden="true" className="size-3" />
-                        Owner
+                        {t("pages.people.roleLabels.owner")}
                       </Chip>
                     ) : (
                       <>
                         <label htmlFor={`role-${member.id}`} className="sr-only">
-                          The role of {member.email ?? "this person"}
+                          {tp("pages.people.roleOf", {
+                            name: member.email ?? t("pages.people.thisPerson"),
+                          })}
                         </label>
                         <Select
                           id={`role-${member.id}`}
@@ -490,7 +574,7 @@ export function PeopleManager({ currentUserId }: { currentUserId: string }) {
                             .filter((role) => role.key !== "owner")
                             .map((role) => (
                               <option key={role.key} value={role.key}>
-                                {role.label}
+                                {roleLabelFor(t, role.key, role.label)}
                               </option>
                             ))}
                         </Select>
@@ -509,8 +593,8 @@ export function PeopleManager({ currentUserId }: { currentUserId: string }) {
                             }
                           >
                             {member.status === "suspended"
-                              ? "Restore"
-                              : "Suspend"}
+                              ? t("pages.people.restore")
+                              : t("pages.people.suspend")}
                           </Button>
                         ) : null}
                       </>
@@ -525,8 +609,8 @@ export function PeopleManager({ currentUserId }: { currentUserId: string }) {
 
       <Card>
         <CardHeader
-          title="Roles"
-          subtitle="What each role may see, use and change"
+          title={t("pages.people.rolesTitle")}
+          subtitle={t("pages.people.rolesSubtitle")}
         />
         <CardBody className="space-y-4">
           <div className="flex flex-wrap items-center gap-2">
@@ -542,23 +626,24 @@ export function PeopleManager({ currentUserId }: { currentUserId: string }) {
                     : "rounded-full border border-border bg-surface px-3.5 py-1.5 text-label-md font-semibold text-muted-text transition-colors hover:bg-surface-muted"
                 }
               >
-                {role.label}
+                {roleLabelFor(t, role.key, role.label)}
               </button>
             ))}
           </div>
 
           {current ? (
             current.immutable ? (
-              <Notice tone="info" title="The owner's access is fixed">
-                The owner holds every permission and cannot be reduced. A
-                workspace with no administrator cannot be administered.
+              <Notice tone="info" title={t("pages.people.ownerAccessTitle")}>
+                {t("pages.people.ownerAccessBody")}
               </Notice>
             ) : (
               <>
                 <div className="overflow-x-auto">
                   <table className="w-full border-collapse text-body-sm">
                     <caption className="sr-only">
-                      The access level of the {current.label} role on each tab
+                      {tp("pages.people.matrixCaption", {
+                        role: roleLabelFor(t, current.key, current.label),
+                      })}
                     </caption>
                     <thead>
                       <tr className="border-b border-border">
@@ -566,7 +651,7 @@ export function PeopleManager({ currentUserId }: { currentUserId: string }) {
                           scope="col"
                           className="px-2 py-2 text-start font-semibold text-secondary"
                         >
-                          Tab
+                          {t("pages.people.tabColumn")}
                         </th>
                         {LEVELS.map((level) => (
                           <th
@@ -574,7 +659,7 @@ export function PeopleManager({ currentUserId }: { currentUserId: string }) {
                             scope="col"
                             className="px-2 py-2 text-center font-semibold text-secondary"
                           >
-                            {level.label}
+                            {t(level.path)}
                           </th>
                         ))}
                       </tr>
@@ -587,14 +672,14 @@ export function PeopleManager({ currentUserId }: { currentUserId: string }) {
                         if (sectionTabs.length === 0) return null;
 
                         return (
-                          <>
-                            <tr key={`section-${section.key}`}>
+                          <Fragment key={section.key}>
+                            <tr>
                               <th
                                 scope="row"
                                 colSpan={LEVELS.length + 1}
                                 className="px-2 pt-4 pb-1 text-start text-label-md font-bold uppercase tracking-[0.06em] text-muted-text"
                               >
-                                {section.label}
+                                {t(section.path)}
                               </th>
                             </tr>
                             {sectionTabs.map((tab) => {
@@ -614,7 +699,7 @@ export function PeopleManager({ currentUserId }: { currentUserId: string }) {
                                     {t(tab.labelKey)}
                                     {tab.ownerOnly ? (
                                       <Chip tone="teal" className="ms-2">
-                                        Owner only
+                                        {t("pages.people.ownerOnly")}
                                       </Chip>
                                     ) : null}
                                   </th>
@@ -625,7 +710,7 @@ export function PeopleManager({ currentUserId }: { currentUserId: string }) {
                                     >
                                       <label
                                         className="inline-flex cursor-pointer items-center justify-center"
-                                        title={option.label}
+                                        title={t(option.path)}
                                       >
                                         <input
                                           type="radio"
@@ -640,7 +725,7 @@ export function PeopleManager({ currentUserId }: { currentUserId: string }) {
                                             }));
                                             setDirty(true);
                                           }}
-                                          aria-label={`${t(tab.labelKey)} — ${option.label}`}
+                                          aria-label={`${t(tab.labelKey)} — ${t(option.path)}`}
                                         />
                                       </label>
                                     </td>
@@ -648,7 +733,7 @@ export function PeopleManager({ currentUserId }: { currentUserId: string }) {
                                 </tr>
                               );
                             })}
-                          </>
+                          </Fragment>
                         );
                       })}
                     </tbody>
@@ -661,16 +746,21 @@ export function PeopleManager({ currentUserId }: { currentUserId: string }) {
                     size="md"
                     onClick={() => void saveRole()}
                     disabled={saving || !dirty}
+                    title={
+                      dirty
+                        ? undefined
+                        : t("pages.people.noChangesToSave")
+                    }
                   >
                     {saving ? (
                       <LoaderCircle
                         aria-hidden="true"
                         className="size-4 animate-spin"
                       />
-                    ) : dirty ? null : (
-                      <Check aria-hidden="true" className="size-4" />
-                    )}
-                    Save the {current.label} role
+                    ) : dirty ? null : null}
+                    {tp("pages.people.saveRole", {
+                      role: roleLabelFor(t, current.key, current.label),
+                    })}
                   </Button>
                   {dirty ? (
                     <Button
@@ -682,14 +772,18 @@ export function PeopleManager({ currentUserId }: { currentUserId: string }) {
                       }}
                     >
                       <X aria-hidden="true" className="size-4" />
-                      Discard the changes
+                      {t("pages.people.discard")}
                     </Button>
                   ) : null}
                 </div>
 
                 <p className="text-body-sm text-muted-text">
-                  {current.permissions.length} permission(s) are derived from
-                  these levels: {current.permissions.join(", ") || "none"}.
+                  {tp("pages.people.derivedPermissions", {
+                    count: current.permissions.length,
+                    permissions:
+                      current.permissions.join(", ") ||
+                      t("pages.people.noPermissions"),
+                  })}
                 </p>
               </>
             )

@@ -3,10 +3,11 @@ import {
   type AnchorHTMLAttributes,
   type ButtonHTMLAttributes,
 } from "react";
+import Link from "next/link";
 import { cn } from "@/lib/cn";
 
 type Variant = "primary" | "secondary" | "ghost" | "danger";
-type Size = "sm" | "md" | "lg";
+type Size = "sm" | "md";
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: Variant;
@@ -45,7 +46,6 @@ const VARIANTS: Record<Variant, string> = {
 const SIZES: Record<Size, string> = {
   sm: "h-[38px] px-3.5 text-label-md",
   md: "h-[47px] px-[25px] text-button-text",
-  lg: "h-[52px] px-7 text-button-text",
 };
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
@@ -72,6 +72,67 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     );
   },
 );
+
+/**
+ * A button that is really a link.
+ *
+ * The styles were copied by hand into seven places, and that is how the
+ * contrast defect spread: one copy was fixed and the other six kept the
+ * old, unreadable teal-on-white label. One component, one style.
+ *
+ * It is a `next/link` for an internal route and a plain anchor for an
+ * external one, so an internal destination does not reload the application
+ * and an external one opens safely.
+ */
+export function ButtonLink({
+  href,
+  children,
+  className,
+  variant = "secondary",
+  size = "sm",
+  external = false,
+  ...props
+}: Omit<
+  AnchorHTMLAttributes<HTMLAnchorElement>,
+  "href" | "type" | "className"
+> & {
+  href: string;
+  children: React.ReactNode;
+  variant?: Variant;
+  size?: Size;
+  className?: string;
+  /** Open in a new tab. Only for a genuinely external destination. */
+  external?: boolean;
+}) {
+  const classes = cn(
+    "inline-flex items-center justify-center gap-2 rounded-md font-semibold",
+    "transition-colors duration-150",
+    "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-ink",
+    VARIANTS[variant],
+    SIZES[size],
+    className,
+  );
+
+  if (external) {
+    return (
+      <a
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={classes}
+        {...props}
+      >
+        {children}
+      </a>
+    );
+  }
+
+  return (
+    <Link href={href} className={classes} {...props}>
+      {children}
+    </Link>
+  );
+}
 
 /**
  * A button that opens a new tab. `noopener`/`noreferrer` are set

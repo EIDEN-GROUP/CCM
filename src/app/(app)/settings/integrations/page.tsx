@@ -13,9 +13,14 @@ import { requirePermission } from "@/lib/auth/guard";
 import { listAppCredentials } from "@/lib/providers/app-credentials";
 import { OAUTH_PROVIDER_LIST } from "@/lib/oauth/registry";
 import { serverEnv } from "@/lib/env";
+import { getTranslator } from "@/lib/i18n-server";
 
-export const metadata: Metadata = { title: "Integrations setup" };
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslator();
+  return { title: t("pages.settings.integrations.title") };
+}
 
 /**
  * The provider app setup.
@@ -29,6 +34,8 @@ export default async function IntegrationsSetupPage() {
   const session = await getSession();
   const guard = await requirePermission(session, "settings.manage");
   if (!guard.allowed) return guard.response;
+
+  const t = await getTranslator();
 
   const db = createAdminClient();
 
@@ -58,21 +65,21 @@ export default async function IntegrationsSetupPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Provider apps"
-        subtitle="Add the client id and secret of each provider's app, then connect it."
+        title={t("pages.settings.integrations.title")}
+        subtitle={t("pages.settings.integrations.subtitle")}
       />
 
-      <Notice tone="info" title="What this replaces">
-        These values used to live in the deployment environment, so
-        connecting a provider meant editing a file and redeploying. They are
-        stored here instead, encrypted, and the Connect button works as soon
-        as the form is saved.
+      <Notice
+        tone="info"
+        title={t("pages.settings.integrations.replacesTitle")}
+      >
+        {t("pages.settings.integrations.replacesBody")}
       </Notice>
 
       <Card>
         <CardHeader
-          title="Apps"
-          subtitle="One app per provider. Google covers Analytics, Search Console, Tag Manager, Ads, YouTube and Gmail."
+          title={t("pages.settings.integrations.appsTitle")}
+          subtitle={t("pages.settings.integrations.appsSubtitle")}
         />
         <CardBody>
           <ProviderSetupPanel

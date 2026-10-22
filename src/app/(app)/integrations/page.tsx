@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Plug } from "lucide-react";
+import { Plug, Boxes } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { DataTable } from "@/components/ui/table";
@@ -15,9 +15,59 @@ import { formatAge } from "@/domain/freshness";
 import { oauthProviderFor, OAUTH_PROVIDER_LIST } from "@/lib/oauth/registry";
 import { listAppCredentials } from "@/lib/providers/app-credentials";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getTranslator } from "@/lib/i18n-server";
+import { formatMessage, type MessagePathRoot, type Translator } from "@/lib/i18n";
 
-export const metadata: Metadata = { title: "Integrations" };
 export const dynamic = "force-dynamic";
+
+/** A message key inside the `pages.integrations` namespace. */
+type IntegrationsPath = Extract<MessagePathRoot, `pages.integrations.${string}`>;
+
+/** A message key inside the `api` namespace, which owns the connection states. */
+type ApiPath = Extract<MessagePathRoot, `api.${string}`>;
+
+/**
+ * The connection states.
+ *
+ * `api.*` already carries the vocabulary of a connection, so the catalogue
+ * is reused rather than duplicated here.
+ */
+const CONNECTION_STATUS: Record<string, ApiPath> = {
+  connected: "api.connected",
+  needs_setup: "api.needsSetup",
+  token_refresh_failed: "api.tokenRefreshFailed",
+  permission_revoked: "api.permissionRevoked",
+  provider_outage: "api.providerOutage",
+  rate_limited: "api.rateLimited",
+  sync_stale: "api.syncStale",
+};
+
+/** The provider taxonomy. */
+const CATEGORY: Record<string, IntegrationsPath> = {
+  advertising: "pages.integrations.categoryAdvertising",
+  analytics: "pages.integrations.categoryAnalytics",
+  search: "pages.integrations.categorySearch",
+  tagging: "pages.integrations.categoryTagging",
+  social: "pages.integrations.categorySocial",
+  email: "pages.integrations.categoryEmail",
+  seo: "pages.integrations.categorySeo",
+  ux: "pages.integrations.categoryUx",
+  site: "pages.integrations.categorySite",
+};
+
+function labelFor(
+  t: Translator,
+  map: Record<string, IntegrationsPath> | Record<string, ApiPath>,
+  value: string,
+): string {
+  const key = map[value];
+  return key ? t(key) : value;
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslator();
+  return { title: t("pages.integrations.title") };
+}
 
 /**
  * The connection catalogue.
@@ -30,6 +80,8 @@ export default async function IntegrationsPage() {
   const session = await getSession();
   const guard = await requirePermission(session, "integrations.read");
   if (!guard.allowed) return guard.response;
+
+  const t = await getTranslator();
 
   const supabase = await createClient();
   const workspaceId = session.workspaceId!;
@@ -101,11 +153,18 @@ export default async function IntegrationsPage() {
 
   const now = new Date();
 
+  const connectionsSubtitle =
+    connectionRows.length === 1
+      ? t("pages.integrations.connectionsSubtitleOne")
+      : formatMessage(t("pages.integrations.connectionsSubtitleOther"), {
+          count: connectionRows.length,
+        });
+
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Integrations"
-        subtitle="Connections, scopes, quotas and freshness."
+        title={t("pages.integrations.title")}
+        subtitle={t("pages.integrations.subtitle")}
         actions={
           <ConnectProviderButton
             providers={connectableProviders}
@@ -114,139 +173,144 @@ export default async function IntegrationsPage() {
         }
       />
 
-      <Notice tone="info" title="Honest status">
-        A tile only says &ldquo;Connected&rdquo; when CCM holds a working API
-        token for that account. Everything else shows what is missing, and the
-        setup checklist below lists the approvals that are still outstanding.
+      <Notice tone="info" title={t("pages.integrations.honestStatusTitle")}>
+        {t("pages.integrations.honestStatusBody")}
       </Notice>
 
       <Card>
         <CardHeader
-          title="Connections"
-          subtitle={`${connectionRows.length} configured`}
+          title={t("pages.integrations.connectionsTitle")}
+          subtitle={connectionsSubtitle}
         />
         <CardBody className="p-0">
-          {connectionRows.length === 0 ? (
-            <EmptyState
-              title="No providers connected"
-              description="Connect Google Ads, GA4, Search Console, GTM, Gmail or a social account to start reporting."
-              icon={<Plug className="size-5" />}
-              className="border-0"
-            />
-          ) : (
-            <DataTable
-              label="Connections"
-              rows={connectionRows}
-              rowKey={(row) => row.id}
-              columns={[
-                {
-                  key: "label",
-                  header: "Connection",
-                  mobile: "primary",
-                  render: (row) => (
-                    <span className="font-semibold text-tertiary">
-                      {row.display_label}
-                    </span>
-                  ),
-                },
-                {
-                  key: "status",
-                  header: "Status",
-                  mobile: "secondary",
-                  render: (row) => (
-                    <Chip
-                      tone={
-                        row.status === "connected"
-                          ? "success"
-                          : row.status === "needs_setup"
-                            ? "warning"
-                            : "danger"
-                      }
-                    >
-                      {row.status.replace(/_/g, " ")}
-                    </Chip>
-                  ),
-                },
-                {
-                  key: "scopes",
-                  header: "Scopes",
-                  mobile: "hidden",
-                  render: (row) =>
-                    row.scopes.length > 0 ? row.scopes.join(", ") : "—",
-                },
-                {
-                  key: "access",
-                  header: "Access level",
-                  mobile: "hidden",
-                  render: (row) => row.api_access_level ?? "—",
-                },
-                {
-                  key: "quota",
-                  header: "Quota",
-                  numeric: true,
-                  mobile: "hidden",
-                  render: (row) =>
-                    row.quota_limit === null
-                      ? "—"
-                      : `${row.quota_used}/${row.quota_limit}`,
-                },
-                {
-                  key: "lastSuccess",
-                  header: "Last success",
-                  mobile: "secondary",
-                  render: (row) =>
-                    row.last_success_at
-                      ? formatAge(
-                          (now.getTime() - Date.parse(row.last_success_at)) / 1000,
-                        )
-                      : "—",
-                },
-                {
-                  key: "actions",
-                  header: "",
-                  mobile: "secondary",
-                  render: (row) => (
-                    <ConnectionActions
-                      connectionId={row.id}
-                      providerKey={row.provider_key}
-                      status={row.status}
-                      canManage={session.permissions.has("integrations.manage")}
-                      oauthProvider={oauthProviderFor(row.provider_key)}
-                      appConfigured={
-                        (() => {
-                          const provider = oauthProviderFor(row.provider_key);
-                          return provider ? configuredApps.has(provider) : false;
-                        })()
-                      }
-                    />
-                  ),
-                },
-                {
-                  key: "error",
-                  header: "Last failure",
-                  mobile: "hidden",
-                  render: (row) => row.last_error_message ?? "—",
-                },
-              ]}
-            />
-          )}
+          <DataTable
+            label={t("pages.integrations.connectionsTable")}
+            rows={connectionRows}
+            empty={
+              <EmptyState
+                title={t("pages.integrations.noConnectionsTitle")}
+                description={t("pages.integrations.noConnectionsBody")}
+                icon={<Plug className="size-5" />}
+                className="border-0"
+              />
+            }
+            rowKey={(row) => row.id}
+            columns={[
+              {
+                key: "label",
+                header: t("pages.integrations.columnConnection"),
+                mobile: "primary",
+                render: (row) => (
+                  <span className="font-semibold text-tertiary">
+                    {row.display_label}
+                  </span>
+                ),
+              },
+              {
+                key: "status",
+                header: t("common.status"),
+                mobile: "secondary",
+                render: (row) => (
+                  <Chip
+                    tone={
+                      row.status === "connected"
+                        ? "success"
+                        : row.status === "needs_setup"
+                          ? "warning"
+                          : "danger"
+                    }
+                  >
+                    {labelFor(t, CONNECTION_STATUS, row.status)}
+                  </Chip>
+                ),
+              },
+              {
+                key: "scopes",
+                header: t("pages.integrations.scopes"),
+                mobile: "secondary",
+                render: (row) =>
+                  row.scopes.length > 0 ? row.scopes.join(", ") : "—",
+              },
+              {
+                key: "access",
+                header: t("pages.integrations.columnAccessLevel"),
+                mobile: "secondary",
+                render: (row) => row.api_access_level ?? "—",
+              },
+              {
+                key: "quota",
+                header: t("pages.integrations.quota"),
+                numeric: true,
+                mobile: "secondary",
+                render: (row) =>
+                  row.quota_limit === null
+                    ? "—"
+                    : `${row.quota_used}/${row.quota_limit}`,
+              },
+              {
+                key: "lastSuccess",
+                header: t("pages.integrations.lastSuccess"),
+                mobile: "secondary",
+                render: (row) =>
+                  row.last_success_at
+                    ? formatAge(
+                        (now.getTime() - Date.parse(row.last_success_at)) / 1000,
+                      )
+                    : "—",
+              },
+              {
+                key: "actions",
+                header: "",
+                mobile: "secondary",
+                render: (row) => (
+                  <ConnectionActions
+                    connectionId={row.id}
+                    providerKey={row.provider_key}
+                    status={row.status}
+                    canManage={session.permissions.has("integrations.manage")}
+                    oauthProvider={oauthProviderFor(row.provider_key)}
+                    appConfigured={
+                      (() => {
+                        const provider = oauthProviderFor(row.provider_key);
+                        return provider ? configuredApps.has(provider) : false;
+                      })()
+                    }
+                  />
+                ),
+              },
+              {
+                key: "error",
+                header: t("pages.integrations.lastFailure"),
+                mobile: "secondary",
+                render: (row) => row.last_error_message ?? "—",
+              },
+            ]}
+          />
         </CardBody>
       </Card>
 
       <Card>
         <CardHeader
-          title="Provider catalogue"
-          subtitle="Every provider CCM knows about, and what it still needs"
+          title={t("pages.integrations.providerCatalogueTitle")}
+          subtitle={t("pages.integrations.providerCatalogueSubtitle")}
         />
         <CardBody className="p-0">
           <DataTable
-            label="Provider catalogue"
+            label={t("pages.integrations.providerCatalogueTable")}
             rows={definitionRows}
+            empty={
+              <EmptyState
+                title={t("pages.integrations.noProviderCatalogueTitle")}
+                description={t("pages.integrations.noProviderCatalogueBody")}
+                icon={<Boxes className="size-5" />}
+                className="border-0"
+              />
+            }
             rowKey={(row) => row.key}
             columns={[
               {
                 key: "provider",
-                header: "Provider",
+                header: t("common.provider"),
                 mobile: "primary",
                 render: (row) => (
                   <span className="font-semibold text-tertiary">
@@ -256,20 +320,22 @@ export default async function IntegrationsPage() {
               },
               {
                 key: "category",
-                header: "Category",
+                header: t("pages.integrations.columnCategory"),
                 mobile: "secondary",
-                render: (row) => <Chip tone="teal">{row.category}</Chip>,
+                render: (row) => (
+                  <Chip tone="teal">{labelFor(t, CATEGORY, row.category)}</Chip>
+                ),
               },
               {
                 key: "apiVersion",
-                header: "API version",
+                header: t("pages.integrations.apiVersion"),
                 mobile: "secondary",
                 render: (row) => row.api_version,
               },
               {
                 key: "approvals",
-                header: "Still needed",
-                mobile: "hidden",
+                header: t("pages.integrations.columnStillNeeded"),
+                mobile: "secondary",
                 render: (row) =>
                   row.blocking_approvals.length > 0
                     ? row.blocking_approvals.join(" · ")
@@ -277,8 +343,8 @@ export default async function IntegrationsPage() {
               },
               {
                 key: "docs",
-                header: "Docs",
-                mobile: "hidden",
+                header: t("pages.integrations.columnDocs"),
+                mobile: "secondary",
                 render: (row) =>
                   row.docs_url ? (
                     <a
@@ -287,7 +353,7 @@ export default async function IntegrationsPage() {
                       rel="noopener noreferrer"
                       className="text-primary-ink underline-offset-2 hover:underline"
                     >
-                      Open
+                      {t("common.open")}
                     </a>
                   ) : (
                     "—"
@@ -300,27 +366,25 @@ export default async function IntegrationsPage() {
 
       <Card>
         <CardHeader
-          title="API version watchlist"
-          subtitle="Where a deprecation would bite, and how to find out"
+          title={t("pages.integrations.changelog")}
+          subtitle={t("pages.integrations.watchlistSubtitle")}
         />
         <CardBody>
           <ul className="space-y-2 text-body-sm text-secondary">
             <li>
-              <span className="font-semibold text-tertiary">Google Ads</span> —
-              developer tokens were sunset on 9 September 2026. Access levels
-              now live on the Google Cloud project (Test, Explorer, Basic,
-              Standard). Basic and Standard require brand verification.
+              <span className="font-semibold text-tertiary">Google Ads</span>
+              {" — "}
+              {t("pages.integrations.watchlistGoogleAds")}
             </li>
             <li>
-              <span className="font-semibold text-tertiary">LinkedIn</span> —
-              Marketing API versions are time-based and must be migrated on
-              schedule. The pinned version lives in the provider registry, not
-              scattered through the code.
+              <span className="font-semibold text-tertiary">LinkedIn</span>
+              {" — "}
+              {t("pages.integrations.watchlistLinkedIn")}
             </li>
             <li>
-              <span className="font-semibold text-tertiary">Google APIs</span> —
-              the Analytics Data API, Search Console API, Tag Manager API v2 and
-              Gmail API are versioned centrally in the provider registry.
+              <span className="font-semibold text-tertiary">Google APIs</span>
+              {" — "}
+              {t("pages.integrations.watchlistGoogleApis")}
             </li>          </ul>
         </CardBody>
       </Card>

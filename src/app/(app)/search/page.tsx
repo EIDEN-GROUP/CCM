@@ -9,9 +9,41 @@ import { createClient } from "@/lib/supabase/server";
 import { requirePermission } from "@/lib/auth/guard";
 import { listLaunchableAccounts } from "@/lib/repositories/launcher";
 import { listWebsites } from "@/lib/repositories/websites";
+import { getTranslator } from "@/lib/i18n-server";
+import { formatMessage, type MessagePathRoot, type Translator } from "@/lib/i18n";
 
-export const metadata: Metadata = { title: "Search" };
 export const dynamic = "force-dynamic";
+
+/** A message key inside the `browser` namespace, which owns the launch states. */
+type BrowserPath = Extract<MessagePathRoot, `browser.${string}`>;
+
+/**
+ * The launch states of an account.
+ *
+ * `browser.*` already carries the vocabulary, so the catalogue is reused
+ * rather than duplicated here.
+ */
+const LAUNCH_STATUS: Record<string, BrowserPath> = {
+  ready: "browser.ready",
+  profile_unmapped: "browser.profileUnmapped",
+  extension_not_paired: "browser.extensionNotPaired",
+  helper_unavailable: "browser.helperUnavailable",
+  browser_unsupported: "browser.browserUnsupported",
+};
+
+function labelFor(
+  t: Translator,
+  map: Record<string, BrowserPath>,
+  value: string,
+): string {
+  const key = map[value];
+  return key ? t(key) : value;
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslator();
+  return { title: t("pages.search.title") };
+}
 
 /**
  * Global search.
@@ -28,6 +60,8 @@ export default async function SearchPage({
   const session = await getSession();
   const guard = await requirePermission(session, "overview.read");
   if (!guard.allowed) return guard.response;
+
+  const t = await getTranslator();
 
   const params = await searchParams;
   const query = (typeof params.q === "string" ? params.q : "").trim();
@@ -57,39 +91,53 @@ export default async function SearchPage({
       )
     : websites;
 
+  const accountsLabel =
+    matchedAccounts.length === 1
+      ? t("pages.search.resultsOne")
+      : formatMessage(t("pages.search.resultsOther"), {
+          count: matchedAccounts.length,
+        });
+
+  const websitesLabel =
+    matchedWebsites.length === 1
+      ? t("pages.search.resultsOne")
+      : formatMessage(t("pages.search.resultsOther"), {
+          count: matchedWebsites.length,
+        });
+
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Search"
+        title={t("pages.search.title")}
         subtitle={
           query
-            ? `Results for “${query}”`
-            : "Everything your roles give you access to"
+            ? formatMessage(t("pages.search.resultsFor"), { query })
+            : t("pages.search.subtitleAll")
         }
       />
 
       <Card>
         <CardHeader
-          title="Accounts"
-          subtitle={`${matchedAccounts.length} result${matchedAccounts.length === 1 ? "" : "s"}`}
+          title={t("pages.search.accountsTitle")}
+          subtitle={accountsLabel}
         />
         <CardBody className="p-0">
-          {matchedAccounts.length === 0 ? (
-            <EmptyState
-              title="No accounts match"
-              description="Try a different term, or browse the Account Launcher."
-              icon={<Search className="size-5" />}
-              className="border-0"
-            />
-          ) : (
             <DataTable
-              label="Account search results"
+              label={t("pages.search.accountsTable")}
               rows={matchedAccounts}
+              empty={
+                <EmptyState
+                  title={t("pages.search.noAccountsTitle")}
+                  description={t("pages.search.noAccountsBody")}
+                  icon={<Search className="size-5" />}
+                  className="border-0"
+                />
+              }
               rowKey={(row) => row.id}
               columns={[
                 {
                   key: "label",
-                  header: "Account",
+                  header: t("common.account"),
                   mobile: "primary",
                   render: (row) => (
                     <span className="font-semibold text-tertiary">
@@ -99,43 +147,42 @@ export default async function SearchPage({
                 },
                 {
                   key: "provider",
-                  header: "Provider",
+                  header: t("common.provider"),
                   mobile: "secondary",
                   render: (row) => row.providerName,
                 },
                 {
                   key: "status",
-                  header: "Status",
+                  header: t("common.status"),
                   mobile: "secondary",
-                  render: (row) => row.status.replace(/_/g, " "),
+                  render: (row) => labelFor(t, LAUNCH_STATUS, row.status),
                 },
               ]}
             />
-          )}
         </CardBody>
       </Card>
 
       <Card>
         <CardHeader
-          title="Websites"
-          subtitle={`${matchedWebsites.length} result${matchedWebsites.length === 1 ? "" : "s"}`}
+          title={t("pages.search.websitesTitle")}
+          subtitle={websitesLabel}
         />
         <CardBody className="p-0">
-          {matchedWebsites.length === 0 ? (
-            <EmptyState
-              title="No websites match"
-              description="Try a different term."
-              className="border-0"
-            />
-          ) : (
             <DataTable
-              label="Website search results"
+              label={t("pages.search.websitesTable")}
               rows={matchedWebsites}
+              empty={
+                <EmptyState
+                  title={t("pages.search.noWebsitesTitle")}
+                  description={t("pages.search.noWebsitesBody")}
+                  className="border-0"
+                />
+              }
               rowKey={(row) => row.id}
               columns={[
                 {
                   key: "name",
-                  header: "Site",
+                  header: t("pages.search.columnSite"),
                   mobile: "primary",
                   render: (row) => (
                     <span className="font-semibold text-tertiary">{row.name}</span>
@@ -143,19 +190,18 @@ export default async function SearchPage({
                 },
                 {
                   key: "domain",
-                  header: "Domain",
+                  header: t("pages.search.columnDomain"),
                   mobile: "secondary",
                   render: (row) => row.domain,
                 },
                 {
                   key: "services",
-                  header: "Services",
-                  mobile: "hidden",
+                  header: t("pages.search.columnServices"),
+                  mobile: "secondary",
                   render: (row) => row.service_lines.join(", ") || "—",
                 },
               ]}
             />
-          )}
         </CardBody>
       </Card>
     </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { Info, TriangleAlert } from "lucide-react";
+import { CircleCheck, Info, TriangleAlert } from "lucide-react";
 import { cn } from "@/lib/cn";
 
 /**
@@ -30,13 +30,24 @@ export function Notice({
     info: "border-primary/25 bg-pale text-primary-ink",
     warning: "border-warning/30 bg-warning-surface/70 text-warning-ink",
     danger: "border-error/30 bg-error-surface/70 text-error-ink",
-    success: "border-primary/30 bg-pale text-primary-ink",
+    success: "border-success/30 bg-surface-muted text-success",
   } as const;
 
-  const Icon = tone === "info" || tone === "success" ? Info : TriangleAlert;
+  /* Success and info are not the same message, so they do not look the
+     same and they do not carry the same icon. */
+  const Icon =
+    tone === "danger" || tone === "warning"
+      ? TriangleAlert
+      : tone === "success"
+        ? CircleCheck
+        : Info;
 
   return (
     <div
+      /* A danger notice interrupts; the others are polite context. A
+         screen reader that never hears the notice has not been told
+         anything. */
+      role={tone === "danger" ? "alert" : "status"}
       className={cn(
         "flex items-start gap-3 rounded-lg border px-4 py-3 text-body-sm",
         styles[tone],

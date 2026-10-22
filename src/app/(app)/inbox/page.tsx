@@ -10,10 +10,62 @@ import { MailboxBrowser } from "@/components/inbox/mailbox-browser";
 import { getSession } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { requirePermission } from "@/lib/auth/guard";
-import { formatAge } from "@/domain/freshness";
+import { intlLocale, type Translator } from "@/lib/i18n";
+import { getLocale, getTranslator } from "@/lib/i18n-server";
 
-export const metadata: Metadata = { title: "Unified Inbox" };
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslator();
+  return { title: t("nav.unifiedInbox") };
+}
+
+/**
+ * The mailbox status, in words.
+ *
+ * The catalogue covers the statuses a mailbox connection can hold; anything
+ * else keeps its raw value rather than an invented label.
+ */
+function statusLabel(status: string, t: Translator): string {
+  switch (status) {
+    case "connected":
+      return t("api.connected");
+    case "needs_setup":
+      return t("api.needsSetup");
+    case "token_refresh_failed":
+      return t("api.tokenRefreshFailed");
+    case "permission_revoked":
+      return t("api.permissionRevoked");
+    case "provider_outage":
+      return t("api.providerOutage");
+    case "rate_limited":
+      return t("api.rateLimited");
+    case "sync_stale":
+      return t("api.syncStale");
+    case "not_configured":
+      return t("api.notConfigured");
+    default:
+      return status.replace(/_/g, " ");
+  }
+}
+
+/**
+ * Relative age, in the interface language.
+ *
+ * The shared domain formatter speaks English only, and a half-translated
+ * screen is worse than an untranslated one.
+ */
+function formatAgeLabel(ageSeconds: number, locale: string): string {
+  const relative = new Intl.RelativeTimeFormat(locale, { numeric: "always" });
+  if (ageSeconds < 60) {
+    return relative.format(-Math.max(1, Math.round(ageSeconds)), "second");
+  }
+  const minutes = ageSeconds / 60;
+  if (minutes < 60) return relative.format(-Math.round(minutes), "minute");
+  const hours = minutes / 60;
+  if (hours < 24) return relative.format(-Math.round(hours), "hour");
+  return relative.format(-Math.round(hours / 24), "day");
+}
 
 /**
  * The unified mailbox.
@@ -32,6 +84,8 @@ export default async function InboxPage() {
   if (!guard.allowed) return guard.response;
 
   const supabase = await createClient();
+  const t = await getTranslator();
+  const locale = intlLocale(await getLocale());
 
   const { data: mailboxes } = await supabase
     .from("mailbox_connections")
@@ -63,42 +117,36 @@ export default async function InboxPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Unified Email"
-        subtitle="Authorised mailboxes, threads and follow-ups."
+        title={t("pages.inbox.title")}
+        subtitle={t("pages.inbox.subtitle")}
       />
 
-      <Notice tone="info" title="Mailbox privacy">
-        Mailbox content is isolated from the rest of CCM and is protected by
-        its own permission set and row-level policies. Message bodies and
-        attachments are read from the provider when you open a message and
-        are never stored here. AI summarisation is opt-in per mailbox — it is
-        off until someone explicitly enables it. Sending always takes a
-        confirmation that shows the recipient and the sending identity, and
-        every send is recorded in the audit log.
+      <Notice tone="info" title={t("pages.inbox.mailboxPrivacyNoticeTitle")}>
+        {t("pages.inbox.mailboxPrivacyNoticeBody")}
       </Notice>
 
       <Card>
         <CardHeader
-          title="Mailboxes"
-          subtitle="Every account you are authorised to read"
+          title={t("pages.inbox.mailboxesCardTitle")}
+          subtitle={t("pages.inbox.mailboxesCardSubtitle")}
         />
         <CardBody className="p-0">
-          {rows.length === 0 ? (
-            <EmptyState
-              title="No mailbox connected"
-              description="medicalbay.ma runs on Google Workspace. Connect a mailbox with the Gmail API to bring the inbox into CCM."
-              icon={<Mail className="size-5" />}
-              className="border-0"
-            />
-          ) : (
             <DataTable
-              label="Mailboxes"
+              label={t("pages.inbox.mailboxesTableLabel")}
               rows={rows}
+              empty={
+                <EmptyState
+                  title={t("pages.inbox.noMailboxTitle")}
+                  description={t("pages.inbox.noMailboxDescription")}
+                  icon={<Mail className="size-5" />}
+                  className="border-0"
+                />
+              }
               rowKey={(row) => row.id}
               columns={[
                 {
                   key: "label",
-                  header: "Mailbox",
+                  header: t("pages.inbox.mailbox"),
                   mobile: "primary",
                   render: (row) => (
                     <span className="font-semibold text-tertiary">
@@ -108,13 +156,13 @@ export default async function InboxPage() {
                 },
                 {
                   key: "email",
-                  header: "Address",
+                  header: t("pages.inbox.addressColumn"),
                   mobile: "secondary",
                   render: (row) => row.mailbox_email,
                 },
                 {
                   key: "status",
-                  header: "Status",
+                  header: t("common.status"),
                   mobile: "secondary",
                   render: (row) => (
                     <Chip
@@ -126,48 +174,48 @@ export default async function InboxPage() {
                             : "danger"
                       }
                     >
-                      {row.status.replace(/_/g, " ")}
+                      {statusLabel(row.status, t)}
                     </Chip>
                   ),
                 },
                 {
                   key: "ai",
-                  header: "AI processing",
-                  mobile: "hidden",
+                  header: t("pages.inbox.aiProcessingColumn"),
+                  mobile: "secondary",
                   render: (row) =>
                     row.ai_processing_enabled ? (
-                      <Chip tone="warning">Enabled</Chip>
+                      <Chip tone="warning">{t("pages.inbox.enabled")}</Chip>
                     ) : (
-                      <Chip tone="neutral">Off</Chip>
+                      <Chip tone="neutral">{t("pages.inbox.off")}</Chip>
                     ),
                 },
                 {
                   key: "sync",
-                  header: "Last sync",
+                  header: t("common.lastSync"),
                   mobile: "secondary",
                   render: (row) =>
                     row.last_sync_at
-                      ? formatAge(
+                      ? formatAgeLabel(
                           (now.getTime() - Date.parse(row.last_sync_at)) / 1000,
+                          locale,
                         )
                       : "—",
                 },
               ]}
             />
-          )}
         </CardBody>
       </Card>
 
       <Card>
         <CardHeader
-          title="Messages"
-          subtitle="Search, page and read. Bodies are fetched on demand and never stored."
+          title={t("pages.inbox.messagesCardTitle")}
+          subtitle={t("pages.inbox.messagesCardSubtitle")}
         />
         <CardBody>
           {connected.length === 0 ? (
             <EmptyState
-              title="No connected mailbox to read"
-              description="The mailbox browser opens once a Gmail mailbox is connected. The list above shows what is connected and what still needs setup."
+              title={t("pages.inbox.noConnectedMailboxTitle")}
+              description={t("pages.inbox.noConnectedMailboxDescription")}
               icon={<Mail className="size-5" />}
               className="border-0"
             />

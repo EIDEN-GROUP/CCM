@@ -259,7 +259,7 @@ export function ProviderSetupPanel({
                 Redirect URI to register
               </span>
               <div className="flex flex-wrap items-center gap-2">
-                <code className="rounded bg-surface-muted px-2 py-1 font-mono text-[13px] text-secondary">
+                <code className="rounded bg-surface-muted px-2 py-1 font-mono text-label-sm text-secondary">
                   {redirectUri}
                 </code>
                 <button

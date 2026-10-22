@@ -204,7 +204,7 @@ jobs. It must be authorised with the `CRON_SECRET`:
 ```json
 {
   "crons": [
-    { "path": "/api/jobs/dispatch", "schedule": "*/15 * * * *" }
+    { "path": "/api/jobs/dispatch", "schedule": "0 3 * * *" }
   ]
 }
 ```
@@ -213,15 +213,50 @@ Vercel sends `Authorization: Bearer <CRON_SECRET>`; the route rejects
 anything else. Vercel's cron sends the header automatically when
 `CRON_SECRET` is set in the project environment.
 
-> **Plan limitation.** The Vercel Hobby plan allows one cron invocation per
-> day. On Hobby, change the schedule to `0 3 * * *` — the dispatcher still
-> claims a bounded batch per run, so a daily dispatch simply means a larger
-> batch per day. On a paid plan, keep the fifteen-minute schedule. The
-> container worker (`scripts/worker.mjs`) polls continuously and is not
-> affected by the Vercel cron limit at all.
+> **The schedule is a daily one, because Vercel's Hobby plan allows only
+> one cron invocation per day.** A `*/15 * * * *` schedule is rejected by
+> Vercel on Hobby with *"Hobby accounts are limited to daily cron jobs"*.
+> The schedule shipped here is `0 3 * * *` — 03:00 UTC, which is 04:00 in
+> Casablanca (Morocco is permanently UTC+1, with no daylight saving), in
+> the small hours before the working day.
+>
+> On a paid plan, change it back to `*/15 * * * *`.
 
-> **Alternative.** Run the dispatcher from Supabase Cron instead. The route
-> accepts the same bearer token, so only the caller changes.
+**What a daily schedule means in practice.** The dispatcher claims one
+bounded batch per run — ten jobs by default, twenty-five at most — and
+stops. With one run a day, that is the whole of the Vercel-driven
+throughput. The response reports `queuedBefore` and `queuedRemaining`, so
+you can see whether the backlog is growing; a backlog that keeps growing
+means the daily run is too slow for the work.
+
+**The recommended way to keep the frequent cadence on Hobby.** Run the same
+dispatcher from Supabase's own scheduler instead of (or as well as) Vercel's.
+The route accepts the same bearer token, so only the caller changes. In the
+Supabase SQL editor, with `pg_cron` and `pg_net` enabled:
+
+```sql
+-- One call every fifteen minutes, from the database itself.
+select cron.schedule(
+  'ccm-dispatch',
+  '*/15 * * * *',
+  $$
+  select net.http_post(
+    url     := 'https://<your-vercel-domain>/api/jobs/dispatch',
+    headers := jsonb_build_object(
+      'Content-Type',  'application/json',
+      'Authorization', 'Bearer <CRON_SECRET>'
+    ),
+    body    := '{}'::jsonb
+  );
+  $$
+);
+```
+
+The Vercel cron then stays as a daily safety net, and the Supabase cron
+does the fifteen-minute work. Neither depends on the other.
+
+**Alternative.** On a VPS or a container, `scripts/worker.mts` polls
+continuously and is not affected by the Vercel cron limit at all.
 
 ### Set the Supabase auth URLs
 

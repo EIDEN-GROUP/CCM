@@ -6,9 +6,14 @@ import { getSession } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { requirePermission } from "@/lib/auth/guard";
 import { listLaunchableAccounts } from "@/lib/repositories/launcher";
+import { getTranslator } from "@/lib/i18n-server";
 
-export const metadata: Metadata = { title: "Set up account launching" };
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslator();
+  return { title: t("launcher.setupWizard") };
+}
 
 /**
  * The account-launcher setup wizard.
@@ -23,6 +28,7 @@ export default async function LauncherSetupPage() {
   if (!guard.allowed) return guard.response;
 
   const supabase = await createClient();
+  const t = await getTranslator();
   const accounts = await listLaunchableAccounts(
     supabase,
     session.workspaceId!,
@@ -31,18 +37,12 @@ export default async function LauncherSetupPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Set up account launching"
-        subtitle="Map each account to the browser profile that holds its provider session."
+        title={t("launcher.setupWizard")}
+        subtitle={t("pages.launcher.setupSubtitle")}
       />
 
-      <Notice tone="info" title="What this does and does not do">
-        A hosted page cannot read another site&apos;s cookies or force a
-        different browser profile to open. What it can do — and what this
-        wizard configures — is open the exact account destination in the
-        browser you are using, and, with the bridge extension installed, open
-        it in the profile where the extension lives. A provider session may
-        still have expired; CCM shows that plainly and lets you sign in
-        normally.
+      <Notice tone="info" title={t("pages.launcher.boundariesTitle")}>
+        {t("pages.launcher.boundariesBody")}
       </Notice>
 
       <LauncherSetup accounts={accounts} />

@@ -1,10 +1,10 @@
 "use client";
 
 import { createElement, useState } from "react";
-import { CircleCheck, CircleX, ExternalLink, FlaskConical, LoaderCircle } from "lucide-react";
+import { CircleCheck, CircleX, ExternalLink, LoaderCircle } from "lucide-react";
 import { useI18n } from "@/components/providers/i18n-provider";
 import { Button } from "@/components/ui/button";
-import { StatusBadge, type Tone } from "@/components/ui/chip";
+import { Chip, StatusBadge, type Tone } from "@/components/ui/chip";
 import { getIcon, PROVIDER_ICONS } from "@/components/ui/icons";
 import { launchAccount, type LaunchResult } from "@/lib/launch/client";
 import { cn } from "@/lib/cn";
@@ -139,13 +139,20 @@ export function AccountTile({
           {t("launcher.openAccount")}
         </Button>
 
-        <div className="flex items-center gap-2">
+        {/*
+          The management console.
+
+          A provider that has none is not a dead end — it is a fact about
+          the provider, and it is said plainly rather than hidden behind a
+          control that cannot be pressed.
+        */}
+        {account.managementUrl ? (
           <button
             type="button"
             onClick={() => run("management")}
-            disabled={busy || !account.managementUrl}
+            disabled={busy}
             className={cn(
-              "inline-flex flex-1 items-center justify-center gap-1.5 rounded-md px-2 py-1.5",
+              "inline-flex w-full items-center justify-center gap-1.5 rounded-md px-2 py-1.5",
               "text-label-md font-semibold text-primary-ink transition-colors hover:bg-pale",
               "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-ink",
               "disabled:cursor-not-allowed disabled:text-muted-text disabled:hover:bg-transparent",
@@ -154,21 +161,9 @@ export function AccountTile({
             <ExternalLink aria-hidden="true" className="size-3.5" />
             {t("launcher.openManagement")}
           </button>
-          <button
-            type="button"
-            onClick={() => run("account")}
-            disabled={busy || !account.accountUrl}
-            className={cn(
-              "inline-flex items-center justify-center gap-1.5 rounded-md px-2 py-1.5",
-              "text-label-md font-semibold text-muted-text transition-colors hover:bg-surface-muted",
-              "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-ink",
-              "disabled:cursor-not-allowed",
-            )}
-          >
-            <FlaskConical aria-hidden="true" className="size-3.5" />
-            {t("launcher.testLaunch")}
-          </button>
-        </div>
+        ) : (
+          <Chip tone="warning">{t("pages.launcher.noManagementConsole")}</Chip>
+        )}
       </div>
 
       {result ? <LaunchFeedback result={result} /> : null}

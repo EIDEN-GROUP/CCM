@@ -14,12 +14,16 @@ import { resolveRangeFromParams } from "@/lib/range-params";
 import { getGscMetrics, latestFetchedAt } from "@/lib/repositories/metrics";
 import { coverageOf, describeChange, sumSeries, weightedAveragePosition } from "@/domain/kpi";
 import { addNullable, formatCount, formatRatio } from "@/domain/metrics";
-import { getLocale } from "@/lib/i18n-server";
-import { intlLocale } from "@/lib/i18n";
+import { getLocale, getTranslator } from "@/lib/i18n-server";
+import { formatMessage, intlLocale } from "@/lib/i18n";
 import { ErrorState } from "@/components/ui/states";
 
-export const metadata: Metadata = { title: "SEO & Rankings" };
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslator();
+  return { title: t("pages.seo.title") };
+}
 
 /**
  * Search Console and rankings.
@@ -42,6 +46,7 @@ export default async function SeoPage({
   const today = getTodayInTimezone(session.workspaceTimezone);
   const { current, previous } = resolveRangeFromParams(params, today);
   const workspaceId = session.workspaceId!;
+  const t = await getTranslator();
   const locale = intlLocale(await getLocale());
 
   // A failed query is **not** an empty result. The difference is the whole
@@ -62,7 +67,7 @@ export default async function SeoPage({
     failure =
       error instanceof Error
         ? error.message
-        : "The Search Console metrics could not be read.";
+        : t("pages.seo.metricsError");
   }
 
   if (!failure) {
@@ -168,15 +173,12 @@ export default async function SeoPage({
   return (
     <div className="space-y-6">
       <PageHeader
-        title="SEO & Rankings"
-        subtitle="Search Console, technical checks and tracked rankings."
+        title={t("pages.seo.title")}
+        subtitle={t("pages.seo.subtitle")}
       />
 
-      <Notice tone="info" title="Two different measurements">
-        Search Console clicks, impressions and average position are reported by
-        Google. Rank-tracking observations come from a third-party provider and
-        are shown in their own table. CCM never blends them, because they
-        measure different things.
+      <Notice tone="info" title={t("pages.seo.twoMeasurementsTitle")}>
+        {t("pages.seo.twoMeasurementsBody")}
       </Notice>
 
       {failure ? (
@@ -188,7 +190,7 @@ export default async function SeoPage({
         <>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <KpiCard
-          label="Organic clicks"
+          label={t("pages.overview.organicClicks")}
            coverage={coverageOf(clicks)}
           value={
             clicks.value === null
@@ -201,7 +203,7 @@ export default async function SeoPage({
           source={fetchedAt ? { label: "Search Console", fetchedAt } : null}
         />
         <KpiCard
-          label="Organic impressions"
+          label={t("pages.seo.organicImpressions")}
            coverage={coverageOf(impressions)}
           value={
             impressions.value === null
@@ -213,12 +215,12 @@ export default async function SeoPage({
           change={describeChange(impressions.value, previousImpressions.value)}
         />
         <KpiCard
-          label="CTR"
+          label={t("pages.seo.ctr")}
            coverage={coverageOf(clicks)}
           value={formatRatio(clicks.value, impressions.value, locale)}
         />
         <KpiCard
-          label="Average position"
+          label={t("pages.seo.position")}
            coverage={coverageOf(position)}
           value={position.value === null ? "—" : position.value.toFixed(1)}
           change={describeChange(position.value, previousPosition.value)}
@@ -227,26 +229,26 @@ export default async function SeoPage({
 
       <Card>
         <CardHeader
-          title="Top queries"
-          subtitle="By clicks, from Search Console"
+          title={t("pages.seo.topQueries")}
+          subtitle={t("pages.seo.topQueriesSubtitle")}
         />
         <CardBody className="p-0">
-          {topQueries.length === 0 ? (
-            <EmptyState
-              title="No query data"
-              description="Connect a verified Search Console property to see real query performance."
-              icon={<Search className="size-5" />}
-              className="border-0"
-            />
-          ) : (
             <DataTable
-              label="Top queries"
+              label={t("pages.seo.topQueries")}
               rows={topQueries}
+              empty={
+                <EmptyState
+                  title={t("pages.seo.noQueryDataTitle")}
+                  description={t("pages.seo.noQueryDataBody")}
+                  icon={<Search className="size-5" />}
+                  className="border-0"
+                />
+              }
               rowKey={(row) => row.id}
               columns={[
                 {
                   key: "query",
-                  header: "Query",
+                  header: t("pages.seo.query"),
                   mobile: "primary",
                   render: (row) => (
                     <span className="font-semibold text-tertiary">{row.label}</span>
@@ -254,21 +256,21 @@ export default async function SeoPage({
                 },
                 {
                   key: "clicks",
-                  header: "Clicks",
+                  header: t("pages.seo.clicks"),
                   numeric: true,
                   mobile: "secondary",
                   render: (row) => formatCount(row.clicks, locale),
                 },
                 {
                   key: "impressions",
-                  header: "Impressions",
+                  header: t("pages.seo.impressions"),
                   numeric: true,
                   mobile: "secondary",
                   render: (row) => formatCount(row.impressions, locale),
                 },
                 {
                   key: "position",
-                  header: "Position",
+                  header: t("pages.seo.rankPosition"),
                   numeric: true,
                   mobile: "secondary",
                   render: (row) =>
@@ -278,7 +280,6 @@ export default async function SeoPage({
                 },
               ]}
             />
-          )}
         </CardBody>
       </Card>
         </>
@@ -286,30 +287,33 @@ export default async function SeoPage({
 
       <Card>
         <CardHeader
-          title="Tracked rankings"
-          subtitle="Third-party observations, kept separate from Search Console"
+          title={t("pages.seo.trackedRankings")}
+          subtitle={t("pages.seo.trackedRankingsSubtitle")}
         />
         <CardBody className="p-0">
           {rankError ? (
             <ErrorState
-              detail={`Could not read rank snapshots: ${rankError.message}`}
-              className="border-0"
-            />
-          ) : (rankRows ?? []).length === 0 ? (
-            <EmptyState
-              title="No rank snapshots"
-              description="Rank observations appear once a rank-tracking provider is connected and a project is configured."
+              detail={formatMessage(t("pages.seo.rankError"), {
+                message: rankError.message,
+              })}
               className="border-0"
             />
           ) : (
             <DataTable
-              label="Rank snapshots"
+              label={t("pages.seo.rankSnapshots")}
               rows={rankRows ?? []}
+              empty={
+                <EmptyState
+                  title={t("pages.seo.noRankSnapshotsTitle")}
+                  description={t("pages.seo.noRankSnapshotsBody")}
+                  className="border-0"
+                />
+              }
               rowKey={(row) => (row as { id: string }).id}
               columns={[
                 {
                   key: "keyword",
-                  header: "Keyword",
+                  header: t("common.keyword"),
                   mobile: "primary",
                   render: (row) => (
                     <span className="font-semibold text-tertiary">
@@ -319,21 +323,21 @@ export default async function SeoPage({
                 },
                 {
                   key: "country",
-                  header: "Country",
+                  header: t("common.country"),
                   mobile: "secondary",
                   render: (row) =>
                     (row as { country: string | null }).country ?? "—",
                 },
                 {
                   key: "device",
-                  header: "Device",
+                  header: t("common.device"),
                   mobile: "secondary",
                   render: (row) =>
                     (row as { device: string }).device,
                 },
                 {
                   key: "position",
-                  header: "Position",
+                  header: t("pages.seo.rankPosition"),
                   numeric: true,
                   mobile: "secondary",
                   render: (row) =>
@@ -341,15 +345,15 @@ export default async function SeoPage({
                 },
                 {
                   key: "observed",
-                  header: "Observed",
-                  mobile: "hidden",
+                  header: t("pages.seo.observed"),
+                  mobile: "secondary",
                   render: (row) =>
                     (row as { observed_on: string }).observed_on,
                 },
                 {
                   key: "provider",
-                  header: "Source",
-                  mobile: "hidden",
+                  header: t("common.source"),
+                  mobile: "secondary",
                   render: (row) =>
                     (row as { source_provider: string }).source_provider,
                 },

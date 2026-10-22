@@ -375,7 +375,7 @@ export function Topbar({
                 {alertCount !== null && alertCount > 0 ? (
                   <span
                     aria-hidden="true"
-                    className="absolute -end-1 -top-1 inline-flex min-w-4 items-center justify-center rounded-full bg-error px-1 text-[10px] font-bold text-tertiary"
+                    className="absolute -end-1 -top-1 inline-flex min-w-4 items-center justify-center rounded-full bg-error px-1 text-label-sm font-bold text-tertiary"
                   >
                     {alertCount > 9 ? "9+" : alertCount}
                   </span>

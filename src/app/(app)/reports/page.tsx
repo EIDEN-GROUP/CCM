@@ -16,9 +16,46 @@ import { getSession } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { requirePermission } from "@/lib/auth/guard";
 import { formatAge } from "@/domain/freshness";
+import { getTranslator } from "@/lib/i18n-server";
+import { formatMessage, type MessagePathRoot, type Translator } from "@/lib/i18n";
 
-export const metadata: Metadata = { title: "Reports" };
 export const dynamic = "force-dynamic";
+
+/** A message key inside the `pages.reports` namespace. */
+type ReportsPath = Extract<MessagePathRoot, `pages.reports.${string}`>;
+
+/**
+ * The report cadence.
+ *
+ * A definition says how often it runs; the label is translated, the key is
+ * not.
+ */
+const CADENCE: Record<string, ReportsPath> = {
+  daily: "pages.reports.daily",
+  weekly: "pages.reports.weekly",
+  monthly: "pages.reports.monthly",
+  on_demand: "pages.reports.onDemand",
+};
+
+const RUN_STATUS: Record<string, ReportsPath> = {
+  pending: "pages.reports.runStatusPending",
+  ready: "pages.reports.runStatusReady",
+  failed: "pages.reports.runStatusFailed",
+};
+
+function labelFor(
+  t: Translator,
+  map: Record<string, ReportsPath>,
+  value: string,
+): string {
+  const key = map[value];
+  return key ? t(key) : value;
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslator();
+  return { title: t("pages.reports.title") };
+}
 
 /**
  * Reports and exports.
@@ -31,6 +68,8 @@ export default async function ReportsPage() {
   const session = await getSession();
   const guard = await requirePermission(session, "reports.read");
   if (!guard.allowed) return guard.response;
+
+  const t = await getTranslator();
 
   const supabase = await createClient();
   const workspaceId = session.workspaceId!;
@@ -86,7 +125,7 @@ export default async function ReportsPage() {
       title:
         payload.title ??
         (run.definition_id ? titleFor.get(run.definition_id) : null) ??
-        "Digest",
+        t("pages.reports.digestFallback"),
       periodStart: run.period_start,
       periodEnd: run.period_end,
       status: run.status,
@@ -101,12 +140,12 @@ export default async function ReportsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Reports & AI Analyst"
-        subtitle="Scheduled briefings and evidence-backed explanations."
+        title={t("pages.reports.title")}
+        subtitle={t("pages.reports.subtitle")}
         actions={
           dailyDefinition ? (
             <RunActionButton
-              label="Generate the daily digest"
+              label={t("pages.reports.generateDigest")}
               action="/api/reports/run"
               payload={{ definitionId: dailyDefinition.id }}
             />
@@ -114,17 +153,14 @@ export default async function ReportsPage() {
         }
       />
 
-      <Notice tone="info" title="What an export contains">
-        Every export carries the same reviewed values as the screen, together
-        with the data freshness, the metric definitions and the caveats that
-        apply. &ldquo;Share safe&rdquo; mode masks customer, mailbox and sensitive
-        account identifiers before anything leaves CCM.
+      <Notice tone="info" title={t("pages.reports.exportContainsTitle")}>
+        {t("pages.reports.exportContainsBody")}
       </Notice>
 
       <Card>
         <CardHeader
-          title="Scheduled digests"
-          subtitle="Built by the worker from the records that have been synced"
+          title={t("pages.reports.scheduledDigestsTitle")}
+          subtitle={t("pages.reports.scheduledDigestsSubtitle")}
         />
         <CardBody>
           <DigestCatalogue
@@ -145,138 +181,147 @@ export default async function ReportsPage() {
 
       <Card>
         <CardHeader
-          title="Report catalogue"
-          subtitle="Daily, weekly and monthly briefings"
+          title={t("pages.reports.reportCatalogueTitle")}
+          subtitle={t("pages.reports.reportCatalogueSubtitle")}
           actions={<ReportExportActions />}
         />
         <CardBody className="p-0">
-          {(definitions ?? []).length === 0 ? (
-            <EmptyState
-              title="No report definitions"
-              description="Report definitions describe which sections a briefing contains and who receives it. They are created in Settings."
-              icon={<FileText className="size-5" />}
-              className="border-0"
-            />
-          ) : (
-            <DataTable
-              label="Report definitions"
-              rows={definitions ?? []}
-              rowKey={(row) => (row as { id: string }).id}
-              columns={[
-                {
-                  key: "title",
-                  header: "Report",
-                  mobile: "primary",
-                  render: (row) => (
-                    <span className="font-semibold text-tertiary">
-                      {(row as { title: string }).title}
-                    </span>
-                  ),
+          <DataTable
+            label={t("pages.reports.reportDefinitionsTable")}
+            rows={definitions ?? []}
+            empty={
+              <EmptyState
+                title={t("pages.reports.noDefinitionsTitle")}
+                description={t("pages.reports.noDefinitionsBody")}
+                icon={<FileText className="size-5" />}
+                className="border-0"
+              />
+            }
+            rowKey={(row) => (row as { id: string }).id}
+            columns={[
+              {
+                key: "title",
+                header: t("pages.reports.columnReport"),
+                mobile: "primary",
+                render: (row) => (
+                  <span className="font-semibold text-tertiary">
+                    {(row as { title: string }).title}
+                  </span>
+                ),
+              },
+              {
+                key: "cadence",
+                header: t("pages.reports.columnCadence"),
+                mobile: "secondary",
+                render: (row) =>
+                  labelFor(t, CADENCE, (row as { cadence: string }).cadence),
+              },
+              {
+                key: "formats",
+                header: t("pages.reports.columnFormats"),
+                mobile: "secondary",
+                render: (row) =>
+                  (row as { formats: string[] }).formats.join(", "),
+              },
+              {
+                key: "lastRun",
+                header: t("pages.reports.columnLastRun"),
+                mobile: "secondary",
+                render: (row) => {
+                  const value = (row as { last_run_at: string | null }).last_run_at;
+                  return value
+                    ? formatAge((now.getTime() - Date.parse(value)) / 1000)
+                    : "—";
                 },
-                {
-                  key: "cadence",
-                  header: "Cadence",
-                  mobile: "secondary",
-                  render: (row) => (row as { cadence: string }).cadence,
-                },
-                {
-                  key: "formats",
-                  header: "Formats",
-                  mobile: "secondary",
-                  render: (row) =>
-                    (row as { formats: string[] }).formats.join(", "),
-                },
-                {
-                  key: "lastRun",
-                  header: "Last run",
-                  mobile: "hidden",
-                  render: (row) => {
-                    const value = (row as { last_run_at: string | null }).last_run_at;
-                    return value
-                      ? formatAge((now.getTime() - Date.parse(value)) / 1000)
-                      : "—";
-                  },
-                },
-              ]}
-            />
-          )}
+              },
+            ]}
+          />
         </CardBody>
       </Card>
 
       <Card>
-        <CardHeader title="Recent runs" subtitle="Generated briefings" />
+        <CardHeader
+          title={t("pages.reports.recentRunsTitle")}
+          subtitle={t("pages.reports.recentRunsSubtitle")}
+        />
         <CardBody className="p-0">
-          {(runs ?? []).length === 0 ? (
-            <EmptyState
-              title="No reports generated yet"
-              description="A run appears here once a briefing has been generated."
-              className="border-0"
-            />
-          ) : (
-            <DataTable
-              label="Report runs"
-              rows={runs ?? []}
-              rowKey={(row) => (row as { id: string }).id}
-              columns={[
-                {
-                  key: "period",
-                  header: "Period",
-                  mobile: "primary",
-                  render: (row) => {
-                    const start = (row as { period_start: string | null }).period_start;
-                    const end = (row as { period_end: string | null }).period_end;
-                    return start && end ? `${start} → ${end}` : "—";
-                  },
+          <DataTable
+            label={t("pages.reports.reportRunsTable")}
+            rows={runs ?? []}
+            empty={
+              <EmptyState
+                title={t("pages.reports.noRunsTitle")}
+                description={t("pages.reports.noRunsBody")}
+                className="border-0"
+              />
+            }
+            rowKey={(row) => (row as { id: string }).id}
+            columns={[
+              {
+                key: "period",
+                header: t("pages.reports.columnPeriod"),
+                mobile: "primary",
+                render: (row) => {
+                  const start = (row as { period_start: string | null }).period_start;
+                  const end = (row as { period_end: string | null }).period_end;
+                  return start && end
+                    ? formatMessage(t("pages.reports.periodTo"), { start, end })
+                    : "—";
                 },
-                {
-                  key: "status",
-                  header: "Status",
-                  mobile: "secondary",
-                  render: (row) => (row as { status: string }).status,
+              },
+              {
+                key: "status",
+                header: t("common.status"),
+                mobile: "secondary",
+                render: (row) =>
+                  labelFor(t, RUN_STATUS, (row as { status: string }).status),
+              },
+              {
+                key: "safeMode",
+                header: t("pages.reports.columnSafeMode"),
+                mobile: "secondary",
+                render: (row) =>
+                  (row as { safe_mode: boolean }).safe_mode
+                    ? t("pages.reports.on")
+                    : t("pages.reports.off"),
+              },
+              {
+                key: "generated",
+                header: t("pages.reports.columnGenerated"),
+                mobile: "secondary",
+                render: (row) => {
+                  const value = (row as { generated_at: string }).generated_at;
+                  return formatAge(
+                    (now.getTime() - Date.parse(value)) / 1000,
+                  );
                 },
-                {
-                  key: "safeMode",
-                  header: "Share safe",
-                  mobile: "secondary",
-                  render: (row) =>
-                    (row as { safe_mode: boolean }).safe_mode ? "On" : "Off",
-                },
-                {
-                  key: "generated",
-                  header: "Generated",
-                  mobile: "hidden",
-                  render: (row) => {
-                    const value = (row as { generated_at: string }).generated_at;
-                    return formatAge(
-                      (now.getTime() - Date.parse(value)) / 1000,
-                    );
-                  },
-                },
-              ]}
-            />
-          )}
+              },
+            ]}
+          />
         </CardBody>
       </Card>
 
       <AnalystPanel enabled={Boolean(process.env.GEMINI_API_KEY)} />
 
+      {/*
+        The analyst card.
+
+        The analyst panel above already says whether the analyst is
+        available, so this card does not repeat that notice. It states
+        what the reports contain and where the answers come from, in the
+        product's own vocabulary: a marketer is not the person who sets an
+        environment variable.
+      */}
       <Card>
         <CardHeader
-          title="AI analyst"
-          subtitle="Grounded answers with an inspectable trail of sources"
+          title={t("pages.reports.analystCardTitle")}
+          subtitle={t("pages.reports.analystCardSubtitle")}
         />
-        <CardBody className="space-y-3">
-          <Notice tone="warning" title="Not yet configured">
-            The analyst answers only from data CCM has synced, cites the
-            records behind each claim, and says plainly when something is not
-            connected, stale or unknown. It never invents a number, and it
-            cannot send mail, publish content, change budgets or publish
-            containers — it can only propose a task for a person to approve.
-          </Notice>
+        <CardBody>
           <p className="text-body-sm text-muted-text">
-            Set <code className="rounded bg-surface-muted px-1.5 py-0.5 text-[13px]">GEMINI_API_KEY</code>{" "}
-            to enable the grounded question interface. Without it the surface
-            reports &ldquo;not configured&rdquo; rather than answering from nothing.
+            {formatMessage(t("pages.reports.analystUnavailableBody"), {
+              link: t("pages.integrations.providerAppsLink"),
+            })}
           </p>
         </CardBody>
       </Card>

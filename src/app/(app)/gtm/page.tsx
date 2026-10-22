@@ -11,9 +11,15 @@ import { createClient } from "@/lib/supabase/server";
 import { requirePermission } from "@/lib/auth/guard";
 import { formatAge } from "@/domain/freshness";
 import { collectMeasurementIds } from "@/providers/google/gtm";
+import { getLocale, getTranslator } from "@/lib/i18n-server";
+import { formatMessage, intlLocale, type Translator } from "@/lib/i18n";
 
-export const metadata: Metadata = { title: "GTM & Tracking" };
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslator();
+  return { title: t("pages.gtm.title") };
+}
 
 interface GtmSnapshot {
   id: string;
@@ -40,6 +46,22 @@ interface ChecklistRow {
   detail: string;
   /** Stable identity for the row, so React can key it. */
   id: string;
+}
+
+/**
+ * What the checklist needs to speak the signed-in language.
+ *
+ * The checklist rows are built by helpers that sit outside the component, so
+ * the translator and the date locale travel with them rather than being
+ * read from a global.
+ */
+interface GtmContext {
+  /** Translator bound to the signed-in locale. */
+  t: Translator;
+  /** BCP-47 tag used to format the timestamps inside the checklist. */
+  locale: string;
+  /** Timezone the workspace works in, so a capture reads in local time. */
+  timezone: string;
 }
 
 /**
@@ -93,13 +115,14 @@ function triggerIds(tag: Record<string, unknown>): string[] {
 
 /** A count in words, so an unreadable count never reads as a zero. */
 function countPhrase(
-  count: number | null,
+  value: unknown,
+  ctx: GtmContext,
   singular: string,
   plural: string,
 ): string {
-  return count === null
-    ? "an unknown number of"
-    : `${count} ${count === 1 ? singular : plural}`;
+  const count = countOf(value);
+  if (count === null) return ctx.t("pages.gtm.unknownCountOf");
+  return `${count} ${count === 1 ? singular : plural}`;
 }
 
 /** How long ago an instant was, or the em dash when it cannot be read. */
@@ -110,10 +133,14 @@ function ageLabel(instant: string, now: Date): string {
 }
 
 /** A timestamp, in the timezone the workspace works in. */
-function formatTimestamp(value: string, timezone: string): string {
+function formatTimestamp(
+  value: string,
+  timezone: string,
+  locale: string,
+): string {
   const instant = new Date(value);
   if (Number.isNaN(instant.getTime())) return "—";
-  return new Intl.DateTimeFormat("en-GB", {
+  return new Intl.DateTimeFormat(locale, {
     timeZone: timezone,
     dateStyle: "medium",
     timeStyle: "short",
@@ -127,7 +154,8 @@ function formatTimestamp(value: string, timezone: string): string {
  * A capture that predates the published version describes a container that
  * has already moved on, so it is stale rather than healthy.
  */
-function captureCheck(snapshot: GtmSnapshot, timezone: string): ChecklistRow {
+function captureCheck(snapshot: GtmSnapshot, ctx: GtmContext): ChecklistRow {
+  const { t } = ctx;
   const capturedAt = snapshot.captured_at;
   const publishedAt = snapshot.published_at;
   const captured = Date.parse(capturedAt);
@@ -136,34 +164,38 @@ function captureCheck(snapshot: GtmSnapshot, timezone: string): ChecklistRow {
   if (!Number.isFinite(captured)) {
     return {
       id: "capture",
-      label: "Not checked",
+      label: t("pages.gtm.notChecked"),
       tone: "neutral",
-      detail:
-        "The capture carries no readable capture date, so it cannot be compared with the published version.",
+      detail: t("pages.gtm.captureNoDate"),
     };
   }
   if (!publishedAt || !Number.isFinite(published)) {
     return {
       id: "capture",
-      label: "Not checked",
+      label: t("pages.gtm.notChecked"),
       tone: "neutral",
-      detail:
-        "The capture records no published version, so there is no date to compare the capture against.",
+      detail: t("pages.gtm.captureNoPublishedVersion"),
     };
   }
   if (captured < published) {
     return {
       id: "capture",
-      label: "Stale",
+      label: t("pages.gtm.stale"),
       tone: "danger",
-      detail: `The capture (${formatTimestamp(capturedAt, timezone)}) predates the published version (${formatTimestamp(publishedAt, timezone)}).`,
+      detail: formatMessage(t("pages.gtm.capturePredatesPublished"), {
+        captured: formatTimestamp(capturedAt, ctx.timezone, ctx.locale),
+        published: formatTimestamp(publishedAt, ctx.timezone, ctx.locale),
+      }),
     };
   }
   return {
     id: "capture",
-    label: "Pass",
+    label: t("pages.gtm.pass"),
     tone: "success",
-    detail: `The capture (${formatTimestamp(capturedAt, timezone)}) is newer than the published version (${formatTimestamp(publishedAt, timezone)}).`,
+    detail: formatMessage(t("pages.gtm.captureNewerThanPublished"), {
+      captured: formatTimestamp(capturedAt, ctx.timezone, ctx.locale),
+      published: formatTimestamp(publishedAt, ctx.timezone, ctx.locale),
+    }),
   };
 }
 
@@ -173,26 +205,28 @@ function captureCheck(snapshot: GtmSnapshot, timezone: string): ChecklistRow {
  * The answer needs the tag definitions. When the capture stored a count
  * instead, the answer is unknown — and unknown is not a pass.
  */
-function measurementIdCheck(snapshot: GtmSnapshot): ChecklistRow {
+function measurementIdCheck(
+  snapshot: GtmSnapshot,
+  ctx: GtmContext,
+): ChecklistRow {
+  const { t } = ctx;
   const tags = tagDefinitions(snapshot.tags);
   const expected = snapshot.expected_measurement_ids ?? [];
 
   if (!tags) {
     return {
       id: "measurement",
-      label: "Not checked",
+      label: t("pages.gtm.notChecked"),
       tone: "neutral",
-      detail:
-        "The capture stored a count of tags rather than the tag definitions, so CCM cannot say which Measurement ID they reference.",
+      detail: t("pages.gtm.measurementNoDefinitions"),
     };
   }
   if (expected.length === 0) {
     return {
       id: "measurement",
-      label: "Not checked",
+      label: t("pages.gtm.notChecked"),
       tone: "neutral",
-      detail:
-        "The snapshot records no expected GA4 Measurement ID, so there is nothing to compare the tags against.",
+      detail: t("pages.gtm.measurementNoExpectedId"),
     };
   }
 
@@ -201,16 +235,20 @@ function measurementIdCheck(snapshot: GtmSnapshot): ChecklistRow {
   if (missing.length > 0) {
     return {
       id: "measurement",
-      label: "Fail",
+      label: t("pages.gtm.fail"),
       tone: "danger",
-      detail: `No tag in the capture references ${missing.join(", ")}.`,
+      detail: formatMessage(t("pages.gtm.measurementMissingIds"), {
+        ids: missing.join(", "),
+      }),
     };
   }
   return {
     id: "measurement",
-    label: "Pass",
+    label: t("pages.gtm.pass"),
     tone: "success",
-    detail: `A tag in the capture references every expected Measurement ID (${expected.join(", ")}).`,
+    detail: formatMessage(t("pages.gtm.measurementAllIds"), {
+      ids: expected.join(", "),
+    }),
   };
 }
 
@@ -220,15 +258,18 @@ function measurementIdCheck(snapshot: GtmSnapshot): ChecklistRow {
  * A duplicate GA4 tag sends the same event twice, so this check needs the
  * tag definitions and their triggers. Without them it stays unchecked.
  */
-function duplicateCheck(snapshot: GtmSnapshot): ChecklistRow {
+function duplicateCheck(
+  snapshot: GtmSnapshot,
+  ctx: GtmContext,
+): ChecklistRow {
+  const { t } = ctx;
   const tags = tagDefinitions(snapshot.tags);
   if (!tags) {
     return {
       id: "duplicate",
-      label: "Not checked",
+      label: t("pages.gtm.notChecked"),
       tone: "neutral",
-      detail:
-        "The capture stored a count of tags rather than the tag definitions, so duplicates cannot be ruled out.",
+      detail: t("pages.gtm.duplicateNoDefinitions"),
     };
   }
 
@@ -238,10 +279,9 @@ function duplicateCheck(snapshot: GtmSnapshot): ChecklistRow {
   if (ga4Tags.length === 0) {
     return {
       id: "duplicate",
-      label: "Not checked",
+      label: t("pages.gtm.notChecked"),
       tone: "neutral",
-      detail:
-        "The capture holds no GA4 tag, so there is no duplicate to rule out.",
+      detail: t("pages.gtm.duplicateNoTags"),
     };
   }
 
@@ -262,9 +302,14 @@ function duplicateCheck(snapshot: GtmSnapshot): ChecklistRow {
   if (sharedIds.length > 0) {
     return {
       id: "duplicate",
-      label: "Fail",
+      label: t("pages.gtm.fail"),
       tone: "danger",
-      detail: `${sharedIds.join(", ")} ${sharedIds.length === 1 ? "is" : "are"} referenced by more than one tag in the capture.`,
+      detail: formatMessage(
+        sharedIds.length === 1
+          ? t("pages.gtm.duplicateSharedIdOne")
+          : t("pages.gtm.duplicateSharedIdMany"),
+        { ids: sharedIds.join(", ") },
+      ),
     };
   }
 
@@ -272,17 +317,27 @@ function duplicateCheck(snapshot: GtmSnapshot): ChecklistRow {
   if (sharedTriggers.length > 0) {
     return {
       id: "duplicate",
-      label: "Fail",
+      label: t("pages.gtm.fail"),
       tone: "danger",
-      detail: `${sharedTriggers.length} ${sharedTriggers.length === 1 ? "trigger fires" : "triggers fire"} more than one GA4 tag in the capture.`,
+      detail: formatMessage(
+        sharedTriggers.length === 1
+          ? t("pages.gtm.duplicateSharedTriggerOne")
+          : t("pages.gtm.duplicateSharedTriggerMany"),
+        { count: sharedTriggers.length },
+      ),
     };
   }
 
   return {
     id: "duplicate",
-    label: "Pass",
+    label: t("pages.gtm.pass"),
     tone: "success",
-    detail: `No Measurement ID or trigger is shared by the ${ga4Tags.length} GA4 ${ga4Tags.length === 1 ? "tag" : "tags"} in the capture.`,
+    detail: formatMessage(
+      ga4Tags.length === 1
+        ? t("pages.gtm.duplicateCleanOne")
+        : t("pages.gtm.duplicateCleanMany"),
+      { count: ga4Tags.length },
+    ),
   };
 }
 
@@ -294,53 +349,49 @@ function duplicateCheck(snapshot: GtmSnapshot): ChecklistRow {
  * stated rather than quietly dropped, because the checklist used to claim
  * it had passed.
  */
-function trackingPlanCheck(): ChecklistRow {
+function trackingPlanCheck(ctx: GtmContext): ChecklistRow {
   return {
     id: "tracking-plan",
-    label: "Not checked",
+    label: ctx.t("pages.gtm.notChecked"),
     tone: "neutral",
-    detail:
-      "CCM holds no approved-event tracking plan, so there is no list of events to compare the container against.",
+    detail: ctx.t("pages.gtm.trackingPlanMissing"),
   };
 }
 
 /** The checklist for one container, or for a workspace with no capture. */
 function checksFor(
   snapshot: GtmSnapshot | null,
-  timezone: string,
+  ctx: GtmContext,
 ): ChecklistRow[] {
   if (!snapshot) {
     return [
       {
         id: "capture",
-        label: "Not checked",
+        label: ctx.t("pages.gtm.notChecked"),
         tone: "neutral",
-        detail:
-          "No container capture has been recorded, so there is no capture date to compare with a published version.",
+        detail: ctx.t("pages.gtm.noCaptureNoDate"),
       },
       {
         id: "measurement",
-        label: "Not checked",
+        label: ctx.t("pages.gtm.notChecked"),
         tone: "neutral",
-        detail:
-          "No container capture has been recorded, so CCM cannot say whether a GA4 tag references the expected Measurement ID.",
+        detail: ctx.t("pages.gtm.noCaptureNoMeasurement"),
       },
       {
         id: "duplicate",
-        label: "Not checked",
+        label: ctx.t("pages.gtm.notChecked"),
         tone: "neutral",
-        detail:
-          "No container capture has been recorded, so duplicate GA4 tags cannot be ruled out.",
+        detail: ctx.t("pages.gtm.noCaptureNoDuplicates"),
       },
-      trackingPlanCheck(),
+      trackingPlanCheck(ctx),
     ];
   }
 
   return [
-    captureCheck(snapshot, timezone),
-    measurementIdCheck(snapshot),
-    duplicateCheck(snapshot),
-    trackingPlanCheck(),
+    captureCheck(snapshot, ctx),
+    measurementIdCheck(snapshot, ctx),
+    duplicateCheck(snapshot, ctx),
+    trackingPlanCheck(ctx),
   ];
 }
 
@@ -362,6 +413,13 @@ export default async function GtmPage() {
   if (!guard.allowed) return guard.response;
 
   const supabase = await createClient();
+  const t = await getTranslator();
+  const timezone = session.workspaceTimezone;
+  const ctx: GtmContext = {
+    t,
+    locale: intlLocale(await getLocale()),
+    timezone,
+  };
 
   const { data, error } = await supabase
     .from("tag_manager_snapshots")
@@ -376,7 +434,7 @@ export default async function GtmPage() {
   // read" and "there is no inventory" are different facts, and the screen
   // must not confuse them.
   const failure = error
-    ? `The container inventory could not be read: ${error.message}`
+    ? formatMessage(t("pages.gtm.inventoryError"), { message: error.message })
     : null;
 
   const snapshots = (data ?? []) as GtmSnapshot[];
@@ -400,20 +458,19 @@ export default async function GtmPage() {
   }
 
   const now = new Date();
-  const timezone = session.workspaceTimezone;
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="GTM & Tracking"
-        subtitle="Container inventory, tags, triggers and validation."
+        title={t("pages.gtm.title")}
+        subtitle={t("pages.gtm.subtitle")}
       />
 
-      <Notice tone="warning" title="Publishing is not available">
-        CCM inventories the container and checks the expected GA4 Measurement
-        ID. Publishing a version requires a preview, an authorised approver, a
-        before/after version reference and an audit record, so the publish
-        action is absent rather than merely disabled.
+      <Notice
+        tone="warning"
+        title={t("pages.gtm.publishingUnavailableTitle")}
+      >
+        {t("pages.gtm.publishingUnavailableBody")}
       </Notice>
 
       {failure ? (
@@ -422,26 +479,26 @@ export default async function GtmPage() {
         <>
           <Card>
             <CardHeader
-              title="Container versions"
-              subtitle="Most recent inventory per container"
+              title={t("pages.gtm.containerVersions")}
+              subtitle={t("pages.gtm.containerVersionsSubtitle")}
             />
             <CardBody className="p-0">
-              {snapshots.length === 0 ? (
-                <EmptyState
-                  title="No container inventory yet"
-                  description="Connect a Tag Manager container. The Medical Bay site currently ships GTM-WF77DFJD."
-                  icon={<Tags className="size-5" />}
-                  className="border-0"
-                />
-              ) : (
                 <DataTable
-                  label="GTM container versions"
+                  label={t("pages.gtm.containerVersions")}
                   rows={snapshots}
+                  empty={
+                    <EmptyState
+                      title={t("pages.gtm.noInventoryTitle")}
+                      description={t("pages.gtm.noInventoryBody")}
+                      icon={<Tags className="size-5" />}
+                      className="border-0"
+                    />
+                  }
                   rowKey={(row) => row.id}
                   columns={[
                     {
                       key: "container",
-                      header: "Container",
+                      header: t("pages.gtm.container"),
                       mobile: "primary",
                       render: (row) => (
                         <span className="font-semibold text-tertiary">
@@ -451,7 +508,7 @@ export default async function GtmPage() {
                     },
                     {
                       key: "version",
-                      header: "Version",
+                      header: t("pages.gtm.version"),
                       mobile: "secondary",
                       render: (row) =>
                         row.version_number === null
@@ -460,22 +517,22 @@ export default async function GtmPage() {
                     },
                     {
                       key: "tags",
-                      header: "Tags",
+                      header: t("pages.gtm.tags"),
                       numeric: true,
                       mobile: "secondary",
                       render: (row) => countText(row.tags),
                     },
                     {
                       key: "triggers",
-                      header: "Triggers",
+                      header: t("pages.gtm.triggers"),
                       numeric: true,
-                      mobile: "hidden",
+                      mobile: "secondary",
                       render: (row) => countText(row.triggers),
                     },
                     {
                       key: "measurement",
-                      header: "Expected GA4 ID",
-                      mobile: "hidden",
+                      header: t("pages.gtm.expectedGa4Id"),
+                      mobile: "secondary",
                       render: (row) =>
                         row.expected_measurement_ids.length > 0
                           ? row.expected_measurement_ids.join(", ")
@@ -483,36 +540,38 @@ export default async function GtmPage() {
                     },
                     {
                       key: "captured",
-                      header: "Captured",
+                      header: t("pages.gtm.captured"),
                       mobile: "secondary",
                       render: (row) => ageLabel(row.captured_at, now),
                     },
                   ]}
                 />
-              )}
             </CardBody>
           </Card>
 
           <Card>
             <CardHeader
-              title="Tracking checklist"
-              subtitle="Each row is decided on the capture that was read; a check that cannot be computed says so"
+              title={t("pages.gtm.trackingChecklist")}
+              subtitle={t("pages.gtm.trackingChecklistSubtitle")}
             />
             <CardBody className="space-y-4">
               {checklist.map((group) => (
                 <div key={group.key} className="space-y-2">
                   {group.snapshot ? (
                     <p className="text-label-md font-semibold text-tertiary">
-                      Container {group.snapshot.container_id}
+                      {formatMessage(t("pages.gtm.containerLabel"), {
+                        container: group.snapshot.container_id,
+                      })}
                       <span className="font-normal text-muted-text">
-                        {" · captured "}
-                        {ageLabel(group.snapshot.captured_at, now)}
+                        {formatMessage(t("pages.gtm.capturedSuffix"), {
+                          age: ageLabel(group.snapshot.captured_at, now),
+                        })}
                       </span>
                     </p>
                   ) : null}
 
                   <ul className="space-y-2 text-body-sm text-secondary">
-                    {checksFor(group.snapshot, timezone).map((check) => (
+                    {checksFor(group.snapshot, ctx).map((check) => (
                       <li
                         key={check.id}
                         className="flex flex-wrap items-start gap-2"
@@ -525,19 +584,20 @@ export default async function GtmPage() {
 
                   {group.snapshot ? (
                     <p className="text-body-sm text-muted-text">
-                      The capture counted{" "}
-                      {countPhrase(
-                        countOf(group.snapshot.tags),
-                        "tag",
-                        "tags",
-                      )}{" "}
-                      and{" "}
-                      {countPhrase(
-                        countOf(group.snapshot.triggers),
-                        "trigger",
-                        "triggers",
-                      )}
-                      .
+                      {formatMessage(t("pages.gtm.captureCounted"), {
+                        tags: countPhrase(
+                          countOf(group.snapshot.tags),
+                          ctx,
+                          t("pages.gtm.tagSingular"),
+                          t("pages.gtm.tagsPlural"),
+                        ),
+                        triggers: countPhrase(
+                          countOf(group.snapshot.triggers),
+                          ctx,
+                          t("pages.gtm.triggerSingular"),
+                          t("pages.gtm.triggersPlural"),
+                        ),
+                      })}
                     </p>
                   ) : null}
                 </div>

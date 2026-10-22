@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { Fragment, useState, type ReactNode } from "react";
 import { LoaderCircle, Plug, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Chip } from "@/components/ui/chip";
 import { Notice } from "@/components/ui/notice";
+import { useI18n } from "@/components/providers/i18n-provider";
 
 /**
  * Quick connect.
@@ -14,6 +15,18 @@ import { Notice } from "@/components/ui/notice";
  * away; a provider whose app is not configured says exactly that, and
  * links to the setup screen rather than failing with an error.
  */
+
+/**
+ * Render a translated sentence that carries a link.
+ *
+ * The link has to stay a link, and where it sits inside the sentence is the
+ * translator's choice, so the sentence carries a placeholder instead.
+ */
+function withLink(template: string, link: ReactNode): ReactNode[] {
+  return template.split(/(\{link\})/).map((part, index) =>
+    part === "{link}" ? <Fragment key={index}>{link}</Fragment> : part,
+  );
+}
 
 export interface ConnectableProvider {
   /** The OAuth app that serves it: google, meta or linkedin. */
@@ -32,6 +45,7 @@ export function ConnectProviderButton({
   providers: ConnectableProvider[];
   canManage: boolean;
 }) {
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
 
   if (!canManage) return null;
@@ -40,7 +54,7 @@ export function ConnectProviderButton({
     return (
       <Button variant="primary" size="md" onClick={() => setOpen(true)}>
         <Plug aria-hidden="true" className="size-4" />
-        Connect a provider
+        {t("pages.integrations.connectProvider")}
       </Button>
     );
   }
@@ -53,25 +67,25 @@ export function ConnectProviderButton({
       <div className="flex items-center justify-between">
         <h2 className="flex items-center gap-2 text-label-lg font-semibold text-secondary">
           <Plug aria-hidden="true" className="size-4" />
-          Connect a provider
+          {t("pages.integrations.connectProvider")}
         </h2>
         <Button variant="ghost" size="sm" onClick={() => setOpen(false)}>
           <X aria-hidden="true" className="size-4" />
-          <span className="sr-only">Close</span>
+          <span className="sr-only">{t("pages.integrations.close")}</span>
         </Button>
       </div>
 
       {ready.length === 0 ? (
-        <Notice tone="warning" title="No provider app is configured yet">
-          A provider needs its own client id and client secret before it can
-          be connected. Add them in{" "}
-          <a
-            href="/settings/integrations"
-            className="font-semibold text-primary-ink underline"
-          >
-            Settings — Provider apps
-          </a>
-          , then come back here.
+        <Notice tone="warning" title={t("pages.integrations.noAppConfiguredTitle")}>
+          {withLink(
+            t("pages.integrations.noAppConfiguredBody"),
+            <a
+              href="/settings/integrations"
+              className="font-semibold text-primary-ink underline"
+            >
+              {t("pages.integrations.providerAppsLink")}
+            </a>,
+          )}
         </Notice>
       ) : null}
 
@@ -98,16 +112,18 @@ export function ConnectProviderButton({
                 className="inline-flex h-[38px] items-center justify-center gap-2 rounded-md border border-primary/35 bg-surface px-3.5 text-label-md font-semibold text-primary-ink transition-colors hover:bg-pale focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-ink"
               >
                 <Plug aria-hidden="true" className="size-4" />
-                Connect
+                {t("common.connect")}
               </a>
             ) : (
               <span className="flex items-center gap-2">
-                <Chip tone="warning">App not configured</Chip>
+                <Chip tone="warning">
+                  {t("pages.integrations.appNotConfigured")}
+                </Chip>
                 <a
                   href={`/settings/integrations?provider=${provider.key}`}
                   className="text-label-md font-semibold text-primary-ink hover:underline"
                 >
-                  Set it up
+                  {t("pages.integrations.setItUp")}
                 </a>
               </span>
             )}
@@ -135,6 +151,7 @@ export function RunActionButton({
   payload: Record<string, unknown>;
   className?: string;
 }) {
+  const { t, tp } = useI18n();
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -156,13 +173,16 @@ export function RunActionButton({
       } | null;
 
       if (!response.ok) {
-        setError(body?.error ?? `The request failed (HTTP ${response.status}).`);
+        setError(
+          body?.error ??
+            tp("pages.reports.requestFailed", { status: response.status }),
+        );
         return;
       }
 
-      setMessage(body?.message ?? "Done.");
+      setMessage(body?.message ?? t("pages.reports.done"));
     } catch {
-      setError("CCM could not reach the server.");
+      setError(t("pages.reports.serverUnreachable"));
     } finally {
       setBusy(false);
     }

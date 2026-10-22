@@ -15,12 +15,16 @@ import { getGa4Metrics, latestFetchedAt } from "@/lib/repositories/metrics";
 import { coverageOf, computeKeyEventRate, describeChange, sumSeries } from "@/domain/kpi";
 import { formatPercent } from "@/domain/currency";
 import { addNullable, formatCount } from "@/domain/metrics";
-import { getLocale } from "@/lib/i18n-server";
+import { getLocale, getTranslator } from "@/lib/i18n-server";
 import { intlLocale } from "@/lib/i18n";
 import { ErrorState } from "@/components/ui/states";
 
-export const metadata: Metadata = { title: "GA4 & Attribution" };
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslator();
+  return { title: t("pages.analytics.title") };
+}
 
 /**
  * GA4 and attribution.
@@ -43,6 +47,7 @@ export default async function AnalyticsPage({
   const today = getTodayInTimezone(session.workspaceTimezone);
   const { current, previous } = resolveRangeFromParams(params, today);
   const workspaceId = session.workspaceId!;
+  const t = await getTranslator();
   const locale = intlLocale(await getLocale());
 
   // A failed query is **not** an empty result. The difference is the whole
@@ -61,7 +66,9 @@ export default async function AnalyticsPage({
     );
   } catch (error) {
     failure =
-      error instanceof Error ? error.message : "The GA4 metrics could not be read.";
+      error instanceof Error
+        ? error.message
+        : t("pages.analytics.metricsError");
   }
 
   if (!failure) {
@@ -142,14 +149,12 @@ export default async function AnalyticsPage({
   return (
     <div className="space-y-6">
       <PageHeader
-        title="GA4 & Attribution"
-        subtitle="Traffic sources, events, funnels and key events."
+        title={t("pages.analytics.title")}
+        subtitle={t("pages.analytics.subtitle")}
       />
 
-      <Notice tone="info" title="Comparability">
-        Google Ads conversions and GA4 key events use different attribution
-        windows and different conversion definitions. CCM shows them side by
-        side and flags the difference; it never silently reconciles them.
+      <Notice tone="info" title={t("pages.analytics.comparabilityTitle")}>
+        {t("pages.analytics.comparabilityBody")}
       </Notice>
 
       {failure ? (
@@ -161,7 +166,7 @@ export default async function AnalyticsPage({
         <>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         <KpiCard
-          label="Sessions"
+          label={t("pages.analytics.sessions")}
            coverage={coverageOf(sessions)}
           value={
             sessions.value === null
@@ -174,7 +179,7 @@ export default async function AnalyticsPage({
           source={fetchedAt ? { label: "GA4", fetchedAt } : null}
         />
         <KpiCard
-          label="Active users"
+          label={t("pages.analytics.activeUsers")}
            coverage={coverageOf(activeUsers)}
           value={
             activeUsers.value === null
@@ -185,7 +190,7 @@ export default async function AnalyticsPage({
           }
         />
         <KpiCard
-          label="New users"
+          label={t("pages.analytics.newUsers")}
            coverage={coverageOf(newUsers)}
           value={
             newUsers.value === null
@@ -196,13 +201,13 @@ export default async function AnalyticsPage({
           }
         />
         <KpiCard
-          label="Key events"
+          label={t("pages.analytics.keyEvents")}
            coverage={coverageOf(keyEvents)}
           value={formatCount(keyEvents.value, locale)}
           change={describeChange(keyEvents.value, previousKeyEvents.value)}
         />
         <KpiCard
-          label="Key event rate"
+          label={t("pages.analytics.keyEventRate")}
            coverage={coverageOf(keyEvents)}
           value={formatPercent(
             computeKeyEventRate(
@@ -213,7 +218,7 @@ export default async function AnalyticsPage({
           )}
         />
         <KpiCard
-          label="Page views"
+          label={t("pages.analytics.pageViews")}
            coverage={coverageOf(views)}
           value={
             views.value === null
@@ -228,26 +233,26 @@ export default async function AnalyticsPage({
       <div className="grid gap-4 xl:grid-cols-2">
         <Card>
           <CardHeader
-            title="Landing pages"
-            subtitle="Sessions by landing page"
+            title={t("pages.analytics.landingPages")}
+            subtitle={t("pages.analytics.landingPagesSubtitle")}
           />
           <CardBody className="p-0">
-            {landingPages.length === 0 ? (
-              <EmptyState
-                title="No landing page data"
-                description="Connect a GA4 property to see which pages drive sessions."
-                icon={<ChartPie className="size-5" />}
-                className="border-0"
-              />
-            ) : (
               <DataTable
-                label="Landing pages"
+                label={t("pages.analytics.landingPages")}
                 rows={aggregateBy(landingPages, "landing_page", "sessions")}
+                empty={
+                  <EmptyState
+                    title={t("pages.analytics.noLandingDataTitle")}
+                    description={t("pages.analytics.noLandingDataBody")}
+                    icon={<ChartPie className="size-5" />}
+                    className="border-0"
+                  />
+                }
                 rowKey={(row) => row.id}
                 columns={[
                   {
                     key: "page",
-                    header: "Landing page",
+                    header: t("common.landingPage"),
                     mobile: "primary",
                     render: (row) => (
                       <span className="font-semibold text-tertiary">{row.label}</span>
@@ -255,35 +260,37 @@ export default async function AnalyticsPage({
                   },
                   {
                     key: "sessions",
-                    header: "Sessions",
+                    header: t("pages.analytics.sessions"),
                     numeric: true,
                     mobile: "secondary",
                     render: (row) => formatCount(row.value, locale),
                   },
                 ]}
               />
-            )}
           </CardBody>
         </Card>
 
         <Card>
-          <CardHeader title="Traffic sources" subtitle="Sessions by source / medium" />
+          <CardHeader
+            title={t("pages.analytics.sources")}
+            subtitle={t("pages.analytics.sourcesSubtitle")}
+          />
           <CardBody className="p-0">
-            {sources.length === 0 ? (
-              <EmptyState
-                title="No source data"
-                description="Traffic source data appears once GA4 has reported."
-                className="border-0"
-              />
-            ) : (
               <DataTable
-                label="Traffic sources"
+                label={t("pages.analytics.sources")}
                 rows={aggregateBy(sources, "source", "sessions")}
+                empty={
+                  <EmptyState
+                    title={t("pages.analytics.noSourceDataTitle")}
+                    description={t("pages.analytics.noSourceDataBody")}
+                    className="border-0"
+                  />
+                }
                 rowKey={(row) => row.id}
                 columns={[
                   {
                     key: "source",
-                    header: "Source / medium",
+                    header: t("common.sourceMedium"),
                     mobile: "primary",
                     render: (row) => (
                       <span className="font-semibold text-tertiary">{row.label}</span>
@@ -291,43 +298,42 @@ export default async function AnalyticsPage({
                   },
                   {
                     key: "sessions",
-                    header: "Sessions",
+                    header: t("pages.analytics.sessions"),
                     numeric: true,
                     mobile: "secondary",
                     render: (row) => formatCount(row.value, locale),
                   },
                 ]}
               />
-            )}
           </CardBody>
         </Card>
       </div>
 
       <Card>
         <CardHeader
-          title="Funnel"
-          subtitle="Sessions → engaged sessions → key events"
+          title={t("pages.analytics.funnel")}
+          subtitle={t("pages.analytics.funnelSubtitle")}
         />
         <CardBody>
           {totalRows.length === 0 ? (
             <EmptyState
-              title="No funnel data"
-              description="The funnel is built from GA4 session and key-event data."
+              title={t("pages.analytics.noFunnelDataTitle")}
+              description={t("pages.analytics.noFunnelDataBody")}
               className="border-0"
             />
           ) : (
             <dl className="grid gap-4 sm:grid-cols-3">
               {[
                 {
-                  label: "Sessions",
+                  label: t("pages.analytics.sessions"),
                   value: sessions.value,
                 },
                 {
-                  label: "Engaged sessions",
+                  label: t("pages.analytics.engagedSessions"),
                   value: sum(totalRows, "engaged_sessions").value,
                 },
                 {
-                  label: "Key events",
+                  label: t("pages.analytics.keyEvents"),
                   value: keyEvents.value,
                 },
               ].map((step) => (

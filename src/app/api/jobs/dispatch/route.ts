@@ -43,6 +43,29 @@ export async function POST(request: Request) {
   const limit = Number(url.searchParams.get("limit") ?? 10);
   const workspaceId = url.searchParams.get("workspaceId");
 
+  /**
+   * How many jobs are still waiting.
+   *
+   * On a daily schedule the dispatcher claims one bounded batch and stops,
+   * so the backlog is the number that says whether the cadence is keeping
+   * up. Without it a daily run looks exactly like a successful run on a
+   * quiet day.
+   */
+  const countQueued = async () => {
+    let query = db
+      .from("sync_jobs")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "queued")
+      .lte("run_after", new Date().toISOString());
+
+    if (workspaceId) query = query.eq("workspace_id", workspaceId);
+
+    const { count } = await query;
+    return count ?? 0;
+  };
+
+  const queuedBefore = await countQueued();
+
   // The digests that are due are queued first, so a scheduled report is not
   // held behind a long sync batch.
   const scheduled = await enqueueDueDigests(db, {
@@ -111,6 +134,12 @@ export async function POST(request: Request) {
     processed: results.length,
     leaseOwner,
     scheduledDigests: scheduled.queued,
+    /**
+     * The jobs that were still waiting when this run finished. A backlog
+     * that keeps growing means the schedule is too slow for the work.
+     */
+    queuedBefore,
+    queuedRemaining: Math.max(0, queuedBefore - jobs.length),
     results,
   });
 }

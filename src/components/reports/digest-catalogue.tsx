@@ -13,6 +13,8 @@ import { Button } from "@/components/ui/button";
 import { Chip } from "@/components/ui/chip";
 import { EmptyState } from "@/components/ui/states";
 import { Notice } from "@/components/ui/notice";
+import { useI18n } from "@/components/providers/i18n-provider";
+import type { MessagePathRoot, Translator } from "@/lib/i18n";
 
 /**
  * The scheduled digests.
@@ -21,6 +23,33 @@ import { Notice } from "@/components/ui/notice";
  * was built. Both are shown, because "the digest is scheduled" and "the
  * digest for Tuesday exists" are different facts.
  */
+
+/** A message key inside the `pages.reports` namespace. */
+type ReportsPath = Extract<MessagePathRoot, `pages.reports.${string}`>;
+
+/** The cadence of a definition. */
+const CADENCE: Record<string, ReportsPath> = {
+  daily: "pages.reports.daily",
+  weekly: "pages.reports.weekly",
+  monthly: "pages.reports.monthly",
+  on_demand: "pages.reports.onDemand",
+};
+
+/** The state of a run. */
+const RUN_STATUS: Record<string, ReportsPath> = {
+  pending: "pages.reports.runStatusPending",
+  ready: "pages.reports.runStatusReady",
+  failed: "pages.reports.runStatusFailed",
+};
+
+function labelFor(
+  t: Translator,
+  map: Record<string, ReportsPath>,
+  value: string,
+): string {
+  const key = map[value];
+  return key ? t(key) : value;
+}
 
 export interface DigestDefinition {
   id: string;
@@ -66,6 +95,7 @@ export function DigestCatalogue({
   runs: DigestRun[];
 }) {
   const router = useRouter();
+  const { t, tp } = useI18n();
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -88,14 +118,17 @@ export function DigestCatalogue({
       } | null;
 
       if (!response.ok) {
-        setError(body?.error ?? `The request failed (HTTP ${response.status}).`);
+        setError(
+          body?.error ??
+            tp("pages.reports.requestFailed", { status: response.status }),
+        );
         return;
       }
 
-      setNotice(body?.message ?? "The digest has been queued.");
+      setNotice(body?.message ?? t("pages.reports.digestQueued"));
       router.refresh();
     } catch {
-      setError("CCM could not reach the server.");
+      setError(t("pages.reports.serverUnreachable"));
     } finally {
       setBusy(null);
     }
@@ -104,8 +137,8 @@ export function DigestCatalogue({
   if (definitions.length === 0) {
     return (
       <EmptyState
-        title="No digest is scheduled"
-        description="Apply supabase/repair.sql to create the daily, weekly and monthly digests for this workspace."
+        title={t("pages.reports.noDigestScheduledTitle")}
+        description={t("pages.reports.noDigestScheduledBody")}
         icon={<CalendarClock aria-hidden="true" className="size-5" />}
         className="border-0"
       />
@@ -115,12 +148,12 @@ export function DigestCatalogue({
   return (
     <div className="space-y-4">
       {notice ? (
-        <Notice tone="success" title="Digest queued">
+        <Notice tone="success" title={t("pages.reports.digestQueuedTitle")}>
           {notice}
         </Notice>
       ) : null}
       {error ? (
-        <Notice tone="danger" title="The digest could not be queued">
+        <Notice tone="danger" title={t("pages.reports.digestFailedTitle")}>
           {error}
         </Notice>
       ) : null}
@@ -136,7 +169,7 @@ export function DigestCatalogue({
                 {definition.title}
               </h3>
               <Chip tone={definition.enabled ? "teal" : "neutral"}>
-                {definition.cadence}
+                {labelFor(t, CADENCE, definition.cadence)}
               </Chip>
             </div>
 
@@ -148,19 +181,19 @@ export function DigestCatalogue({
 
             <dl className="mt-3 space-y-1 text-body-sm">
               <div className="flex justify-between gap-2">
-                <dt className="text-muted-text">Last run</dt>
+                <dt className="text-muted-text">{t("pages.reports.lastRun")}</dt>
                 <dd className="font-semibold text-tertiary">
                   {definition.lastRunAt
                     ? new Date(definition.lastRunAt).toLocaleString()
-                    : "Never"}
+                    : t("common.never")}
                 </dd>
               </div>
               <div className="flex justify-between gap-2">
-                <dt className="text-muted-text">Next run</dt>
+                <dt className="text-muted-text">{t("pages.reports.nextRun")}</dt>
                 <dd className="font-semibold text-tertiary">
                   {definition.nextRunAt
                     ? new Date(definition.nextRunAt).toLocaleString()
-                    : "Not scheduled"}
+                    : t("pages.reports.notScheduled")}
                 </dd>
               </div>
             </dl>
@@ -177,7 +210,7 @@ export function DigestCatalogue({
               ) : (
                 <Play aria-hidden="true" className="size-4" />
               )}
-              Build now
+              {t("pages.reports.buildNow")}
             </Button>
           </li>
         ))}
@@ -186,7 +219,7 @@ export function DigestCatalogue({
       {runs.length > 0 ? (
         <div>
           <h3 className="mb-2 text-label-lg font-semibold text-secondary">
-            Recent digests
+            {t("pages.reports.recentDigests")}
           </h3>
           <ul className="divide-y divide-border/70 rounded-lg border border-border bg-surface">
             {runs.map((run) => {
@@ -215,7 +248,10 @@ export function DigestCatalogue({
                         {run.title}
                       </span>
                       <span className="block text-body-sm text-muted-text">
-                        {run.periodStart ?? "—"} to {run.periodEnd ?? "—"}
+                        {tp("pages.reports.periodTo", {
+                          start: run.periodStart ?? "—",
+                          end: run.periodEnd ?? "—",
+                        })}
                       </span>
                     </span>
                     <Chip
@@ -227,7 +263,7 @@ export function DigestCatalogue({
                             : "neutral"
                       }
                     >
-                      {run.status}
+                      {labelFor(t, RUN_STATUS, run.status)}
                     </Chip>
                   </button>
 
@@ -245,7 +281,7 @@ export function DigestCatalogue({
                           {!section.available ? (
                             <p className="mt-1 text-body-sm text-muted-text">
                               {section.unavailableReason ??
-                                "No data was available for this period."}
+                                t("pages.reports.noDataAvailable")}
                             </p>
                           ) : section.metrics.length > 0 ? (
                             <dl className="mt-1 grid grid-cols-2 gap-x-4 gap-y-1 text-body-sm md:grid-cols-3">
@@ -289,7 +325,7 @@ export function DigestCatalogue({
                       {run.caveats.length > 0 ? (
                         <div className="rounded-md border border-border bg-surface-muted/60 px-3 py-2">
                           <h4 className="text-label-md font-semibold text-secondary">
-                            Caveats
+                            {t("pages.reports.caveats")}
                           </h4>
                           <ul className="mt-1 space-y-0.5">
                             {run.caveats.map((caveat, index) => (

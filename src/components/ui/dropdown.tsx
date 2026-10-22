@@ -6,20 +6,36 @@ import {
   useContext,
   useEffect,
   useId,
+  useMemo,
   useRef,
   useState,
   type ReactNode,
 } from "react";
-import { ChevronDown } from "lucide-react";
+import Link from "next/link";
+import { ChevronDown, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/cn";
 
 /**
- * The role of the panel a dropdown item sits in.
+ * The role of the panel a dropdown item sits in, and the way to close it.
  *
  * Items are menu items only when the panel is a menu; inside a panel that
- * holds form controls they are ordinary buttons.
+ * holds form controls they are ordinary buttons. The close function lets an
+ * item dismiss the panel it lives in, which matters for a route: the
+ * client-side navigation would otherwise leave the panel open behind it.
  */
-const PanelRoleContext = createContext<"menu" | "group" | "dialog">("menu");
+const PanelContext = createContext<{
+  role: "menu" | "group" | "dialog";
+  close: () => void;
+}>({ role: "menu", close: () => {} });
+
+/**
+ * Whether a destination leaves this application.
+ *
+ * A scheme or a protocol-relative address leaves it; a path does not.
+ */
+function isExternal(href: string): boolean {
+  return /^[a-z][a-z0-9+.-]*:/i.test(href) || href.startsWith("//");
+}
 
 /**
  * An accessible dropdown built on native buttons.
@@ -91,6 +107,11 @@ export function Dropdown({
     setOpen(false);
   }, []);
 
+  const panel = useMemo(
+    () => ({ role: panelRole, close }),
+    [panelRole, close],
+  );
+
   // Restore focus to the trigger when the popover closes. This lives in an
   // effect rather than in `close` so that a ref is never read during render.
   const wasOpen = useRef(false);
@@ -154,7 +175,7 @@ export function Dropdown({
         </button>
       )}
       {open ? (
-        <PanelRoleContext.Provider value={panelRole}>
+        <PanelContext.Provider value={panel}>
           <div
             id={panelId}
             role={panelRole}
@@ -166,7 +187,7 @@ export function Dropdown({
           >
             {children({ close })}
           </div>
-        </PanelRoleContext.Provider>
+        </PanelContext.Provider>
       ) : null}
     </div>
   );
@@ -186,7 +207,7 @@ export function DropdownItem({
   href?: string;
   destructive?: boolean;
 }) {
-  const panelRole = useContext(PanelRoleContext);
+  const { role: panelRole, close } = useContext(PanelContext);
   // `menuitem` is only correct inside a menu. In a panel that holds form
   // controls the items are ordinary buttons.
   const role = panelRole === "menu" ? "menuitem" : undefined;
@@ -199,14 +220,47 @@ export function DropdownItem({
   );
 
   if (href) {
+    // A route in this application opens in this tab, the way every other
+    // link in CCM does.
+    if (!isExternal(href) && href.startsWith("/")) {
+      return (
+        <Link
+          href={href}
+          role={role}
+          className={className}
+          onClick={() => {
+            onSelect?.();
+            close();
+          }}
+        >
+          {children}
+        </Link>
+      );
+    }
+
+    // A destination that leaves the application opens in a new tab, and
+    // says so, so nobody follows it expecting to come back.
+    if (isExternal(href)) {
+      return (
+        <a
+          href={href}
+          role={role}
+          className={className}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={close}
+        >
+          {children}
+          <ExternalLink
+            aria-hidden="true"
+            className="ms-auto size-3.5 shrink-0 text-muted-text"
+          />
+        </a>
+      );
+    }
+
     return (
-      <a
-        href={href}
-        role={role}
-        className={className}
-        target="_blank"
-        rel="noopener noreferrer"
-      >
+      <a href={href} role={role} className={className} onClick={close}>
         {children}
       </a>
     );
