@@ -1,9 +1,10 @@
 {
   "manifest_version": 3,
   "name": "CCM Browser Bridge",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Opens CCM's connected accounts in the browser profile where this extension is installed, and verifies that the request really came from CCM.",
   "minimum_chrome_version": "116",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAsL4LtmVuoRm/VLYTD/bL8Ls/mTf7qB8H0XDevw1AEPNZva6jkkC/BMRfRYuZF0k6ekK6bFsyKYYdBh3Q05Kx83hj0gSpCYx8QsKbdKQV4X+uFhec52mzFMRPNmmzpVltglfnshlpdzPBRBm0CPoHiJP5QlgUHYxhBxy8IDVJ2p7VSI56YaK2K7GwOJva14mcxG0Pn7YNEQeGvvQDtVxO06n3LVtFYPudlftSMKB1X9A9o0UfPA+hnlp5xx6oZ9Wpchw1fvZT+U6tH189LeUm+RDblPOh+KgBQEfxj35vMsC/0F0p2xCUheS4mkitg9SNcWyhcPZ15A2e2ENri+aKNQIDAQAB",
 
   "permissions": ["storage", "scripting"],
 

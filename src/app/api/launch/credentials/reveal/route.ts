@@ -6,12 +6,12 @@ import { writeAuditEvent } from "@/lib/repositories/alerts";
 import { verifyLaunchTicket } from "@/lib/launch/tickets";
 import { providerSupportsCredentialFill } from "@/lib/launch/credential-hosts";
 import type { ProviderKey } from "@/providers/registry";
+import { BRIDGE_EXTENSION_ID } from "@/lib/launch/bridge-config";
 
 export const dynamic = "force-dynamic";
 
 function extensionOrigin() {
-  const id = process.env.NEXT_PUBLIC_BRIDGE_EXTENSION_ID;
-  return id ? `chrome-extension://${id}` : null;
+  return `chrome-extension://${BRIDGE_EXTENSION_ID}`;
 }
 
 function cors(origin: string) {

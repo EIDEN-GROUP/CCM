@@ -43,6 +43,7 @@ tsconfig.tsbuildinfo
 # local scratch
 /tmp
 /.scratch
+/.private/
 *.local.log
 npm-debug.log*
 yarn-error.log*

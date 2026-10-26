@@ -14,7 +14,6 @@ export const PUBLIC_ENV = {
   appUrl: "NEXT_PUBLIC_APP_URL",
   supabaseUrl: "NEXT_PUBLIC_SUPABASE_URL",
   supabaseAnonKey: "NEXT_PUBLIC_SUPABASE_ANON_KEY",
-  bridgeExtensionId: "NEXT_PUBLIC_BRIDGE_EXTENSION_ID",
 } as const;
 
 export const SERVER_ENV = {
@@ -70,7 +69,6 @@ export const publicEnv = {
   appUrl: () => readPublic(PUBLIC_ENV.appUrl),
   supabaseUrl: () => readPublic(PUBLIC_ENV.supabaseUrl),
   supabaseAnonKey: () => readPublic(PUBLIC_ENV.supabaseAnonKey),
-  bridgeExtensionId: () => readPublic(PUBLIC_ENV.bridgeExtensionId),
 };
 
 export const serverEnv = {

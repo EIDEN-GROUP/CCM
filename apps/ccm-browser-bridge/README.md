@@ -81,15 +81,23 @@ replay set, and the server marks the ticket consumed in Postgres.
 
 ## Install locally
 
-1. Open `chrome://extensions`.
-2. Turn on **Developer mode**.
-3. Click **Load unpacked** and select this folder
+1. Download and extract the packaged bridge from **Account Launcher → Set up
+   account launching**, or use the source folder below.
+2. Open `chrome://extensions`.
+3. Turn on **Developer mode**.
+4. Click **Load unpacked** and select the extracted folder or this source folder
    (`apps/ccm-browser-bridge`).
-4. Open the extension's **Options** page (right-click → *Options*, or the
+5. Open the extension's **Options** page (right-click → *Options*, or the
    toolbar icon → *Open setup*).
-5. Enter your CCM origin — `http://localhost:3000` in development, or the
+6. Enter your CCM origin — `http://localhost:3000` in development, or the
    production origin — and press **Save and verify key**.
-6. Copy the **instance id** shown on that page.
+7. Copy the **instance id** shown on that page.
+
+The extension ID is fixed by the `key` in `manifest.json` and matches the
+ID used by the CCM app and credential handoff. Keep that field when packaging.
+Replacing an older installation that was loaded without this key may change
+its extension ID; remove the old extension, install this package, then pair
+the new instance id again.
 
 Then in CCM: **Account Launcher → Set up account launching**, paste the
 instance id, and map each account to the browser profile that holds its

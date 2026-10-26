@@ -1,5 +1,7 @@
 "use client";
 
+import { BRIDGE_EXTENSION_ID } from "@/lib/launch/bridge-config";
+
 /**
  * The browser half of the account launcher.
  *
@@ -64,10 +66,9 @@ declare global {
   }
 }
 
-/** The extension id, configured per deployment. */
+/** The extension id pinned by the downloadable extension manifest. */
 function extensionId(): string | null {
-  const id = process.env.NEXT_PUBLIC_BRIDGE_EXTENSION_ID;
-  return id && id.length > 0 ? id : null;
+  return BRIDGE_EXTENSION_ID;
 }
 
 /**

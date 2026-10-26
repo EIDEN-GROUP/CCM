@@ -89,7 +89,6 @@ const OPTIONAL: Array<[string, string]> = [
   ["META_APP_ID", "Meta / Instagram app"],
   ["LINKEDIN_CLIENT_ID", "LinkedIn app"],
   ["AHREFS_API_KEY", "rank tracking"],
-  ["NEXT_PUBLIC_BRIDGE_EXTENSION_ID", "browser bridge extension"],
   ["GEMINI_API_KEY", "AI analyst"],
 ];
 

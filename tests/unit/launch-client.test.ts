@@ -9,7 +9,6 @@ describe("account launcher fallback", () => {
   });
 
   it("opens the normal browser tab when the mapped helper is unavailable", async () => {
-    vi.stubEnv("NEXT_PUBLIC_BRIDGE_EXTENSION_ID", "");
     const ticket = {
       url: "https://analytics.google.com/analytics/web/?property=123",
       ticket: "signed-ticket",

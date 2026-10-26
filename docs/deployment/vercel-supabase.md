@@ -171,7 +171,6 @@ variables to the Vercel project settings.
 | `GA4_PROPERTY_ID`, `GSC_PROPERTY_URL`, `GTM_CONTAINER_ID` | Vercel | |
 | `GOOGLE_ADS_CUSTOMER_ID`, `GOOGLE_ADS_MANAGER_CUSTOMER_ID` | Vercel | |
 | `GOOGLE_ADS_API_ACCESS_LEVEL` | Vercel | Display only: `test` / `explorer` / `basic` / `standard` |
-| `NEXT_PUBLIC_BRIDGE_EXTENSION_ID` | Vercel | The published extension id |
 | `BRIDGE_PAIRING_SECRET` | Vercel | |
 | `GEMINI_API_KEY`, `AI_MODEL` | Vercel | Optional — without them the AI surface says "not configured" |
 
@@ -268,14 +267,13 @@ In **Supabase → Authentication → URL Configuration**:
 
 ## 7. The browser bridge extension
 
-1. Load `apps/ccm-browser-bridge/` unpacked, or publish it to the Chrome
-   Web Store.
-2. In `manifest.json`, replace `https://ccm.medicalbay.ma/*` with your
-   real production origin.
-3. Add the published extension id to `NEXT_PUBLIC_BRIDGE_EXTENSION_ID`.
-4. In the extension's options page, enter the CCM origin and press
+1. Download and extract the browser bridge from **Account Launcher → Set up
+   account launching**, or load `apps/ccm-browser-bridge/` unpacked.
+2. Its ID is pinned by `manifest.key` and the app configuration, so no
+   extension-ID environment variable is needed.
+3. In the extension's options page, enter the CCM origin and press
    **Save and verify key**.
-5. Copy the instance id into **Account Launcher → Set up account launching**.
+4. Copy the instance id into **Account Launcher → Set up account launching**.
 
 See `docs/account-launcher.md` for the full model.
 
