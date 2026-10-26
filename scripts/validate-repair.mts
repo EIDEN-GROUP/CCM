@@ -238,7 +238,7 @@ async function main() {
 
   for (const [table, expected] of [
     ["roles", "8"],
-    ["provider_definitions", "13"],
+    ["provider_definitions", "14"],
     ["metric_definitions", "22"],
   ] as const) {
     const rows = await db.query<{ count: string }>(

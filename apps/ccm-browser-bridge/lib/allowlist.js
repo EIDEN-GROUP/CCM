@@ -22,6 +22,7 @@ export const PROVIDER_HOSTS = {
     "graph.facebook.com",
   ],
   instagram: ["www.instagram.com", "graph.facebook.com"],
+  tiktok: ["www.tiktok.com"],
   linkedin: ["www.linkedin.com"],
   ahrefs: ["app.ahrefs.com", "docs.ahrefs.com"],
   clarity: ["clarity.microsoft.com"],

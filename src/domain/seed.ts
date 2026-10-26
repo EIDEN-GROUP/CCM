@@ -226,6 +226,15 @@ export const PROVIDER_SEED = [
     ],
   },
   {
+    key: "tiktok",
+    display_name: "TikTok",
+    category: "social",
+    api_version: "n/a",
+    hosts: ["www.tiktok.com"],
+    docs_url: "https://developers.tiktok.com/",
+    blocking_approvals: [],
+  },
+  {
     key: "linkedin",
     display_name: "LinkedIn",
     category: "social",

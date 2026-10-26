@@ -160,6 +160,23 @@ create table if not exists public.provider_app_credentials (
   unique (workspace_id, provider_key)
 );
 
+-- App credentials use OAuth app keys (google/meta/linkedin), not product keys
+-- from provider_definitions. Keep this repair safe for databases created by
+-- the earlier migration that incorrectly attached the product-catalog FK.
+alter table public.provider_app_credentials
+  drop constraint if exists provider_app_credentials_provider_key_fkey;
+do $$ begin
+  if not exists (
+    select 1 from pg_constraint
+    where conname = 'provider_app_credentials_provider_key_check'
+      and conrelid = 'public.provider_app_credentials'::regclass
+  ) then
+    alter table public.provider_app_credentials
+      add constraint provider_app_credentials_provider_key_check
+      check (provider_key in ('google', 'meta', 'linkedin'));
+  end if;
+end $$;
+
 create index if not exists provider_app_credentials_workspace_idx
   on public.provider_app_credentials (workspace_id, provider_key);
 
@@ -1002,6 +1019,7 @@ values
   ('gmail', 'Gmail', 'email', 'v1', array['mail.google.com']::text[], 'https://developers.google.com/workspace/gmail/api/guides', array['Gmail API enabled', 'Restricted-scope verification or security assessment if the scopes used are restricted']::text[]),
   ('meta', 'Meta / Instagram', 'social', 'v23.0', array['www.facebook.com', 'business.facebook.com', 'graph.facebook.com', 'www.instagram.com']::text[], 'https://developers.facebook.com/docs/graph-api/', array['Meta app with the required pages and insights permissions', 'App review for any publishing permission']::text[]),
   ('instagram', 'Instagram', 'social', 'v23.0', array['www.instagram.com', 'graph.facebook.com']::text[], 'https://developers.facebook.com/docs/instagram-api/', array['Instagram professional account linked to a Facebook Page', 'App review for the insights permissions']::text[]),
+  ('tiktok', 'TikTok', 'social', 'n/a', array['www.tiktok.com']::text[], 'https://developers.tiktok.com/', array[]::text[]),
   ('linkedin', 'LinkedIn', 'social', '2026-10', array['www.linkedin.com']::text[], 'https://learn.microsoft.com/en-us/linkedin/marketing/integrations/migrations', array['LinkedIn app with organisation admin access and approved Marketing API scopes']::text[]),
   ('ahrefs', 'SEO / Rankings', 'seo', 'v3', array['app.ahrefs.com', 'docs.ahrefs.com']::text[], 'https://docs.ahrefs.com/', array['Ahrefs API key with units available on the subscribed plan']::text[]),
   ('clarity', 'Clarity / UX', 'ux', 'export-v1', array['clarity.microsoft.com']::text[], 'https://learn.microsoft.com/en-us/clarity/', array['Clarity project ID; API token if the plan exposes one']::text[]),

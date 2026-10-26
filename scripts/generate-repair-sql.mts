@@ -231,6 +231,23 @@ create table if not exists public.provider_app_credentials (
   unique (workspace_id, provider_key)
 );
 
+-- App credentials use OAuth app keys (google/meta/linkedin), not product keys
+-- from provider_definitions. Keep this repair safe for databases created by
+-- the earlier migration that incorrectly attached the product-catalog FK.
+alter table public.provider_app_credentials
+  drop constraint if exists provider_app_credentials_provider_key_fkey;
+do $$ begin
+  if not exists (
+    select 1 from pg_constraint
+    where conname = 'provider_app_credentials_provider_key_check'
+      and conrelid = 'public.provider_app_credentials'::regclass
+  ) then
+    alter table public.provider_app_credentials
+      add constraint provider_app_credentials_provider_key_check
+      check (provider_key in ('google', 'meta', 'linkedin'));
+  end if;
+end $$;
+
 create index if not exists provider_app_credentials_workspace_idx
   on public.provider_app_credentials (workspace_id, provider_key);
 

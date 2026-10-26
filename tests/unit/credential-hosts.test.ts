@@ -27,6 +27,7 @@ describe("saved-login host permissions", () => {
   it("does not offer fill support for providers without an account login", () => {
     expect(CREDENTIAL_LOGIN_HOSTS.pagespeed).toBeUndefined();
     expect(CREDENTIAL_LOGIN_HOSTS.uptime).toBeUndefined();
+    expect(CREDENTIAL_LOGIN_HOSTS.tiktok).toEqual(["www.tiktok.com"]);
   });
 
   it("uses only a fixed provider-approved destination for each saved-login account", () => {

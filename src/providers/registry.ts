@@ -23,6 +23,7 @@ export type ProviderKey =
   | "gmail"
   | "meta"
   | "instagram"
+  | "tiktok"
   | "linkedin"
   | "ahrefs"
   | "clarity"
@@ -73,6 +74,7 @@ export interface AccountIdentifiers {
   youtube?: { channelId?: string };
   gmail?: { mailboxEmail?: string };
   meta?: { pageId?: string; igBusinessAccountId?: string; username?: string };
+  tiktok?: { username?: string; accountId?: string };
   linkedin?: { organizationId?: string; pageSlug?: string };
   ahrefs?: { projectId?: string };
   clarity?: { projectId?: string };
@@ -215,6 +217,16 @@ function instagramAccount(ids: AccountIdentifiers): string | null {
 
 function instagramManagement(): string | null {
   return "https://www.instagram.com/professional/";
+}
+
+function tiktokAccount(ids: AccountIdentifiers): string | null {
+  const username = ids.tiktok?.username?.replace(/^@/, "");
+  if (!username) return "https://www.tiktok.com/login";
+  return `https://www.tiktok.com/@${encodeURIComponent(username)}`;
+}
+
+function tiktokManagement(): string | null {
+  return "https://www.tiktok.com/creator-center/";
 }
 
 function linkedinAccount(ids: AccountIdentifiers): string | null {
@@ -482,6 +494,23 @@ export const PROVIDERS: Record<ProviderKey, ProviderDefinition> = {
       "Instagram professional (business/creator) account linked to a Facebook Page",
       "App with instagram_basic and the required insights permissions",
     ],
+  },
+  tiktok: {
+    key: "tiktok",
+    displayName: "TikTok",
+    category: "social",
+    icon: "Video",
+    hosts: ["www.tiktok.com"],
+    apiVersion: "n/a",
+    capabilities: [
+      { key: "read.metrics", implemented: false, limitation: "TikTok analytics are not connected in this version; this entry only opens TikTok in the paired browser." },
+      { key: "read.accounts", implemented: false, limitation: "TikTok account discovery is not connected; add a saved browser login or enter the profile username." },
+      { key: "launch.account", implemented: true },
+      { key: "launch.management", implemented: true },
+    ],
+    launch: { account: tiktokAccount, management: tiktokManagement },
+    docsUrl: "https://developers.tiktok.com/",
+    blockingApprovals: [],
   },
   linkedin: {
     key: "linkedin",

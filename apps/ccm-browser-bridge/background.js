@@ -39,6 +39,7 @@ const LOGIN_HOSTS = {
   gmail: ["accounts.google.com"],
   meta: ["www.facebook.com", "business.facebook.com"],
   instagram: ["www.instagram.com", "www.facebook.com"],
+  tiktok: ["www.tiktok.com"],
   linkedin: ["www.linkedin.com"],
   ahrefs: ["app.ahrefs.com"],
   clarity: ["clarity.microsoft.com", "login.microsoftonline.com"],

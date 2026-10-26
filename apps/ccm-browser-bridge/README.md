@@ -79,6 +79,10 @@ Both sides validate independently:
 A ticket is single-use on both sides: the extension keeps a session-scoped
 replay set, and the server marks the ticket consumed in Postgres.
 
+TikTok is supported for browser launching and optional sign-in fill on
+`www.tiktok.com`. The bridge does not access TikTok cookies or claim API
+analytics/account discovery support.
+
 ## Install locally
 
 1. Download and extract the packaged bridge from **Account Launcher → Set up

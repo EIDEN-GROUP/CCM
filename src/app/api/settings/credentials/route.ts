@@ -8,13 +8,19 @@ import {
   writeAppCredential,
 } from "@/lib/providers/app-credentials";
 import { OAUTH_PROVIDER_LIST } from "@/lib/oauth/registry";
+import type { OAuthProviderKey } from "@/lib/oauth/registry";
 import { writeAuditEvent } from "@/lib/repositories/alerts";
 import { serverEnv } from "@/lib/env";
 
 export const dynamic = "force-dynamic";
 
+const oauthProviderKeys = OAUTH_PROVIDER_LIST.map(({ key }) => key) as [
+  OAuthProviderKey,
+  ...OAuthProviderKey[],
+];
+
 const saveSchema = z.object({
-  providerKey: z.string().min(2).max(60),
+  providerKey: z.enum(oauthProviderKeys),
   clientId: z.string().min(1).max(500),
   /** Omit to leave the stored secret alone; empty string clears it. */
   secret: z.string().max(2000).optional(),
@@ -169,7 +175,7 @@ export async function DELETE(request: Request) {
 
   const url = new URL(request.url);
   const providerKey = url.searchParams.get("providerKey");
-  if (!providerKey) {
+  if (!providerKey || !oauthProviderKeys.includes(providerKey as OAuthProviderKey)) {
     return NextResponse.json(
       { error: "providerKey is required" },
       { status: 400 },

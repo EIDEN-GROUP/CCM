@@ -65,6 +65,7 @@ export const PROVIDER_ICONS: Record<string, string> = {
   gmail: "Mail",
   meta: "Users",
   instagram: "Camera",
+  tiktok: "Video",
   linkedin: "Briefcase",
   ahrefs: "TrendingUp",
   clarity: "Eye",

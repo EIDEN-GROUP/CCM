@@ -16,7 +16,7 @@ What CCM *can* do, and does:
 
 1. Open the **precise** destination for an account — the right Google Ads
    customer, the right GA4 property, the right Search Console property, the
-   right GTM container, the right Instagram profile, the right LinkedIn Page.
+   right GTM container, the right Instagram or TikTok profile, the right LinkedIn Page.
 2. Open it in the browser profile the user is already using, so a valid
    provider session is reused.
 3. With the browser bridge extension, open it in **a specific** profile and

@@ -76,7 +76,7 @@ export async function POST(request: Request) {
       provider_key: providerKey,
       external_account_id: null,
       display_label: displayLabel,
-      identifiers: {},
+      identifiers: providerKey === "tiktok" ? { tiktok: { username } } : {},
       is_active: true,
     })
     .select("id")

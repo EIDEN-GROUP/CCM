@@ -251,7 +251,7 @@ describe("the schema applies to a real PostgreSQL", () => {
 
     for (const [table, expected] of [
       ["roles", 8],
-      ["provider_definitions", 13],
+      ["provider_definitions", 14],
       ["metric_definitions", 22],
     ] as const) {
       const { rows } = await db.query<{ count: string }>(
@@ -274,11 +274,30 @@ describe("the schema applies to a real PostgreSQL", () => {
     const { rows } = await db.query<{ key: string; hosts: string[] }>(
       "select key, hosts from public.provider_definitions",
     );
-    expect(rows).toHaveLength(13);
+    expect(rows).toHaveLength(14);
     for (const row of rows) {
       expect(Array.isArray(row.hosts), row.key).toBe(true);
       expect(row.hosts.length, row.key).toBeGreaterThan(0);
     }
+  });
+
+  it("keys provider app credentials by OAuth app, including the Google umbrella app", async () => {
+    await db.exec(`
+      insert into public.provider_app_credentials
+        (workspace_id, provider_key, client_id)
+      select id, 'google', 'test-client'
+        from public.workspaces where slug = 'sql-test';
+    `);
+    const { rows } = await db.query<{ provider_key: string }>(
+      "select provider_key from public.provider_app_credentials where client_id = 'test-client'",
+    );
+    expect(rows).toEqual([{ provider_key: "google" }]);
+    await expect(db.exec(`
+      insert into public.provider_app_credentials
+        (workspace_id, provider_key, client_id)
+      select id, 'unknown-oauth-app', 'bad-client'
+        from public.workspaces where slug = 'sql-test';
+    `)).rejects.toThrow();
   });
 
   it("creates the digests and counts the quota", async () => {

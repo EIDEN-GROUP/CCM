@@ -55,6 +55,15 @@ describe("buildLaunchTarget", () => {
     expect(target.url).toBe("https://www.instagram.com/medicalbay.maroc/");
   });
 
+  it("builds an allowlisted TikTok profile or login destination", () => {
+    expect(buildLaunchTarget("tiktok", { tiktok: { username: "@clinic" } }).url)
+      .toBe("https://www.tiktok.com/@clinic");
+    expect(buildLaunchTarget("tiktok", {}).url)
+      .toBe("https://www.tiktok.com/login");
+    expect(buildLaunchTarget("tiktok", {}, "management").url)
+      .toBe("https://www.tiktok.com/creator-center/");
+  });
+
   it("builds the exact LinkedIn company destination", () => {
     const target = buildLaunchTarget("linkedin", {
       linkedin: { pageSlug: "medical-bay-agadir" },

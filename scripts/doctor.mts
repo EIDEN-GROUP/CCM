@@ -222,7 +222,7 @@ if (!url || !serviceKey || url.includes("REDACTED")) {
   for (const [table, expected] of [
     ["roles", 8],
     ["role_permissions", 97],
-    ["provider_definitions", 13],
+    ["provider_definitions", 14],
     ["metric_definitions", 22],
   ] as const) {
     const { count } = await db
