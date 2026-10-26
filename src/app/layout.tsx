@@ -21,7 +21,7 @@ const notoArabic = Noto_Sans_Arabic({
 
 export const metadata: Metadata = {
   title: {
-    default: "CCM — Command Center Medicalbay",
+    default: "CCM — Command Center Management",
     template: "%s · CCM",
   },
   description:

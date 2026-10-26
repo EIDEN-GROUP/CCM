@@ -10,7 +10,7 @@ import { admin } from "./pages/fr/admin";
 export const fr: Messages = {
   app: {
     name: "CCM",
-    tagline: "Centre de Commandement Medicalbay",
+    tagline: "Command Center Management",
     medicalBay: "Medical Bay",
     medicalBayTagline: "Votre santé. Notre priorité.",
   },
@@ -44,6 +44,13 @@ export const fr: Messages = {
     searchPlaceholder: "Rechercher…",
     searchLabel: "Rechercher dans CCM",
     workspace: "Espace de travail",
+    workspaces: "Vos espaces de travail",
+    addWorkspace: "Ajouter un espace",
+    renameWorkspace: "Renommer",
+    workspaceName: "Nom de l’espace",
+    createWorkspace: "Créer l’espace",
+    saveWorkspaceName: "Enregistrer le nom",
+    workspaceActionError: "La modification n’a pas été enregistrée. Réessayez.",
     site: "Site web",
     account: "Compte",
     dateRange: "Période",

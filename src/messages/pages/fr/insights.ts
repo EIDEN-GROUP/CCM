@@ -244,11 +244,12 @@ export const insights: ChannelsShape = {
     step1Subtitle:
       "Facultatif, mais cela ajoute les lancements vérifiés et l'association de profils",
     checkingExtension: "Recherche de l'extension…",
+    downloadBridgeExtension: "Télécharger CCM Browser Bridge",
     extensionInstalled:
       "La passerelle navigateur est installée dans ce profil de navigateur.",
     extensionNotDetectedTitle: "Extension non détectée",
     loadExtensionBody:
-      "Chargez l'extension non empaquetée depuis {bridgePath} dans {extensionsUrl}, ouvrez sa page d'options et saisissez cette origine CCM. L'ouverture de comptes fonctionne quand même sans elle — l'onglet s'ouvre simplement dans le profil actuel.",
+      "Téléchargez et extrayez la passerelle ci-dessous, puis choisissez Load unpacked dans {extensionsUrl} et sélectionnez le dossier extrait. Vous pouvez aussi charger le dossier source {bridgePath}. Ouvrez les options et saisissez cette origine CCM.",
     instanceIdLabel: "L'identifiant d'instance de ce profil",
     step2Title: "Étape 2 — associer un profil de navigateur",
     step2Subtitle:

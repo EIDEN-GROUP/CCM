@@ -976,6 +976,10 @@ export interface Database {
     };
     Views: Record<string, never>;
     Functions: {
+      create_workspace_for_owner: {
+        Args: { p_name: string };
+        Returns: Array<{ id: string; name: string }>;
+      };
       add_provider_quota_usage: {
         Args: {
           p_connection_id: string;

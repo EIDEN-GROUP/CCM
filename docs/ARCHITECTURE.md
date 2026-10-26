@@ -1,6 +1,6 @@
 # Architecture
 
-CCM — Command Center Medicalbay. A modular monolith for marketing, growth
+CCM — Command Center Management. A modular monolith for marketing, growth
 and digital operations, deployed on Vercel + Supabase and architected so the
 same domain code can run on a VPS later.
 

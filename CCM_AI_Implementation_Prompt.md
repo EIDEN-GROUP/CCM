@@ -1,7 +1,7 @@
-# CCM — Command Center Medicalbay
+# CCM — Command Center Management
 ## Production implementation brief for the coding agent
 
-**Current working name:** `CCM` (Command Center Medicalbay). Keep the final product name open for a later branding decision. Do not rename, rebrand, or invent a different name now.
+**Current working name:** `CCM` (Command Center Management). Keep the final product name open for a later branding decision.
 
 **Deployment starting point:** Vercel + Supabase. Architect for a future Docker/VPS deployment without rebuilding the product.
 
@@ -11,7 +11,7 @@
 
 # 1. Your mission
 
-Build a real, secure, production-grade digital marketing and business operations command center for **Medical Bay / Medicalbay**, an Agadir, Morocco medical-tourism coordination business. The product's internal working title is **CCM — Command Center Medicalbay**.
+Build a real, secure, production-grade digital marketing and business operations command center for **Medical Bay / Medicalbay**, an Agadir, Morocco medical-tourism coordination business. The product's internal working title is **CCM — Command Center Management**.
 
 CCM must consolidate authorized data from every supported website, advertising account, analytics property, search/SEO source, social account, and mailbox into one coherent interface. This must be a full-stack application with a real database, authentication, authorization, background synchronization, error handling, audit trail, account launcher, responsive frontend, tests, and deployment documentation—not a static UI mockup.
 

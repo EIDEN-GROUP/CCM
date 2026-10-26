@@ -1,4 +1,5 @@
 import { cache } from "react";
+import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import {
   type Permission,
@@ -14,6 +15,10 @@ export interface CcmSession {
   workspaceName: string;
   workspaceTimezone: string;
   workspaceCurrency: string;
+  /** Workspaces this user can switch into, with their role in each. */
+  workspaces: Array<{ id: string; name: string; role: Role }>;
+  /** Whether the user owns at least one workspace and can create another. */
+  canCreateWorkspace: boolean;
   /** The user's role in the active workspace. */
   role: Role | null;
   /** All permissions implied by that role. */
@@ -34,6 +39,8 @@ const FALLBACK: CcmSession = {
   workspaceName: "Medical Bay",
   workspaceTimezone: "Africa/Casablanca",
   workspaceCurrency: "MAD",
+  workspaces: [],
+  canCreateWorkspace: false,
   role: null,
   permissions: new Set<Permission>(),
   configured: false,
@@ -81,16 +88,17 @@ export const getSession = cache(async (): Promise<CcmSession> => {
     const userEmail =
       typeof claims.email === "string" ? claims.email : null;
 
-    // The active workspace is the user's first membership. A future
-    // workspace switcher reads the same table with a different filter.
+    // The active workspace is a validated first-party preference. Every
+    // request rechecks membership, so a stale or forged cookie grants nothing.
+    const cookieStore = await cookies();
+    const requestedWorkspaceId = cookieStore.get("ccm_active_workspace")?.value;
     const { data: memberships, error: membershipError } = await supabase
       .from("workspace_members")
       .select("workspace_id, role")
       .eq("user_id", userId)
       .eq("status", "active")
       .order("created_at", { ascending: true })
-      .limit(1)
-      .maybeSingle();
+      .limit(100);
 
     if (membershipError) {
       return {
@@ -102,9 +110,14 @@ export const getSession = cache(async (): Promise<CcmSession> => {
       };
     }
 
-    const membership = memberships as
-      | { workspace_id: string; role: string }
-      | null;
+    const memberRows = (memberships ?? []) as Array<{
+      workspace_id: string;
+      role: string;
+    }>;
+    const membership =
+      memberRows.find((item) => item.workspace_id === requestedWorkspaceId) ??
+      memberRows[0] ??
+      null;
 
     if (!membership) {
       return {
@@ -115,6 +128,20 @@ export const getSession = cache(async (): Promise<CcmSession> => {
         problem: "This account is not a member of any workspace.",
       };
     }
+
+    const workspaceIds = memberRows.map((item) => item.workspace_id);
+    const { data: workspaceRows } = await supabase
+      .from("workspaces")
+      .select("id, name")
+      .in("id", workspaceIds);
+    const names = new Map(
+      ((workspaceRows ?? []) as Array<{ id: string; name: string }>).map((item) => [item.id, item.name]),
+    );
+    const workspaces = memberRows.map((item) => ({
+      id: item.workspace_id,
+      name: names.get(item.workspace_id) ?? "Workspace",
+      role: item.role as Role,
+    }));
 
     const { data: workspaceRow } = await supabase
       .from("workspaces")
@@ -165,6 +192,8 @@ export const getSession = cache(async (): Promise<CcmSession> => {
       workspaceName: workspace?.name ?? "Workspace",
       workspaceTimezone: workspace?.timezone ?? "Africa/Casablanca",
       workspaceCurrency: workspace?.currency ?? "MAD",
+      workspaces,
+      canCreateWorkspace: workspaces.some((item) => item.role === "owner"),
       role,
       permissions,
       configured: true,

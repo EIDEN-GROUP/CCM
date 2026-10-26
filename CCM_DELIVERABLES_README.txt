@@ -1,4 +1,4 @@
-CCM — Command Center Medicalbay
+CCM — Command Center Management
 Deliverables package
 
 1) CCM_AI_Implementation_Prompt.md
@@ -17,4 +17,4 @@ Deliverables package
 Important account-launch requirement:
 CCM should open the precise platform/account destination in the user's existing browser profile so a valid provider session can be reused. A website cannot guarantee indefinite third-party login sessions or access other sites' cookies. The prompt specifies an extension/session-bridge design for deterministic same-profile launches, explicit handling for multiple profiles, short-lived signed launch tickets and test cases; it prohibits password/cookie harvesting or bypassing MFA/CAPTCHA.
 
-Working title only: CCM — Command Center Medicalbay. Leave final product naming/branding for a later decision.
+Working title only: CCM — Command Center Management. Leave final product naming/branding for a later decision.

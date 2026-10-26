@@ -1,7 +1,7 @@
 "use client";
 
 import { Fragment, useEffect, useState, type ReactNode } from "react";
-import { CircleCheck, LoaderCircle, TriangleAlert } from "lucide-react";
+import { CircleCheck, Download, LoaderCircle, TriangleAlert } from "lucide-react";
 import { useI18n } from "@/components/providers/i18n-provider";
 import { Button } from "@/components/ui/button";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
@@ -112,6 +112,15 @@ export function LauncherSetup({ accounts }: { accounts: LaunchableAccount[] }) {
               </code>
             </div>
           ) : null}
+
+          <a
+            href="/downloads/ccm-browser-bridge.zip"
+            download="ccm-browser-bridge.zip"
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-primary/35 bg-pale px-4 text-label-md font-semibold text-primary-ink transition-[background-color,border-color,transform] duration-150 hover:-translate-y-px hover:border-primary hover:bg-primary/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-ink"
+          >
+            <Download aria-hidden="true" className="size-4" />
+            {t("pages.launcher.downloadBridgeExtension")}
+          </a>
         </CardBody>
       </Card>
 

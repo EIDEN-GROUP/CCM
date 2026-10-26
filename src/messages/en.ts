@@ -14,7 +14,7 @@ import { admin } from "./pages/en/admin";/**
 export const en = {
   app: {
     name: "CCM",
-    tagline: "Command Center Medicalbay",
+    tagline: "Command Center Management",
     medicalBay: "Medical Bay",
     medicalBayTagline: "Your Health. Our Priority.",
   },
@@ -48,6 +48,13 @@ export const en = {
     searchPlaceholder: "Search anything…",
     searchLabel: "Search CCM",
     workspace: "Workspace",
+    workspaces: "Your workspaces",
+    addWorkspace: "Add workspace",
+    renameWorkspace: "Rename",
+    workspaceName: "Workspace name",
+    createWorkspace: "Create workspace",
+    saveWorkspaceName: "Save name",
+    workspaceActionError: "That workspace change could not be saved. Try again.",
     site: "Website",
     account: "Account",
     dateRange: "Date range",

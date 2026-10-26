@@ -227,11 +227,12 @@ export const insights = {
     step1Subtitle:
       "Optional, but it adds verified launches and profile mapping",
     checkingExtension: "Checking for the extension…",
+    downloadBridgeExtension: "Download CCM Browser Bridge",
     extensionInstalled:
       "The browser bridge is installed in this browser profile.",
     extensionNotDetectedTitle: "Extension not detected",
     loadExtensionBody:
-      "Load the unpacked extension from {bridgePath} in {extensionsUrl}, open its options page and enter this CCM origin. Account launching still works without it — the tab simply opens in the current profile.",
+      "Download and extract the bridge below, then choose Load unpacked in {extensionsUrl} and select the extracted folder. You can also load the source folder at {bridgePath}. Open the options page and enter this CCM origin.",
     instanceIdLabel: "This profile's instance id",
     step2Title: "Step 2 — map a browser profile",
     step2Subtitle:

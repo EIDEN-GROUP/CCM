@@ -230,11 +230,12 @@ export const insights: ChannelsShape = {
     step1Subtitle:
       "اختياري، لكنه يضيف عمليات تشغيل موثَّقة وربط الملفات الشخصية",
     checkingExtension: "جارٍ البحث عن الإضافة…",
+    downloadBridgeExtension: "تنزيل إضافة CCM Browser Bridge",
     extensionInstalled:
       "جسر المتصفح مثبَّت في هذا الملف الشخصي للمتصفح.",
     extensionNotDetectedTitle: "لم يتم العثور على الإضافة",
     loadExtensionBody:
-      "حمِّل الإضافة غير المجمَّعة من {bridgePath} في {extensionsUrl}، ثم افتح صفحة خياراتها وأدخل أصل CCM هذا. يظل فتح الحسابات ممكناً بدونها — إذ يُفتح التبويب في الملف الشخصي الحالي فقط.",
+      "نزّل الجسر واستخرج ملفاته من الرابط أدناه، ثم اختر Load unpacked في {extensionsUrl} وحدد المجلد المستخرج. يمكنك أيضاً تحميل مجلد المصدر {bridgePath}. افتح صفحة الخيارات وأدخل عنوان CCM هذا.",
     instanceIdLabel: "مُعرِّف نسخة هذا الملف الشخصي",
     step2Title: "الخطوة 2 — ربط ملف شخصي للمتصفح",
     step2Subtitle:

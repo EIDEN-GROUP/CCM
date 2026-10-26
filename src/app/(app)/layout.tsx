@@ -78,6 +78,9 @@ export default async function AppLayout({
             <Topbar
               userEmail={session.userEmail}
               workspaceName={session.workspaceName}
+              workspaceId={session.workspaceId ?? ""}
+              workspaces={session.workspaces}
+              canCreateWorkspace={session.canCreateWorkspace}
               roleLabel={session.role ? ROLE_LABELS[session.role] : "—"}
               alertCount={alertCount}
               canViewAlerts={canViewAlerts}

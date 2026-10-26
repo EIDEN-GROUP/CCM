@@ -33,7 +33,7 @@ test.describe("application boot", () => {
       ).toBeVisible();
     } else if (screen === "login") {
       await expect(
-        page.getByRole("heading", { name: "Command Center Medicalbay" }),
+        page.getByRole("heading", { name: "Command Center Management" }),
       ).toBeVisible();
       // Invite-only: there is no sign-up path.
       await expect(page.getByText(/No account yet/)).toBeVisible();

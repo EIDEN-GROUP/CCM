@@ -394,7 +394,7 @@ export default async function OverviewPage({
   };
 
   return (
-    <div className="space-y-8">
+    <div className="dashboard-page-enter space-y-8">
       <PageHeader
         title={t("pages.overview.title")}
         subtitle={t("pages.overview.subtitle")}

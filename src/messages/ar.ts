@@ -13,7 +13,7 @@ import { admin } from "./pages/ar/admin";
 export const ar: Messages = {
   app: {
     name: "CCM",
-    tagline: "مركز قيادة ميديكال باي",
+    tagline: "Command Center Management",
     medicalBay: "ميديكال باي",
     medicalBayTagline: "صحتك. أولويتنا.",
   },
@@ -47,6 +47,13 @@ export const ar: Messages = {
     searchPlaceholder: "ابحث في كل شيء…",
     searchLabel: "البحث في CCM",
     workspace: "مساحة العمل",
+    workspaces: "مساحات العمل لديك",
+    addWorkspace: "إضافة مساحة عمل",
+    renameWorkspace: "إعادة التسمية",
+    workspaceName: "اسم مساحة العمل",
+    createWorkspace: "إنشاء مساحة العمل",
+    saveWorkspaceName: "حفظ الاسم",
+    workspaceActionError: "تعذر حفظ التغيير. حاول مرة أخرى.",
     site: "الموقع الإلكتروني",
     account: "الحساب",
     dateRange: "الفترة الزمنية",

@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="description" content="CCM — Command Center Medicalbay: system blueprint, architecture, account launcher, integrations, security and implementation roadmap.">
-<title>CCM — Command Center Medicalbay | Blueprint</title>
+<meta name="description" content="CCM — Command Center Management: system blueprint, architecture, account launcher, integrations, security and implementation roadmap.">
+<title>CCM — Command Center Management | Blueprint</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -24,7 +24,7 @@
   <div>
    <div class="brandmark"><span class="brand-symbol">✚</span><span>MEDICAL BAY <span class="muted" style="font-weight:400">/ DIGITAL OPERATIONS</span></span></div>
    <div class="eyebrow">SYSTEM BLUEPRINT · 20 OCTOBER 2026</div>
-   <h1>CCM<br><span style="color:var(--primary)">Command Center Medicalbay</span></h1>
+   <h1>CCM<br><span style="color:var(--primary)">Command Center Management</span></h1>
    <p class="lede">One calm, secure command center for website performance, paid media, SEO, social channels, email and the actions that grow Medical Bay.</p>
    <div class="services"><span class="tag">Vercel + Supabase first</span><span class="tag neutral">VPS-ready architecture</span><span class="tag neutral">EN · FR · AR</span></div>
    <p class="muted" style="margin-top:24px;max-width:520px">This is a build blueprint—not a claim that providers are connected yet. The implementation agent must verify every integration against real accounts and current API permissions.</p>
@@ -257,7 +257,7 @@
  const progress=document.getElementById('progressFill');
  const counter=document.getElementById('counter');
  let index=0;
- function show(next){index=Math.max(0,Math.min(slides.length-1,next));slides.forEach((s,i)=>{s.classList.toggle('active',i===index);s.setAttribute('aria-hidden',i===index?'false':'true')});counter.textContent=(index+1)+' / '+slides.length;progress.style.width=((index+1)/slides.length*100)+'%';document.title=slides[index].dataset.title+' — CCM Command Center Medicalbay';history.replaceState(null,'','#slide-'+(index+1));}
+ function show(next){index=Math.max(0,Math.min(slides.length-1,next));slides.forEach((s,i)=>{s.classList.toggle('active',i===index);s.setAttribute('aria-hidden',i===index?'false':'true')});counter.textContent=(index+1)+' / '+slides.length;progress.style.width=((index+1)/slides.length*100)+'%';document.title=slides[index].dataset.title+' — CCM Command Center Management';history.replaceState(null,'','#slide-'+(index+1));}
  document.getElementById('prevBtn').addEventListener('click',()=>show(index-1));
  document.getElementById('nextBtn').addEventListener('click',()=>show(index+1));
  document.getElementById('printBtn').addEventListener('click',()=>window.print());

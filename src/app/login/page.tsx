@@ -25,7 +25,7 @@ export default async function LoginPage() {
             <span className="text-label-md font-bold">CCM</span>
           </span>
           <h1 className="text-headline-lg font-bold text-tertiary">
-            Command Center Medicalbay
+            Command Center Management
           </h1>
           <p className="text-body-md text-muted-text">
             Sign in to your workspace. Access is invite-only.

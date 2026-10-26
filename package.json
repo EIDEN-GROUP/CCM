@@ -2,7 +2,7 @@
   "name": "ccm",
   "version": "0.1.0",
   "private": true,
-  "description": "CCM - Command Center Medicalbay. Marketing and business operations command center for Medical Bay (Agadir, Morocco).",
+  "description": "CCM - Command Center Management. Marketing and business operations command center for Medical Bay (Agadir, Morocco).",
   "engines": {
     "node": ">=20.9.0"
   },

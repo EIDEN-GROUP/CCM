@@ -1,4 +1,4 @@
-# CCM — Command Center Medicalbay
+# CCM — Command Center Management
 
 A production-grade marketing and business-operations command centre for
 **Medical Bay**, a medical-tourism coordination business in Agadir, Morocco.
@@ -8,7 +8,7 @@ analytics properties, search sources, social accounts and mailboxes into one
 interface — with a secure, verified **account launcher** that opens each
 connected account in the right browser profile.
 
-> **Working title.** `CCM — Command Center Medicalbay` is a working name.
+> **Working title.** `CCM — Command Center Management` is a working name.
 > Product naming is deliberately left open for a later branding decision.
 
 ---

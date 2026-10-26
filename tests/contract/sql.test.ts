@@ -504,4 +504,53 @@ describe("the Row Level Security policies", () => {
     );
     expect(mailboxes[0]?.count).toBe("0");
   });
+
+  it("lets only an owner create a workspace and gives the creator ownership", async () => {
+    const { rows: sourceRows } = await db.query<{ id: string }>(
+      "insert into public.workspaces (name, slug) values ('Owner source', 'owner-source') returning id",
+    );
+    const sourceId = sourceRows[0]!.id;
+    const { rows: ownerRows } = await db.query<{ id: string }>(user("workspace-owner"));
+    const ownerId = ownerRows[0]!.id;
+    await db.query(
+      "insert into public.workspace_members (workspace_id, user_id, role, status) values ($1, $2, 'owner', 'active')",
+      [sourceId, ownerId],
+    );
+
+    const created = await asUser<{ id: string; name: string }>(
+      ownerId,
+      "select * from public.create_workspace_for_owner('Client portfolio')",
+    );
+    expect(created[0]?.name).toBe("Client portfolio");
+    const membership = await db.query<{ role: string; status: string }>(
+      "select role, status from public.workspace_members where workspace_id = $1 and user_id = $2",
+      [created[0]!.id, ownerId],
+    );
+    expect(membership.rows[0]).toEqual({ role: "owner", status: "active" });
+
+    const { rows: memberRows } = await db.query<{ id: string }>(user("workspace-member"));
+    const memberId = memberRows[0]!.id;
+    await db.query(
+      "insert into public.workspace_members (workspace_id, user_id, role, status) values ($1, $2, 'admin', 'active')",
+      [created[0]!.id, memberId],
+    );
+    const memberRename = await asUser<{ id: string }>(
+      memberId,
+      `update public.workspaces set name = 'Admin rename' where id = '${created[0]!.id}' returning id`,
+    );
+    expect(memberRename).toHaveLength(0);
+    const ownerRename = await asUser<{ id: string }>(
+      ownerId,
+      `update public.workspaces set name = 'Owner rename' where id = '${created[0]!.id}' returning id`,
+    );
+    expect(ownerRename).toHaveLength(1);
+
+    await db.query(
+      "insert into public.workspace_members (workspace_id, user_id, role, status) values ($1, $2, 'admin', 'active')",
+      [sourceId, memberId],
+    );
+    await expect(
+      asUser(memberId, "select * from public.create_workspace_for_owner('Not allowed')"),
+    ).rejects.toThrow(/Only a workspace owner/);
+  });
 });

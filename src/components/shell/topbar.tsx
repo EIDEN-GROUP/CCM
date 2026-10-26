@@ -25,6 +25,7 @@ import {
 } from "@/lib/i18n";
 import { formatDay } from "@/domain/dates";
 import type { RangePreset } from "@/domain/dates";
+import { WorkspaceSwitcher, type WorkspaceChoice } from "@/components/shell/workspace-switcher";
 
 /**
  * The preset labels live in the message catalogue — the date range button is
@@ -43,7 +44,7 @@ const ICON_BUTTON =
   "inline-flex size-11 items-center justify-center rounded-md border border-border bg-surface text-secondary transition-colors hover:bg-surface-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-ink";
 
 /**
- * The top utility bar: brand, global search, period selector, language,
+ * The top utility bar: workspace switcher, global search, period selector, language,
  * notifications and the account menu.
  *
  * Below the `md` breakpoint the bar wraps onto two rows instead of
@@ -53,12 +54,18 @@ const ICON_BUTTON =
 export function Topbar({
   userEmail,
   workspaceName,
+  workspaceId,
+  workspaces,
+  canCreateWorkspace,
   roleLabel,
   alertCount = null,
   canViewAlerts = false,
 }: {
   userEmail: string | null;
   workspaceName: string;
+  workspaceId: string;
+  workspaces: WorkspaceChoice[];
+  canCreateWorkspace: boolean;
   roleLabel: string;
   /**
    * How many alerts are open, or `null` when the count could not be read.
@@ -137,8 +144,8 @@ export function Topbar({
     // breakpoint it grows with its content.
     <header className="shrink-0 border-b border-border bg-surface md:h-[72px]">
       <div className="flex min-h-[72px] flex-wrap items-center gap-x-3 gap-y-2 px-4 py-2 md:h-full md:flex-nowrap md:gap-4 md:px-6 md:py-0">
-        {/* Brand, and the two controls a phone has no room for in the bar */}
-        <div className="flex shrink-0 items-center gap-2 md:gap-3 max-md:grow">
+        {/* Workspace controls and the search affordance for narrow screens */}
+        <div className="flex min-w-0 shrink-0 items-center gap-2 max-md:grow md:gap-3">
           <button
             ref={menuButtonRef}
             type="button"
@@ -151,21 +158,12 @@ export function Topbar({
             <Menu aria-hidden="true" className="size-5" />
           </button>
 
-          <span
-            aria-hidden="true"
-            className="flex size-9 items-center justify-center rounded-lg bg-primary text-tertiary"
-          >
-            <span className="text-label-md font-bold tracking-tight">CCM</span>
-          </span>
-
-          <span className="hidden leading-tight lg:block">
-            <span className="block text-headline-sm font-bold text-tertiary">
-              {t("app.name")}
-            </span>
-            <span className="block text-label-sm text-muted-text">
-              {t("app.tagline")}
-            </span>
-          </span>
+          <WorkspaceSwitcher
+            workspaces={workspaces}
+            activeWorkspaceId={workspaceId}
+            canCreateWorkspace={canCreateWorkspace}
+            canRenameWorkspace={workspaces.find((item) => item.id === workspaceId)?.role === "owner"}
+          />
 
           <button
             ref={searchButtonRef}

@@ -158,8 +158,10 @@ and the extension decides whether it is willing to open it. Both must agree.
 
 ### Installing it
 
-1. `chrome://extensions` → Developer mode → **Load unpacked** → select
-   `apps/ccm-browser-bridge`.
+1. Download and extract the CCM Browser Bridge from the Account Launcher
+   setup page, then open `chrome://extensions` → Developer mode →
+   **Load unpacked** → select the extracted folder. Developers can load
+   `apps/ccm-browser-bridge` directly.
 2. Open the extension's options page, enter the CCM origin, press
    **Save and verify key**. The extension fetches the public verification
    key from `<origin>/api/launch/public-key` and caches it.
