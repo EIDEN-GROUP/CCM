@@ -199,9 +199,22 @@ export const insights = {
       "Choose a message on the left to read it, or search the mailbox.",
   },
   launcher: {
+    accountSummary: "Account launch summary",
+    totalAccounts: "Accounts available",
+    readyAccounts: "Browser profile ready",
+    attentionAccounts: "Need attention",
+    accountsLoadErrorTitle: "Accounts could not be loaded",
+    accountsLoadErrorBody:
+      "Your account list is temporarily unavailable. Reload this page to try again.",
+    reloadAccounts: "Reload accounts",
+    clearFilters: "Clear filters",
+    connectAccount: "Connect an account",
+    launcherEmptyTitle: "No accounts yet",
+    launcherEmptyBody:
+      "Add a saved provider sign-in above, or connect a provider to create an API-connected account.",
     howItWorksTitle: "How this works",
     howItWorksBody:
-      "A valid API connection does not prove a browser session exists. CCM opens the exact destination for each account; the provider decides whether your session is still signed in, and may ask you to complete sign-in, MFA or a CAPTCHA. CCM never reads cookies or passwords and never claims a session is permanent.",
+      "A valid API connection does not prove a browser session exists. CCM opens the exact destination for each account; the provider decides whether your session is still signed in, and may ask you to complete sign-in, MFA or a CAPTCHA. Saved sign-ins are optional and encrypted. After you choose Open and sign in, the paired browser bridge submits them only to the provider's visible login form.",
     connectedAccountsTitle: "Connected accounts",
     connectedAccountsSubtitle:
       "Every account CCM can open, with its API and browser state.",
@@ -225,7 +238,7 @@ export const insights = {
       "Tie an account to the profile that holds its provider session",
     noAccountsTitle: "No accounts yet",
     noAccountsBody:
-      "Register a provider account from Integrations first, then come back to map it to a browser profile.",
+      "Add a saved login from Account Launcher, or connect a provider in Integrations, then map the account to a browser profile.",
     accountLabel: "Account",
     noManagementConsole:
       "This provider has no management console to open.",
@@ -234,7 +247,7 @@ export const insights = {
     multiProfileBody:
       "A normal web page cannot force Chrome, Edge or Firefox to open a different profile. The bridge extension can, because it opens the tab in the profile where it is installed — so the reliable workflow for a second identity is to install the extension in that profile and map the account to that instance id.",
     multiProfileHelperBody:
-      "The optional local helper exists for the case where the account lives in a profile you cannot install the extension into. It is explicitly installed and paired by you, it only accepts allow-listed hosts and configured profile directories, and it never reads, exports or modifies cookies or passwords.",
+      "The optional local helper exists for the case where the account lives in a profile you cannot install the extension into. It is explicitly installed and paired by you, it only accepts allow-listed hosts and configured profile directories, and it never reads, exports or modifies cookies or saved sign-ins.",
     helperTitle: "The local helper",
     helperSubtitle:
       "For a profile the extension cannot be installed in",
@@ -247,7 +260,7 @@ export const insights = {
     helperChooseBody:
       "Choose {mode} as the launch mode above and name the browser profile directory — the one shown in {version}, for example {example} or {fallback}.",
     helperWarning:
-      "The helper accepts only a signed launch ticket, checks the destination against the provider allowlist, and opens the browser with the browser's own cookie store. It never reads a cookie, a password or an MFA code.",
+      "The helper accepts only a signed launch ticket, checks the destination against the provider allowlist, and opens the browser with the browser's own cookie store. It never reads cookies, passwords or MFA codes.",
     instanceIdLabelField: "Extension instance id",
     instanceIdHint:
       "Paste the id from the extension's options page, or use the button above.",
@@ -270,5 +283,40 @@ export const insights = {
     mappingSaveFailed: "The mapping could not be saved (HTTP {status}).",
     serverUnreachable:
       "CCM could not reach the server to save the mapping.",
+    credentialsAddLabel: "Add secure sign-in",
+    credentialsSavedLabel: "Secure sign-in saved",
+    credentialsPrivacy:
+      "Encrypted before storage. The paired browser bridge sends them only to an allowlisted provider login form after you choose Open and sign in. MFA and CAPTCHA remain with the provider.",
+    credentialsChecking: "Checking saved sign-in…",
+    credentialsCheckFailed: "Could not check saved sign-in details.",
+    credentialsSaveFailed: "Could not save the sign-in details.",
+    loginUsername: "Username or email",
+    loginPassword: "Password",
+    passwordReplaceHint: "Enter a new password to replace the saved one.",
+    saveLogin: "Save sign-in securely",
+    removeLogin: "Remove saved sign-in",
+    credentialsSaved: "Sign-in details saved securely.",
+    credentialsRemoved: "Saved sign-in removed.",
+    credentialsManagedByAdmin: "Ask an integrations manager to update these details.",
+    credentialsAskAdmin: "Ask an integrations manager to add sign-in details.",
+    openAndFill: "Open account and sign in",
+    credentialsExtensionRequired:
+      "Install and pair the CCM browser bridge in this browser to fill saved details. You can still open the account and sign in normally.",
+    credentialsHelperProfile:
+      "Saved sign-in fill works in the paired browser profile. Map this account to the browser bridge profile to use it.",
+    addLoginAccount: "Add saved login",
+    addLoginAccountTitle: "Add a provider login",
+    addLoginAccountSubtitle:
+      "Create a browser-only account. Your API integrations and reporting data stay separate.",
+    loginProvider: "Provider",
+    loginAccountLabel: "Account name",
+    loginAccountPrivacy:
+      "Your password is encrypted before storage. Autofill runs only after you choose it in the browser bridge. The provider may still ask for MFA or a CAPTCHA.",
+    saveLoginAccount: "Save and add account",
+    savingLoginAccount: "Saving securely…",
+    loginAccountCreated: "Saved login added. You can open it from the account list below.",
+    loginAccountCreateFailed: "Could not add this saved login.",
+    browserOnly: "Browser login only",
+    launchPermissionRequired: "You can view this account, but your role cannot launch it.",
   },
 } as const;

@@ -11,6 +11,7 @@ import {
   InvalidLaunchTargetError,
   type LaunchMode,
 } from "@/lib/launch/urls";
+import { CREDENTIAL_LOGIN_URLS } from "@/lib/launch/credential-hosts";
 import {
   getProvider,
   type AccountIdentifiers,
@@ -53,6 +54,8 @@ export interface LaunchableAccount {
   helperEndpoint: string | null;
   status: string;
   apiStatus: string;
+  /** A browser-only account created directly in the launcher. */
+  loginOnly: boolean;
   lastOpenedAt: string | null;
   lastLaunchResult: string | null;
 }
@@ -79,12 +82,18 @@ export async function prepareLaunch(
     providerKey: ProviderKey;
     identifiers: AccountIdentifiers;
     displayLabel: string;
+    loginOnly?: boolean;
   },
 ): Promise<LaunchOutcome> {
   const provider = getProvider(account.providerKey);
 
   const target = buildLaunchTarget(account.providerKey, account.identifiers, request.mode);
-  if (!target.url) {
+  const targetUrl = target.url ?? (
+    request.mode === "account" && account.loginOnly
+      ? CREDENTIAL_LOGIN_URLS[account.providerKey] ?? null
+      : null
+  );
+  if (!targetUrl) {
     return {
       ok: false,
       code: "missing_identifier",
@@ -96,7 +105,7 @@ export async function prepareLaunch(
 
   let url: URL;
   try {
-    url = assertAllowedLaunchUrl(account.providerKey, target.url);
+    url = assertAllowedLaunchUrl(account.providerKey, targetUrl);
   } catch (error) {
     if (error instanceof InvalidLaunchTargetError) {
       return {

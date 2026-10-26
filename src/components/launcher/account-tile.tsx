@@ -9,6 +9,7 @@ import { getIcon, PROVIDER_ICONS } from "@/components/ui/icons";
 import { launchAccount, type LaunchResult } from "@/lib/launch/client";
 import { cn } from "@/lib/cn";
 import type { LaunchableAccount } from "@/lib/launch/service";
+import { AccountCredentials } from "@/components/launcher/account-credentials";
 
 /**
  * One account tile.
@@ -21,9 +22,13 @@ import type { LaunchableAccount } from "@/lib/launch/service";
 export function AccountTile({
   account,
   onResult,
+  canManageCredentials = false,
+  canLaunch = true,
 }: {
   account: LaunchableAccount;
   onResult?: (result: LaunchResult) => void;
+  canManageCredentials?: boolean;
+  canLaunch?: boolean;
 }) {
   const { t } = useI18n();
   const [busy, setBusy] = useState(false);
@@ -34,9 +39,11 @@ export function AccountTile({
   const apiTone: Tone =
     account.apiStatus === "connected"
       ? "success"
-      : account.apiStatus === "needs_setup"
-        ? "warning"
-        : "danger";
+      : account.apiStatus === "browser_only" || account.apiStatus === "not_visible"
+        ? "neutral"
+        : account.apiStatus === "needs_setup"
+          ? "warning"
+          : "danger";
 
   const browserTone: Tone =
     account.status === "ready"
@@ -45,12 +52,13 @@ export function AccountTile({
         ? "warning"
         : "danger";
 
-  async function run(mode: "account" | "management") {
+  async function run(mode: "account" | "management", autoFill = false) {
     setBusy(true);
     setResult(null);
     const outcome = await launchAccount(account.id, mode, {
-      path: account.launchMode,
+      path: autoFill ? "extension" : account.launchMode,
       profile: account.browserProfileDirectory ?? undefined,
+      autoFill,
     });
     setResult(outcome);
     onResult?.(outcome);
@@ -96,17 +104,21 @@ export function AccountTile({
           label={t(
             account.apiStatus === "connected"
               ? "api.connected"
-              : account.apiStatus === "needs_setup"
-                ? "api.needsSetup"
-                : account.apiStatus === "token_refresh_failed"
-                  ? "api.tokenRefreshFailed"
-                  : account.apiStatus === "permission_revoked"
-                    ? "api.permissionRevoked"
-                    : account.apiStatus === "provider_outage"
-                      ? "api.providerOutage"
-                      : account.apiStatus === "rate_limited"
-                        ? "api.rateLimited"
-                        : "api.syncStale",
+              : account.apiStatus === "browser_only"
+                ? "pages.launcher.browserOnly"
+                : account.apiStatus === "not_visible"
+                  ? "api.notVisible"
+                : account.apiStatus === "needs_setup"
+                  ? "api.needsSetup"
+                  : account.apiStatus === "token_refresh_failed"
+                    ? "api.tokenRefreshFailed"
+                    : account.apiStatus === "permission_revoked"
+                      ? "api.permissionRevoked"
+                      : account.apiStatus === "provider_outage"
+                        ? "api.providerOutage"
+                        : account.apiStatus === "rate_limited"
+                          ? "api.rateLimited"
+                          : "api.syncStale",
           )}
         />
       </div>
@@ -118,6 +130,14 @@ export function AccountTile({
         </span>
       </p>
 
+      <AccountCredentials
+        accountId={account.id}
+        providerKey={account.providerKey}
+        canManage={canManageCredentials}
+        canAutofill={canLaunch && account.launchMode !== "helper"}
+        onAutofill={() => run("account", true)}
+      />
+
       {account.missing.length > 0 ? (
         <p className="rounded-md border border-warning/25 bg-warning-surface/60 px-3 py-2 text-body-sm text-warning-ink">
           {account.missing.join(" · ")}
@@ -125,10 +145,15 @@ export function AccountTile({
       ) : null}
 
       <div className="mt-auto flex flex-col gap-2">
+        {!canLaunch ? (
+          <p className="text-body-sm text-muted-text">
+            {t("pages.launcher.launchPermissionRequired")}
+          </p>
+        ) : null}
         <Button
           size="sm"
           onClick={() => run("account")}
-          disabled={busy || !account.accountUrl}
+          disabled={busy || !account.accountUrl || !canLaunch}
           fullWidth
         >
           {busy ? (
@@ -150,7 +175,7 @@ export function AccountTile({
           <button
             type="button"
             onClick={() => run("management")}
-            disabled={busy}
+            disabled={busy || !canLaunch}
             className={cn(
               "inline-flex w-full items-center justify-center gap-1.5 rounded-md px-2 py-1.5",
               "text-label-md font-semibold text-primary-ink transition-colors hover:bg-pale",

@@ -45,6 +45,7 @@ interface TicketResponse {
   accountLabel: string;
   providerKey: string;
   fingerprint: string;
+  credentialsIncluded?: boolean;
 }
 
 declare global {
@@ -94,6 +95,32 @@ export async function isExtensionAvailable(): Promise<boolean> {
   });
 }
 
+/** Whether the installed bridge has paired its CCM origin and verification key. */
+export async function isExtensionPaired(): Promise<boolean> {
+  const id = extensionId();
+  if (!id || !window.chrome?.runtime?.sendMessage) return false;
+
+  return new Promise((resolve) => {
+    try {
+      window.chrome!.runtime!.sendMessage!(id, { type: "ccm.identity" }, (response) => {
+        void window.chrome?.runtime?.lastError;
+        const identity = response as
+          | { ok?: boolean; origin?: string | null; pairedAt?: string | null }
+          | undefined;
+        resolve(
+          Boolean(
+            identity?.ok &&
+              identity.origin === window.location.origin &&
+              identity.pairedAt,
+          ),
+        );
+      });
+    } catch {
+      resolve(false);
+    }
+  });
+}
+
 /** Ask the extension for its instance id, used to pair a browser profile. */
 export async function getExtensionInstanceId(): Promise<string | null> {
   const id = extensionId();
@@ -121,17 +148,19 @@ interface ExtensionLaunchReply {
   provider?: string;
   tabId?: number | null;
   openedAt?: string;
+  autofill?: "submitted" | "filled" | "partial" | "not_detected" | "failed";
 }
 
 function sendToExtension(
   id: string,
   ticket: string,
+  autofill = false,
 ): Promise<ExtensionLaunchReply | null> {
   return new Promise((resolve) => {
     try {
       window.chrome!.runtime!.sendMessage!(
         id,
-        { type: "ccm.launch", ticket },
+        { type: "ccm.launch", ticket, autofill },
         (response) => {
           void window.chrome?.runtime?.lastError;
           resolve((response as ExtensionLaunchReply | undefined) ?? null);
@@ -174,6 +203,8 @@ export interface LaunchOptions {
   path?: LaunchPath;
   /** The browser profile directory, for the local helper. */
   profile?: string;
+  /** Retrieve the saved login only inside the paired extension. */
+  autoFill?: boolean;
 }
 
 /**
@@ -234,12 +265,13 @@ export async function launchAccount(
   mode: "account" | "management" = "account",
   options: LaunchOptions = {},
 ): Promise<LaunchResult> {
+  const autoFill = options.autoFill === true && (await isExtensionAvailable());
   let ticket: TicketResponse;
   try {
     const response = await fetch("/api/launch/ticket", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ accountId, mode }),
+      body: JSON.stringify({ accountId, mode, includeCredentials: autoFill }),
     });
 
     const body = (await response.json().catch(() => null)) as unknown;
@@ -311,25 +343,18 @@ export async function launchAccount(
       };
     }
 
-    // The helper is not running. Say so, and fall through to the other paths
-    // so the user is not left with a dead button.
-    await reportOutcome(ticket.jti, "rejected_invalid_ticket", {
-      host: ticket.host,
-      reason: "The local helper is not running.",
-      viaExtension: false,
-      token: ticket.ticket,
-    });
-    return {
-      status: "unavailable",
-      code: "helper_unavailable",
-      message:
-        "The local helper is not running. Start it, or map this account to a different launch path.",
-    };
+    // A missing helper is a missing convenience, not a reason to strand the
+    // user. Continue to the browser bridge and then the normal direct launch.
+    // The ticket is still short-lived, signed and scoped to this destination.
   }
 
   // --- Path 2: the browser bridge extension ---------------------------------
   if (extensionIdValue) {
-    const reply = await sendToExtension(extensionIdValue, ticket.ticket);
+    const reply = await sendToExtension(
+      extensionIdValue,
+      ticket.ticket,
+      autoFill && ticket.credentialsIncluded === true,
+    );
 
     if (reply?.ok) {
       await reportOutcome(ticket.jti, "opened", {
@@ -343,7 +368,17 @@ export async function launchAccount(
         host: reply.host ?? ticket.host,
         accountLabel: ticket.accountLabel,
         message:
-          "The browser bridge opened the destination in this browser profile.",
+          reply.autofill === "submitted"
+            ? "The browser bridge submitted your saved sign-in to the provider. Complete any MFA or CAPTCHA prompt there."
+            : reply.autofill === "filled"
+              ? "The browser bridge filled the saved sign-in. Review and submit it on the provider page."
+              : reply.autofill === "partial"
+                ? "The browser bridge filled the username. Continue the provider sign-in; it may ask for your password on the next step."
+                : reply.autofill === "failed"
+                  ? "The browser bridge opened the destination, but could not fill the saved login. Sign in on the provider page."
+                  : reply.autofill === "not_detected"
+                    ? "The browser bridge opened the destination. No sign-in form was detected, so the saved login was not used."
+                    : "The browser bridge opened the destination in this browser profile.",
       };
     }
 

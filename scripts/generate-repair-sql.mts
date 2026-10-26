@@ -796,6 +796,7 @@ const POLICIES: Policy[] = [
   { table: "provider_connection_credentials", name: "provider_connection_credentials_deny", command: "select", using: "false" },
 
   { table: "external_accounts", name: "external_accounts_read", command: "select", using: "public.can_read_account(id)" },
+  { table: "external_accounts", name: "external_accounts_launcher_read", command: "select", using: "public.has_permission(workspace_id, 'launch.read') and (public.can_access_account(id, 'launch.read') or public.can_access_account(id, 'launch.execute'))" },
   { table: "external_accounts", name: "external_accounts_write", command: "all", using: "public.has_permission(workspace_id, 'integrations.manage')", check: "public.has_permission(workspace_id, 'integrations.manage')" },
 
   { table: "external_account_identifiers", name: "external_account_identifiers_read", command: "select", using: "public.can_read_account(account_id)" },
@@ -903,6 +904,8 @@ $$;
 const allTables = [
   ...new Set(POLICIES.map((policy) => policy.table)),
   "provider_connection_credentials",
+  "account_login_credentials",
+  "account_login_access_tickets",
 ];
 
 for (const table of allTables) {
@@ -930,6 +933,8 @@ out.push(`
 -- provider_connection_credentials is deliberately absent: it has a policy
 -- that denies every authenticated role, and no privilege is granted either.
 -- Only the service role — the sync worker — may read it.
+-- Account login credential and access-ticket tables are likewise absent:
+-- only server routes with an explicit launch permission may use them.
 `);
 
 out.push("grant usage on schema public to authenticated;");
@@ -963,7 +968,7 @@ notify pgrst, 'reload schema';
 commit;
 `);
 
-const output = out.join("\n");
+const output = out.join("\n").replace(/\r\n/g, "\n");
 writeFileSync("supabase/repair.sql", output, "utf8");
 
 console.log(

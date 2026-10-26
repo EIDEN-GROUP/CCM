@@ -1,6 +1,6 @@
 # The account launcher
 
-The release-blocking feature. When a user clicks a connected account, CCM
+The release-blocking feature. When a user clicks a launcher account, CCM
 opens **the exact account destination** in a browser profile where the
 provider session may still be valid.
 
@@ -26,8 +26,20 @@ What CCM *can* do, and does:
 5. Hand off cleanly when the session has expired, so the user completes a
    normal sign-in, MFA or CAPTCHA.
 
-CCM never reads, exports or stores provider cookies, passwords or MFA
-codes, and never bypasses a provider's access controls.
+CCM never reads, exports or stores provider cookies or MFA codes. An
+integrations manager may create a browser-only launcher account with a
+provider, account label, username and password; API-connected accounts can
+also save a login on their tile. Browser-only entries have no API connection
+or reporting data, and use a fixed provider entry URL from CCM's allowlist.
+The password is encrypted with AES-256-GCM under the server-only
+`APP_ENCRYPTION_KEY`, bound to that workspace and account, and is never
+returned to the CCM page or written to extension storage. On an explicit
+"Open account and fill sign-in" action, the paired extension redeems a
+short-lived, single-use signed ticket and fills visible fields only on that
+provider's exact login-host allowlist. When both username and password are
+present on the same visible form, the extension submits that form as part of
+the user's explicit action. Multi-step sign-in stops for the user to continue;
+MFA and CAPTCHA remain with the provider.
 
 ## 2. Two independent state machines
 
@@ -121,7 +133,9 @@ rather than trusted from the caller.
 permission: `storage`.
 
 It does not request `cookies`, `history`, `<all_urls>`, `webRequest`,
-`scripting`, `passwords` or `formData`. It has no host permissions.
+`passwords` or `formData`. For optional saved-login fill, it requests
+`scripting` and host access only for the exact provider login domains listed
+in `manifest.json`; the extension's own provider map checks the host again.
 
 ### What it does when it receives a message
 

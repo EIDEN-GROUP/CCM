@@ -2,30 +2,73 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>CCM Browser Bridge</title>
     <style>
-      :root { --primary: #4bbdbd; --secondary: #4b4f58; --tertiary: #3a3a3a; --muted: #f7f8f9; --border: #e5e7eb; }
+      :root {
+        color-scheme: light;
+        --primary: #4bbdbd;
+        --primary-ink: #17787b;
+        --secondary: #4b4f58;
+        --tertiary: #3a3a3a;
+        --muted-text: #6b727c;
+        --surface: #fff;
+        --muted: #f7f8f9;
+        --pale: #eaf8f8;
+        --border: #e5e7eb;
+        --error-ink: #b33834;
+        --error-surface: #fdeceb;
+        --warning-ink: #7d5f1f;
+        --warning-surface: #fff5df;
+      }
+      * { box-sizing: border-box; }
       body {
-        width: 280px; margin: 0; padding: 16px;
-        font-family: Heebo, "Noto Sans", Arial, sans-serif; font-size: 14px; color: var(--secondary);
+        width: 340px;
+        margin: 0;
+        padding: 18px;
+        background: var(--surface);
+        color: var(--secondary);
+        font: 14px/1.5 Heebo, "Noto Sans", Arial, sans-serif;
       }
-      h1 { margin: 0 0 2px; font-size: 16px; color: var(--tertiary); }
-      p { margin: 0 0 12px; color: #727984; font-size: 13px; }
-      .row { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-top: 1px solid var(--border); }
-      .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--primary); flex: none; }
-      .dot.off { background: #d9534f; }
-      a { color: #208f91; }
-      button {
-        width: 100%; height: 38px; border: 1px solid var(--primary); border-radius: 7px;
-        background: #fff; color: #208f91; font: inherit; font-weight: 600; cursor: pointer; margin-top: 8px;
-      }
+      .brand { display: flex; align-items: center; gap: 11px; padding: 2px 1px 16px; }
+      .mark { display: grid; width: 42px; height: 42px; flex: none; place-items: center; border-radius: 12px; background: var(--pale); color: var(--primary-ink); font-size: 14px; font-weight: 800; letter-spacing: -.04em; }
+      .brand-copy { min-width: 0; }
+      h1 { margin: 0; color: var(--tertiary); font-size: 16px; line-height: 1.25; }
+      .brand p { margin: 3px 0 0; color: var(--muted-text); font-size: 12px; }
+      .status-card { display: flex; align-items: flex-start; gap: 11px; padding: 14px; border: 1px solid var(--border); border-radius: 12px; background: var(--muted); }
+      .status-icon { display: grid; width: 32px; height: 32px; flex: none; place-items: center; border-radius: 9px; background: var(--pale); color: var(--primary-ink); }
+      .status-icon.off { background: var(--warning-surface); color: var(--warning-ink); }
+      .status-icon.error { background: var(--error-surface); color: var(--error-ink); }
+      .status-copy { min-width: 0; flex: 1; }
+      .status-copy strong { display: block; color: var(--tertiary); font-size: 13px; }
+      .status-copy span { display: block; margin-top: 2px; color: var(--muted-text); font-size: 12px; overflow-wrap: anywhere; }
+      .actions { display: grid; gap: 9px; margin-top: 14px; }
+      button, a.button { display: inline-flex; min-height: 42px; align-items: center; justify-content: center; gap: 8px; border: 1px solid var(--primary); border-radius: 9px; background: var(--primary); color: var(--tertiary); font: inherit; font-weight: 700; text-align: center; text-decoration: none; cursor: pointer; transition: background-color .15s ease, transform .15s ease; }
+      button:hover, a.button:hover { background: #6ccaca; }
+      button:active, a.button:active { transform: translateY(1px); }
+      button:focus-visible, a.button:focus-visible { outline: 2px solid var(--primary-ink); outline-offset: 2px; }
+      .secondary { border-color: var(--border) !important; background: var(--surface) !important; color: var(--primary-ink) !important; }
+      .secondary:hover { background: var(--pale) !important; }
+      .footnote { margin: 13px 2px 0; color: var(--muted-text); font-size: 11px; text-align: center; }
+      @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition-duration: .01ms !important; } }
     </style>
   </head>
   <body>
-    <h1>CCM Browser Bridge</h1>
-    <p>Verified account launches for CCM.</p>
-    <div class="row"><span class="dot" id="dot"></span><span id="state">Checking…</span></div>
-    <button id="open" type="button">Open setup</button>
+    <header class="brand">
+      <span class="mark" aria-hidden="true">CCM</span>
+      <span class="brand-copy"><h1>Browser Bridge</h1><p>Secure account launches</p></span>
+    </header>
+    <section class="status-card" aria-live="polite">
+      <span class="status-icon" id="status-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7 10 17l-5-5"/></svg>
+      </span>
+      <span class="status-copy"><strong id="state">Checking connection…</strong><span id="detail">Reading this browser profile’s pairing status.</span></span>
+    </section>
+    <div class="actions">
+      <button id="open" type="button">Open setup</button>
+      <a id="dashboard" class="button secondary" href="https://ccm.eiden-group.com" target="_blank" rel="noreferrer">Open CCM</a>
+    </div>
+    <p class="footnote">Provider cookies stay in your browser. Saved logins are used only when you request autofill.</p>
     <script type="module" src="popup.js"></script>
   </body>
 </html>

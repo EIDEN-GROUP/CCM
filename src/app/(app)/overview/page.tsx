@@ -394,7 +394,7 @@ export default async function OverviewPage({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <PageHeader
         title={t("pages.overview.title")}
         subtitle={t("pages.overview.subtitle")}
@@ -427,13 +427,14 @@ export default async function OverviewPage({
       ) : (
         <>
       {/* KPI row */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-6">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:gap-4">
         <KpiCard
           label={t("pages.overview.adSpend")}
            coverage={coverageOf(adsTotals)}
           value={formatMoney(spendMoney, locale)}
           change={describeChange(adsTotals.value, previousAdsTotals.value)}
           source={adsFetchedAt ? { label: "Google Ads", fetchedAt: adsFetchedAt, ageLabel: formatAge((now.getTime() - Date.parse(adsFetchedAt)) / 1000) } : null}
+          className="min-h-[150px] justify-between border-border/80 p-5 transition-shadow hover:shadow-raised"
         />
         <KpiCard
           label={t("pages.overview.conversions")}
@@ -444,6 +445,7 @@ export default async function OverviewPage({
             previousAdsConversions.value,
           )}
           source={adsFetchedAt ? { label: "Google Ads", fetchedAt: adsFetchedAt, ageLabel: formatAge((now.getTime() - Date.parse(adsFetchedAt)) / 1000) } : null}
+          className="min-h-[150px] justify-between border-border/80 p-5 transition-shadow hover:shadow-raised"
         />
         <KpiCard
           label={t("pages.overview.organicClicks")}
@@ -467,6 +469,7 @@ export default async function OverviewPage({
                 }
               : null
           }
+          className="min-h-[150px] justify-between border-border/80 p-5 transition-shadow hover:shadow-raised"
         />
         <KpiCard
           label={t("pages.overview.sessions")}
@@ -480,12 +483,14 @@ export default async function OverviewPage({
           }
           change={describeChange(ga4Sessions.value, previousGa4Sessions.value)}
           source={ga4FetchedAt ? { label: "GA4", fetchedAt: ga4FetchedAt, ageLabel: formatAge((now.getTime() - Date.parse(ga4FetchedAt)) / 1000) } : null}
+          className="min-h-[150px] justify-between border-border/80 p-5 transition-shadow hover:shadow-raised"
         />
         <KpiCard
           label={t("pages.overview.ga4KeyEvents")}
            coverage={coverageOf(ga4KeyEvents)}
           value={formatCount(ga4KeyEvents.value, locale)}
           source={ga4FetchedAt ? { label: "GA4", fetchedAt: ga4FetchedAt, ageLabel: formatAge((now.getTime() - Date.parse(ga4FetchedAt)) / 1000) } : null}
+          className="min-h-[150px] justify-between border-border/80 p-5 transition-shadow hover:shadow-raised"
         />
         <KpiCard
           label={t("pages.overview.costPerConversion")}
@@ -497,17 +502,17 @@ export default async function OverviewPage({
             locale,
           )}
           source={adsFetchedAt ? { label: "Google Ads", fetchedAt: adsFetchedAt, ageLabel: formatAge((now.getTime() - Date.parse(adsFetchedAt)) / 1000) } : null}
+          className="min-h-[150px] justify-between border-border/80 p-5 transition-shadow hover:shadow-raised"
         />
       </div>
-
       {/* Trends + campaigns */}
-      <div className="grid gap-4 xl:grid-cols-3">
-        <Card className="xl:col-span-2">
+      <div className="grid gap-4 xl:grid-cols-5">
+        <Card className="overflow-hidden border-border/80 xl:col-span-3">
           <CardHeader
             title={t("pages.overview.channelTrends")}
             subtitle={t("pages.overview.channelTrendsSubtitle")}
           />
-          <CardBody>
+          <CardBody className="min-h-[320px]">
             {hasData ? (
               <ChannelTrendChart
                 series={series}
@@ -522,7 +527,7 @@ export default async function OverviewPage({
           </CardBody>
         </Card>
 
-        <Card>
+        <Card className="overflow-hidden border-border/80 xl:col-span-2">
           <CardHeader
             title={t("pages.overview.topCampaigns")}
             subtitle={t("pages.overview.topCampaignsSubtitle")}
@@ -589,8 +594,8 @@ export default async function OverviewPage({
       </div>
 
       {/* Secondary metrics */}
-      <div className="grid gap-4 lg:grid-cols-3">
-        <StatCard>
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:gap-4">
+        <StatCard className="min-h-[132px] border-border/80 p-5 transition-shadow hover:shadow-raised">
           <h3 className="text-label-md font-semibold text-secondary">
             {t("pages.overview.ctr")}
           </h3>
@@ -606,7 +611,7 @@ export default async function OverviewPage({
           <p className="mt-1 text-body-sm text-muted-text">Google Ads</p>
         </StatCard>
 
-        <StatCard>
+        <StatCard className="min-h-[132px] border-border/80 p-5 transition-shadow hover:shadow-raised">
           <h3 className="text-label-md font-semibold text-secondary">
             {t("pages.overview.roas")}
           </h3>
@@ -622,7 +627,7 @@ export default async function OverviewPage({
           </p>
         </StatCard>
 
-        <StatCard>
+        <StatCard className="min-h-[132px] border-border/80 p-5 transition-shadow hover:shadow-raised">
           <h3 className="text-label-md font-semibold text-secondary">
             {t("pages.overview.averagePosition")}
           </h3>
@@ -640,7 +645,7 @@ export default async function OverviewPage({
       )}
 
       {/* Connections */}
-      <Card>
+      <Card className="overflow-hidden border-border/80">
         <CardHeader
           title={t("pages.overview.connections")}
           subtitle={t("pages.overview.connectionsSubtitle")}

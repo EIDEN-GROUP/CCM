@@ -216,9 +216,22 @@ export const insights: ChannelsShape = {
       "Choisissez un message à gauche pour le lire, ou cherchez dans la boîte aux lettres.",
   },
   launcher: {
+    accountSummary: "Résumé des comptes à ouvrir",
+    totalAccounts: "Comptes disponibles",
+    readyAccounts: "Profil navigateur prêt",
+    attentionAccounts: "À vérifier",
+    accountsLoadErrorTitle: "Les comptes n'ont pas pu être chargés",
+    accountsLoadErrorBody:
+      "La liste des comptes est temporairement indisponible. Rechargez cette page pour réessayer.",
+    reloadAccounts: "Recharger les comptes",
+    clearFilters: "Effacer les filtres",
+    connectAccount: "Connecter un compte",
+    launcherEmptyTitle: "Aucun compte pour le moment",
+    launcherEmptyBody:
+      "Ajoutez ci-dessus une connexion fournisseur enregistrée, ou connectez un fournisseur pour créer un compte relié à l’API.",
     howItWorksTitle: "Comment ça marche",
     howItWorksBody:
-      "Une connexion API valide ne prouve pas qu'une session de navigateur existe. CCM ouvre la destination exacte de chaque compte ; c'est le fournisseur qui décide si votre session est toujours connectée, et il peut vous demander de vous connecter, de saisir un MFA ou de résoudre un CAPTCHA. CCM ne lit jamais les cookies ni les mots de passe et ne prétend jamais qu'une session est permanente.",
+      "Une connexion API valide ne prouve pas qu'une session de navigateur existe. CCM ouvre la destination exacte de chaque compte ; le fournisseur décide si votre session est valide et peut demander un MFA ou un CAPTCHA. Les identifiants enregistrés sont chiffrés. Après avoir choisi Ouvrir et se connecter, l'extension associée les envoie uniquement au formulaire de connexion autorisé du fournisseur.",
     connectedAccountsTitle: "Comptes connectés",
     connectedAccountsSubtitle:
       "Chaque compte que CCM peut ouvrir, avec son état API et son état navigateur.",
@@ -242,7 +255,7 @@ export const insights: ChannelsShape = {
       "Reliez un compte au profil qui contient sa session fournisseur",
     noAccountsTitle: "Aucun compte pour l'instant",
     noAccountsBody:
-      "Enregistrez d'abord un compte fournisseur depuis Intégrations, puis revenez l'associer à un profil de navigateur.",
+      "Ajoutez une connexion enregistrée depuis Account Launcher, ou connectez un fournisseur dans Intégrations, puis associez le compte à un profil de navigateur.",
     accountLabel: "Compte",
     noManagementConsole:
       "Ce fournisseur n'a pas de console de gestion à ouvrir.",
@@ -291,5 +304,40 @@ export const insights: ChannelsShape = {
       "L'association n'a pas pu être enregistrée (HTTP {status}).",
     serverUnreachable:
       "CCM n'a pas pu joindre le serveur pour enregistrer l'association.",
+    credentialsAddLabel: "Ajouter une connexion sécurisée",
+    credentialsSavedLabel: "Connexion sécurisée enregistrée",
+    credentialsPrivacy:
+      "Chiffrés avant stockage. L'extension associée les envoie uniquement au formulaire autorisé du fournisseur après votre choix. Le MFA et le CAPTCHA restent gérés par le fournisseur.",
+    credentialsChecking: "Vérification de la connexion enregistrée…",
+    credentialsCheckFailed: "Impossible de vérifier la connexion enregistrée.",
+    credentialsSaveFailed: "Impossible d'enregistrer les identifiants.",
+    loginUsername: "Nom d'utilisateur ou e-mail",
+    loginPassword: "Mot de passe",
+    passwordReplaceHint: "Saisissez un nouveau mot de passe pour remplacer l'ancien.",
+    saveLogin: "Enregistrer la connexion",
+    removeLogin: "Supprimer la connexion enregistrée",
+    credentialsSaved: "Connexion enregistrée de façon sécurisée.",
+    credentialsRemoved: "Connexion enregistrée supprimée.",
+    credentialsManagedByAdmin: "Demandez à un gestionnaire des intégrations de modifier ces identifiants.",
+    credentialsAskAdmin: "Demandez à un gestionnaire des intégrations d'ajouter des identifiants.",
+    openAndFill: "Ouvrir le compte et se connecter",
+    credentialsExtensionRequired:
+      "Installez et associez l'extension CCM dans ce navigateur pour remplir les identifiants. Vous pouvez toujours ouvrir le compte et vous connecter normalement.",
+    credentialsHelperProfile:
+      "Le remplissage fonctionne dans le profil associé à l'extension. Associez ce compte au profil de la passerelle navigateur pour l'utiliser.",
+    addLoginAccount: "Ajouter une connexion enregistrée",
+    addLoginAccountTitle: "Ajouter une connexion fournisseur",
+    addLoginAccountSubtitle:
+      "Créez un compte réservé au navigateur. Les intégrations API et les données de reporting restent séparées.",
+    loginProvider: "Fournisseur",
+    loginAccountLabel: "Nom du compte",
+    loginAccountPrivacy:
+      "Votre mot de passe est chiffré avant stockage. Le remplissage ne démarre qu’à votre demande dans l’extension. Le fournisseur peut toujours demander une MFA ou un CAPTCHA.",
+    saveLoginAccount: "Enregistrer et ajouter le compte",
+    savingLoginAccount: "Enregistrement sécurisé…",
+    loginAccountCreated: "Connexion enregistrée. Vous pouvez ouvrir le compte dans la liste ci-dessous.",
+    loginAccountCreateFailed: "Impossible d’ajouter cette connexion enregistrée.",
+    browserOnly: "Connexion navigateur uniquement",
+    launchPermissionRequired: "Vous pouvez voir ce compte, mais votre rôle ne permet pas de l’ouvrir.",
   },
 } as const;

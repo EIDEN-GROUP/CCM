@@ -1145,13 +1145,13 @@ alter table public.website_pages enable row level security;
 alter table public.site_health_checks enable row level security;
 alter table public.provider_definitions enable row level security;
 alter table public.provider_app_credentials enable row level security;
+alter table public.launch_tickets enable row level security;
 alter table public.role_tab_access enable row level security;
 alter table public.provider_connections enable row level security;
 alter table public.provider_connection_credentials enable row level security;
 alter table public.external_accounts enable row level security;
 alter table public.external_account_identifiers enable row level security;
 alter table public.account_launch_profiles enable row level security;
-alter table public.launch_tickets enable row level security;
 alter table public.launch_events enable row level security;
 alter table public.sync_jobs enable row level security;
 alter table public.sync_runs enable row level security;
@@ -1179,6 +1179,8 @@ alter table public.report_runs enable row level security;
 alter table public.ai_insight_requests enable row level security;
 alter table public.ai_insight_sources enable row level security;
 alter table public.provider_connection_credentials enable row level security;
+alter table public.account_login_credentials enable row level security;
+alter table public.account_login_access_tickets enable row level security;
 
 drop policy if exists roles_read on public.roles;
 create policy roles_read on public.roles for select to authenticated using (true);
@@ -1230,6 +1232,8 @@ drop policy if exists provider_app_credentials_read on public.provider_app_crede
 create policy provider_app_credentials_read on public.provider_app_credentials for select to authenticated using (public.has_permission(workspace_id, 'settings.manage'));
 drop policy if exists provider_app_credentials_write on public.provider_app_credentials;
 create policy provider_app_credentials_write on public.provider_app_credentials for all to authenticated using (public.has_permission(workspace_id, 'settings.manage')) with check (public.has_permission(workspace_id, 'settings.manage'));
+drop policy if exists launch_tickets_update on public.launch_tickets;
+create policy launch_tickets_update on public.launch_tickets for update to authenticated using (user_id = auth.uid() and public.has_permission(workspace_id, 'launch.execute')) with check (user_id = auth.uid() and public.has_permission(workspace_id, 'launch.execute'));
 drop policy if exists role_tab_access_read on public.role_tab_access;
 create policy role_tab_access_read on public.role_tab_access for select to authenticated using (exists (select 1 from public.workspace_members m where m.workspace_id = role_tab_access.workspace_id and m.user_id = auth.uid() and m.status = 'active'));
 drop policy if exists role_tab_access_write on public.role_tab_access;
@@ -1242,6 +1246,8 @@ drop policy if exists provider_connection_credentials_deny on public.provider_co
 create policy provider_connection_credentials_deny on public.provider_connection_credentials for select to authenticated using (false);
 drop policy if exists external_accounts_read on public.external_accounts;
 create policy external_accounts_read on public.external_accounts for select to authenticated using (public.can_read_account(id));
+drop policy if exists external_accounts_launcher_read on public.external_accounts;
+create policy external_accounts_launcher_read on public.external_accounts for select to authenticated using (public.has_permission(workspace_id, 'launch.read') and (public.can_access_account(id, 'launch.read') or public.can_access_account(id, 'launch.execute')));
 drop policy if exists external_accounts_write on public.external_accounts;
 create policy external_accounts_write on public.external_accounts for all to authenticated using (public.has_permission(workspace_id, 'integrations.manage')) with check (public.has_permission(workspace_id, 'integrations.manage'));
 drop policy if exists external_account_identifiers_read on public.external_account_identifiers;
@@ -1333,6 +1339,8 @@ create policy ai_insight_sources_read on public.ai_insight_sources for select to
 -- provider_connection_credentials is deliberately absent: it has a policy
 -- that denies every authenticated role, and no privilege is granted either.
 -- Only the service role — the sync worker — may read it.
+-- Account login credential and access-ticket tables are likewise absent:
+-- only server routes with an explicit launch permission may use them.
 
 grant usage on schema public to authenticated;
 grant select on public.account_launch_profiles to authenticated;
@@ -1372,6 +1380,7 @@ grant update on public.external_accounts to authenticated;
 grant delete on public.external_accounts to authenticated;
 grant select on public.launch_events to authenticated;
 grant insert on public.launch_events to authenticated;
+grant update on public.launch_tickets to authenticated;
 grant select on public.launch_tickets to authenticated;
 grant insert on public.launch_tickets to authenticated;
 grant select on public.mailbox_connections to authenticated;

@@ -5,12 +5,20 @@
   "description": "Opens CCM's connected accounts in the browser profile where this extension is installed, and verifies that the request really came from CCM.",
   "minimum_chrome_version": "116",
 
-  "permissions": ["storage"],
+  "permissions": ["storage", "scripting"],
 
   "host_permissions": [
     "http://localhost:3000/*",
     "https://ccm.medicalbay.ma/*",
-    "https://ccm.eiden-group.com/*"
+    "https://ccm.eiden-group.com/*",
+    "https://accounts.google.com/*",
+    "https://www.facebook.com/*",
+    "https://business.facebook.com/*",
+    "https://www.instagram.com/*",
+    "https://www.linkedin.com/*",
+    "https://app.ahrefs.com/*",
+    "https://clarity.microsoft.com/*",
+    "https://login.microsoftonline.com/*"
   ],
 
   "background": {

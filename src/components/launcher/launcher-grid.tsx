@@ -5,6 +5,7 @@ import { Rocket } from "lucide-react";
 import { useI18n } from "@/components/providers/i18n-provider";
 import { AccountTile } from "@/components/launcher/account-tile";
 import { Input, Select } from "@/components/ui/input";
+import { Button, ButtonLink } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/states";
 import type { LaunchableAccount } from "@/lib/launch/service";
 
@@ -14,8 +15,12 @@ import type { LaunchableAccount } from "@/lib/launch/service";
  */
 export function LauncherGrid({
   accounts,
+  canManageCredentials,
+  canExecute,
 }: {
   accounts: LaunchableAccount[];
+  canManageCredentials: boolean;
+  canExecute: boolean;
 }) {
   const { t, tp } = useI18n();
   const [provider, setProvider] = useState("");
@@ -57,20 +62,34 @@ export function LauncherGrid({
     });
   }, [accounts, provider, status, profile, query]);
 
+  const filtersActive = Boolean(query.trim() || provider || status || profile);
+
+  function clearFilters() {
+    setQuery("");
+    setProvider("");
+    setStatus("");
+    setProfile("");
+  }
+
   if (accounts.length === 0) {
     return (
       <EmptyState
-        title={t("common.notConnectedTitle")}
-        description={t("common.notConnectedBody")}
+        title={t("pages.launcher.launcherEmptyTitle")}
+        description={t("pages.launcher.launcherEmptyBody")}
         icon={<Rocket className="size-5" />}
+        action={
+          canManageCredentials ? (
+            <ButtonLink href="/integrations">{t("pages.launcher.connectAccount")}</ButtonLink>
+          ) : null
+        }
       />
     );
   }
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-end gap-3">
-        <label className="flex min-w-[200px] flex-1 flex-col gap-1">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <label className="flex min-w-0 flex-col gap-1 xl:col-span-2">
           <span className="text-label-sm font-semibold uppercase tracking-[0.04em] text-muted-text">
             {t("common.search")}
           </span>
@@ -82,7 +101,7 @@ export function LauncherGrid({
           />
         </label>
 
-        <label className="flex flex-col gap-1">
+        <label className="flex min-w-0 flex-col gap-1">
           <span className="text-label-sm font-semibold uppercase tracking-[0.04em] text-muted-text">
             {t("launcher.filterProvider")}
           </span>
@@ -99,7 +118,7 @@ export function LauncherGrid({
           </Select>
         </label>
 
-        <label className="flex flex-col gap-1">
+        <label className="flex min-w-0 flex-col gap-1">
           <span className="text-label-sm font-semibold uppercase tracking-[0.04em] text-muted-text">
             {t("launcher.filterStatus")}
           </span>
@@ -125,7 +144,7 @@ export function LauncherGrid({
         </label>
 
         {profiles.length > 0 ? (
-          <label className="flex flex-col gap-1">
+          <label className="flex min-w-0 flex-col gap-1">
             <span className="text-label-sm font-semibold uppercase tracking-[0.04em] text-muted-text">
               {t("launcher.filterProfile")}
             </span>
@@ -144,9 +163,16 @@ export function LauncherGrid({
         ) : null}
       </div>
 
-      <p className="text-body-sm text-muted-text" role="status">
-        {tp("launcher.results", { count: filtered.length })}
-      </p>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-body-sm text-muted-text" role="status" aria-live="polite">
+          {tp("launcher.results", { count: filtered.length })}
+        </p>
+        {filtersActive ? (
+          <Button variant="ghost" size="sm" onClick={clearFilters}>
+            {t("pages.launcher.clearFilters")}
+          </Button>
+        ) : null}
+      </div>
 
       {filtered.length === 0 ? (
         <EmptyState
@@ -156,7 +182,12 @@ export function LauncherGrid({
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {filtered.map((account) => (
-            <AccountTile key={account.id} account={account} />
+            <AccountTile
+              key={account.id}
+              account={account}
+              canManageCredentials={canManageCredentials}
+              canLaunch={canExecute}
+            />
           ))}
         </div>
       )}

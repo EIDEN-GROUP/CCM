@@ -219,6 +219,29 @@ describe("the schema applies to a real PostgreSQL", () => {
     expect(Number(policies.rows[0]?.count)).toBeGreaterThanOrEqual(67);
   });
 
+  it("keeps saved logins and credential tickets server-only", async () => {
+    const { rows } = await db.query<{ relname: string; relrowsecurity: boolean }>(
+      `select c.relname, c.relrowsecurity
+         from pg_class c
+         join pg_namespace n on n.oid = c.relnamespace
+        where n.nspname = 'public'
+          and c.relname in ('account_login_credentials', 'account_login_access_tickets')
+        order by c.relname`,
+    );
+    expect(rows).toHaveLength(2);
+    expect(rows.every((row) => row.relrowsecurity)).toBe(true);
+
+    for (const table of ["account_login_credentials", "account_login_access_tickets"]) {
+      const { rows: privileges } = await db.query<{ can_read: boolean; can_write: boolean }>(
+        `select has_table_privilege('authenticated', $1, 'select') as can_read,
+                has_table_privilege('authenticated', $1, 'insert,update,delete') as can_write`,
+        [`public.${table}`],
+      );
+      expect(privileges[0]?.can_read, table).toBe(false);
+      expect(privileges[0]?.can_write, table).toBe(false);
+    }
+  });
+
   it("seeds the registry exactly", async () => {
     // The role grants are per workspace, so a workspace has to exist before
     // they can be counted.
@@ -329,6 +352,37 @@ describe("the Row Level Security policies", () => {
       await db.exec("reset role;");
     }
   }
+
+  it("lets a launcher reader see accounts without granting API integrations access", async () => {
+    const { rows: workspaceRows } = await db.query<{ id: string }>(
+      "insert into public.workspaces (name, slug) values ('Launcher reader', 'launcher-reader') returning id",
+    );
+    const workspaceId = workspaceRows[0]!.id;
+    const { rows: userRows } = await db.query<{ id: string }>(user("launcher-reader"));
+    const userId = userRows[0]!.id;
+
+    await db.query(
+      "insert into public.workspace_members (workspace_id, user_id, role, status) values ($1, $2, 'read_only', 'active')",
+      [workspaceId, userId],
+    );
+    await db.query(
+      `insert into public.external_accounts (workspace_id, provider_key, display_label)
+       values ($1, 'gmail', 'Browser mailbox')`,
+      [workspaceId],
+    );
+
+    const accounts = await asUser<{ display_label: string }>(
+      userId,
+      "select display_label from public.external_accounts",
+    );
+    expect(accounts.map((row) => row.display_label)).toEqual(["Browser mailbox"]);
+
+    const integrations = await asUser<{ count: string }>(
+      userId,
+      "select count(*)::text as count from public.provider_connections",
+    );
+    expect(integrations[0]?.count).toBe("0");
+  });
 
   it("gives a read-only member the connection catalogue, and nothing private", async () => {
     const { rows: workspaceRows } = await db.query<{ id: string }>(

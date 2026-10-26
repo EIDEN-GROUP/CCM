@@ -214,10 +214,16 @@ third-party pages. Its controls are described in full in
 
 ### What the launcher does not do
 
-It does not read cookies, export cookies, store cookies, read passwords,
-collect MFA codes, or bypass a CAPTCHA or an MFA challenge. When a provider
-session has expired, the provider shows its own sign-in screen and CCM says
-so plainly.
+It does not read, export or store provider cookies, collect MFA codes, or
+bypass a CAPTCHA or MFA challenge. An integrations manager may save an
+account username and password. Passwords are encrypted with AES-256-GCM and
+the server-only `APP_ENCRYPTION_KEY`; the credential table has RLS enabled
+and grants no access to `authenticated` or `anon`. A paired extension can
+redeem a short-lived, single-use, account-bound launch ticket to retrieve the
+plaintext directly from the server. CCM's page never receives it, and the
+extension keeps it in memory only long enough to fill visible fields on an
+exact provider login host. It never submits the sign-in form. Credential
+storage and fill are audited without recording the values.
 
 ## 6a. Sending mail
 
@@ -433,7 +439,7 @@ any finding that is not fixed with a written justification.
 
 | Secret | Rotation procedure |
 |---|---|
-| `APP_ENCRYPTION_KEY` | Re-encrypt every row in `provider_connection_credentials` under the new key, then swap the environment variable. The per-row key fingerprint detects a partial rotation. |
+| `APP_ENCRYPTION_KEY` | Re-encrypt every row in `provider_connection_credentials` and `account_login_credentials` under the new key, then swap the environment variable. Provider-token rows have a key fingerprint; account passwords do not, because a password hash would enable offline guessing. |
 | `LAUNCH_SIGNING_PRIVATE_KEY` / `LAUNCH_SIGNING_PUBLIC_KEY` | Generate a new pair, publish the new public key, update the extension's pinned key, then swap the environment variable. Tickets signed by the old key stay valid only for their 60-second lifetime, so the cutover is effectively instant. |
 | `CRON_SECRET` | Replace in the environment and in the scheduler configuration. |
 | Provider OAuth clients | Revoke the old client in the provider console, then update the environment. Existing refresh tokens are invalidated by the provider. |

@@ -23,15 +23,18 @@ CCM never claims otherwise.
 
 ## What it deliberately cannot do
 
-- It does **not** request the `cookies`, `history`, `<all_urls>`, `webRequest`,
-  `scripting`, `passwords` or `formData` permissions. Its only permission is
-  `storage`, used for the CCM origin, the instance id and the cached public
-  key.
-- It does **not** read, export, store or upload provider cookies, passwords
-  or MFA codes.
-- It does **not** sign in to any provider, and it does not bypass MFA or
-  a CAPTCHA. When a provider session has expired, the provider shows its own
-  sign-in screen and the user completes it normally.
+- It does **not** request `cookies`, `history`, `<all_urls>`, `webRequest`,
+  `passwords` or `formData` permissions. It uses `storage` for pairing and
+  replay protection, plus `scripting` and exact provider login-host access to
+  fill credentials after an explicit user action.
+- It never reads, exports or stores provider cookies or MFA codes. Saved
+  usernames and passwords are fetched directly from CCM using a short-lived,
+  single-use ticket, kept in extension memory only for the active launch, and
+  never written to extension storage or logs.
+- Credential fill is limited to a visible username/password form on an
+  exact provider login host. After the explicit "Open account and sign in"
+  action, it submits only when both fields are present on that form. It does
+  not bypass MFA or CAPTCHA; those challenges remain with the provider.
 - It does **not** accept a URL from a web page. It accepts a *signed launch
   ticket* and reconstructs the destination from the ticket's own `host` and
   `path` claims, then re-checks the host against its own allowlist.
@@ -100,7 +103,8 @@ provider session.
 "externally_connectable": {
   "matches": [
     "http://localhost:3000/*",
-    "https://ccm.medicalbay.ma/*"
+    "https://ccm.medicalbay.ma/*",
+    "https://ccm.eiden-group.com/*"
   ]
 }
 ```

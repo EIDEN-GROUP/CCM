@@ -202,9 +202,22 @@ export const insights: ChannelsShape = {
       "اختر رسالة على اليسار لقراءتها، أو ابحث في صندوق البريد.",
   },
   launcher: {
+    accountSummary: "ملخص الحسابات",
+    totalAccounts: "الحسابات المتاحة",
+    readyAccounts: "ملف المتصفح جاهز",
+    attentionAccounts: "تحتاج إلى مراجعة",
+    accountsLoadErrorTitle: "تعذّر تحميل الحسابات",
+    accountsLoadErrorBody:
+      "قائمة الحسابات غير متاحة مؤقتاً. أعد تحميل الصفحة للمحاولة مرة أخرى.",
+    reloadAccounts: "إعادة تحميل الحسابات",
+    clearFilters: "مسح عوامل التصفية",
+    connectAccount: "ربط حساب",
+    launcherEmptyTitle: "لا توجد حسابات بعد",
+    launcherEmptyBody:
+      "أضف بيانات دخول محفوظة للمزوّد أعلاه، أو اربط مزوّداً لإنشاء حساب متصل بواجهة API.",
     howItWorksTitle: "كيف يعمل",
     howItWorksBody:
-      "اتصال API سليم لا يُثبت وجود جلسة متصفح. يفتح CCM الوجهة الدقيقة لكل حساب؛ والمزوّد هو من يقرّر ما إذا كانت جلستك ما تزال مسجَّلة الدخول، وقد يطلب منك إكمال تسجيل الدخول أو التحقّق بخطوتين أو حلّ CAPTCHA. لا يقرأ CCM ملفات تعريف الارتباط ولا كلمات المرور أبداً، ولا يدّعي أبداً أن جلسة ما دائمة.",
+      "اتصال API سليم لا يُثبت وجود جلسة متصفح. يفتح CCM الوجهة الدقيقة لكل حساب؛ والمزوّد هو من يقرّر ما إذا كانت جلستك صالحة، وقد يطلب التحقّق بخطوتين أو حلّ CAPTCHA. تُشفّر بيانات الدخول المحفوظة. بعد اختيار فتح الحساب وتسجيل الدخول، ترسلها إضافة المتصفح المقترنة إلى نموذج الدخول المسموح به للمزوّد فقط.",
     connectedAccountsTitle: "الحسابات المتصلة",
     connectedAccountsSubtitle:
       "كل حساب يمكن لـ CCM فتحه، مع حالة الـ API وحالة المتصفح.",
@@ -228,7 +241,7 @@ export const insights: ChannelsShape = {
       "اربط حساباً بالملف الشخصي الذي يحمل جلسته لدى المزوّد",
     noAccountsTitle: "لا توجد حسابات بعد",
     noAccountsBody:
-      "سجّل حساب مزوّد أولاً من قسم «Integrations»، ثم عد لربطه بملف شخصي للمتصفح.",
+      "أضف بيانات دخول محفوظة من Account Launcher، أو اربط مزوّداً من قسم Integrations، ثم اربط الحساب بملف المتصفح الشخصي.",
     accountLabel: "الحساب",
     noManagementConsole: "لا توجد لوحة إدارة لدى هذا المزوّد لفتحها.",
     multiProfileTitle: "ملفات متصفح متعددة",
@@ -272,5 +285,40 @@ export const insights: ChannelsShape = {
       "حُفظ الربط. الآن تعرض بطاقة الحساب هذا الملف الشخصي.",
     mappingSaveFailed: "تعذّر حفظ الربط (HTTP {status}).",
     serverUnreachable: "تعذّر على CCM الوصول إلى الخادم لحفظ الربط.",
+    credentialsAddLabel: "إضافة بيانات دخول آمنة",
+    credentialsSavedLabel: "تم حفظ بيانات الدخول بأمان",
+    credentialsPrivacy:
+      "تُشفّر البيانات قبل التخزين. ترسلها إضافة المتصفح المقترنة إلى نموذج دخول المزوّد المسموح به فقط بعد اختيارك. يظل التحقّق بخطوتين وCAPTCHA لدى المزوّد.",
+    credentialsChecking: "جارٍ التحقق من بيانات الدخول المحفوظة…",
+    credentialsCheckFailed: "تعذّر التحقق من بيانات الدخول المحفوظة.",
+    credentialsSaveFailed: "تعذّر حفظ بيانات الدخول.",
+    loginUsername: "اسم المستخدم أو البريد الإلكتروني",
+    loginPassword: "كلمة المرور",
+    passwordReplaceHint: "أدخل كلمة مرور جديدة لاستبدال المحفوظة.",
+    saveLogin: "حفظ بيانات الدخول بأمان",
+    removeLogin: "حذف بيانات الدخول المحفوظة",
+    credentialsSaved: "تم حفظ بيانات الدخول بأمان.",
+    credentialsRemoved: "تم حذف بيانات الدخول المحفوظة.",
+    credentialsManagedByAdmin: "اطلب من مدير التكاملات تحديث هذه البيانات.",
+    credentialsAskAdmin: "اطلب من مدير التكاملات إضافة بيانات الدخول.",
+    openAndFill: "فتح الحساب وتسجيل الدخول",
+    credentialsExtensionRequired:
+      "ثبّت إضافة CCM للمتصفح واقرنها بهذا المتصفح لتعبئة البيانات. ما زال بإمكانك فتح الحساب وتسجيل الدخول بالطريقة المعتادة.",
+    credentialsHelperProfile:
+      "تعمل التعبئة في ملف المتصفح المقترن بالإضافة. اربط هذا الحساب بملف إضافة المتصفح لاستخدامها.",
+    addLoginAccount: "إضافة بيانات دخول محفوظة",
+    addLoginAccountTitle: "إضافة تسجيل دخول للمزوّد",
+    addLoginAccountSubtitle:
+      "أنشئ حساباً للمتصفح فقط. تظل تكاملات API وبيانات التقارير منفصلة.",
+    loginProvider: "المزوّد",
+    loginAccountLabel: "اسم الحساب",
+    loginAccountPrivacy:
+      "تُشفّر كلمة المرور قبل التخزين. لا تبدأ التعبئة إلا بعد اختيارك لها في إضافة المتصفح. وقد يطلب المزوّد التحقّق بخطوتين أو CAPTCHA.",
+    saveLoginAccount: "حفظ الحساب وإضافته",
+    savingLoginAccount: "جارٍ الحفظ بأمان…",
+    loginAccountCreated: "تمت إضافة بيانات الدخول المحفوظة. يمكنك فتح الحساب من القائمة أدناه.",
+    loginAccountCreateFailed: "تعذّرت إضافة بيانات الدخول المحفوظة.",
+    browserOnly: "تسجيل دخول عبر المتصفح فقط",
+    launchPermissionRequired: "يمكنك عرض هذا الحساب، لكن دورك لا يسمح بفتحه.",
   },
 } as const;

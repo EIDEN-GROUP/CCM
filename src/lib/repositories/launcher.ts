@@ -6,6 +6,8 @@ import {
 } from "@/providers/registry";
 import { buildLaunchTarget } from "@/lib/launch/urls";
 import type { LaunchableAccount } from "@/lib/launch/service";
+import { CREDENTIAL_LOGIN_URLS } from "@/lib/launch/credential-hosts";
+import { assertAllowedLaunchUrl } from "@/lib/launch/urls";
 
 /**
  * Read the accounts a user may launch.
@@ -24,6 +26,7 @@ export async function listLaunchableAccounts(
       `
         id,
         workspace_id,
+        connection_id,
         provider_key,
         external_account_id,
         display_label,
@@ -74,8 +77,19 @@ export async function listLaunchableAccounts(
 
     const profile = firstOf(row.account_launch_profiles);
     const connection = firstOf(row.provider_connections);
+    const loginOnly = row.connection_id === null && row.external_account_id === null;
+    const credentialLaunchUrl = loginOnly
+      ? CREDENTIAL_LOGIN_URLS[providerKey] ?? null
+      : null;
+    const accountUrl =
+      accountTarget.url ??
+      (credentialLaunchUrl
+        ? assertAllowedLaunchUrl(providerKey, credentialLaunchUrl).toString()
+        : null);
 
-    const missing = [...accountTarget.missing ?? [], ...managementTarget.missing ?? []];
+    const missing = loginOnly
+      ? []
+      : [...(accountTarget.missing ?? []), ...(managementTarget.missing ?? [])];
 
     return {
       id: row.id,
@@ -85,7 +99,7 @@ export async function listLaunchableAccounts(
       displayLabel: row.display_label,
       externalAccountId: row.external_account_id,
       identifiers,
-      accountUrl: accountTarget.url,
+      accountUrl,
       managementUrl: managementTarget.url,
       missing,
       launchMode: profile?.launch_mode ?? "direct",
@@ -94,7 +108,10 @@ export async function listLaunchableAccounts(
       extensionInstanceId: profile?.extension_instance_id ?? null,
       helperEndpoint: profile?.helper_endpoint ?? null,
       status: profile?.status ?? "profile_unmapped",
-      apiStatus: connection?.status ?? "needs_setup",
+      apiStatus: loginOnly
+        ? "browser_only"
+        : connection?.status ?? (row.connection_id ? "not_visible" : "needs_setup"),
+      loginOnly,
       lastOpenedAt: profile?.last_opened_at ?? null,
       lastLaunchResult: profile?.last_launch_result ?? null,
     };
@@ -104,6 +121,7 @@ export async function listLaunchableAccounts(
 interface LauncherRow {
   id: string;
   workspace_id: string;
+  connection_id: string | null;
   provider_key: string;
   external_account_id: string | null;
   display_label: string;
@@ -150,6 +168,8 @@ export async function getLaunchableAccount(
 ): Promise<{
   id: string;
   workspaceId: string;
+  connectionId: string | null;
+  externalAccountId: string | null;
   providerKey: ProviderKey;
   displayLabel: string;
   identifiers: AccountIdentifiers;
@@ -157,9 +177,10 @@ export async function getLaunchableAccount(
   const { data, error } = await db
     .from("external_accounts")
     .select(
-      "id, workspace_id, provider_key, display_label, identifiers, is_active",
+      "id, workspace_id, connection_id, external_account_id, provider_key, display_label, identifiers, is_active",
     )
     .eq("id", accountId)
+    .eq("is_active", true)
     .maybeSingle();
 
   if (error) {
@@ -170,6 +191,8 @@ export async function getLaunchableAccount(
   return {
     id: data.id,
     workspaceId: data.workspace_id,
+    connectionId: data.connection_id,
+    externalAccountId: data.external_account_id,
     providerKey: data.provider_key as ProviderKey,
     displayLabel: data.display_label,
     identifiers: (data.identifiers ?? {}) as AccountIdentifiers,

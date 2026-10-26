@@ -9,6 +9,9 @@ const originInput = document.getElementById("origin");
 const instanceOutput = document.getElementById("instance");
 const statusBox = document.getElementById("status");
 const saveButton = document.getElementById("save");
+const copyButton = document.getElementById("copy-instance");
+const openCcmLink = document.getElementById("open-ccm");
+const openLauncherLink = document.getElementById("open-launcher");
 
 function setStatus(message, kind) {
   statusBox.hidden = false;
@@ -17,18 +20,23 @@ function setStatus(message, kind) {
 }
 
 async function init() {
-  const instanceId = await ensureInstanceId();
-  instanceOutput.textContent = instanceId;
+  try {
+    const instanceId = await ensureInstanceId();
+    instanceOutput.textContent = instanceId;
+    copyButton.disabled = false;
 
-  const config = await getConfig();
-  if (config.origin) {
-    originInput.value = config.origin;
-    setStatus(
-      `Paired with ${config.origin} (key id: ${config.publicKeyKid ?? "unknown"}).`,
-      "ok",
-    );
-  } else {
-    setStatus("Not paired yet. Enter your CCM origin and save.", "warn");
+    const config = await getConfig();
+    if (config.origin) {
+      originInput.value = config.origin;
+      openCcmLink.href = config.origin;
+      openLauncherLink.href = `${config.origin}/launcher/setup`;
+      setStatus(
+        `Connected to ${config.origin}. Verification key: ${config.publicKeyKid ?? "not verified"}.`,
+        config.publicKey ? "ok" : "warn",
+      );
+    }
+  } catch {
+    setStatus("Could not read this browser profile. Try reloading the extension page.", "error");
   }
 }
 
@@ -40,6 +48,7 @@ saveButton.addEventListener("click", async () => {
   }
 
   saveButton.disabled = true;
+  saveButton.textContent = "Verifying…";
   setStatus("Saving…", "warn");
 
   try {
@@ -56,6 +65,16 @@ saveButton.addEventListener("click", async () => {
     );
   } finally {
     saveButton.disabled = false;
+    saveButton.textContent = "Save and verify";
+  }
+});
+
+copyButton.addEventListener("click", async () => {
+  try {
+    await navigator.clipboard.writeText(instanceOutput.textContent ?? "");
+    setStatus("Browser profile ID copied. Paste it into Account Launcher setup in CCM.", "ok");
+  } catch {
+    setStatus("Could not copy the ID. Select the profile ID above and copy it manually.", "error");
   }
 });
 

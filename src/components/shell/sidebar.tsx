@@ -104,7 +104,7 @@ export function Sidebar({
         aria-hidden={offCanvas ? true : undefined}
         inert={offCanvas ? true : undefined}
         className={cn(
-          "flex h-full shrink-0 flex-col border-e border-border bg-surface transition-[width] duration-200",
+          "flex h-full shrink-0 flex-col border-e border-border/80 bg-surface transition-[width] duration-200",
           railCollapsed ? "w-[72px]" : "w-[248px]",
           // Below the phone breakpoint the rail is a drawer anchored to the
           // inline start edge. The slide mirrors with the text direction.
@@ -114,9 +114,22 @@ export function Sidebar({
             : "max-md:ltr:-translate-x-full max-md:rtl:translate-x-full max-md:pointer-events-none",
         )}
       >
+        <div className={cn("border-b border-border/80 px-4 py-4", railCollapsed && "px-3")}>
+          <div className={cn("flex min-w-0 items-center gap-3", railCollapsed && "justify-center")}>
+            <span aria-hidden="true" className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-pale text-primary-ink ring-1 ring-inset ring-primary/20">
+              <span className="text-label-md font-extrabold tracking-tight">CCM</span>
+            </span>
+            {!railCollapsed ? (
+              <span className="min-w-0 leading-tight">
+                <span className="block truncate text-body-md font-bold text-tertiary">{t("app.name")}</span>
+                <span className="mt-0.5 block truncate text-label-sm text-muted-text">{t("app.tagline")}</span>
+              </span>
+            ) : null}
+          </div>
+        </div>
         <nav
           aria-label={t("nav.overview")}
-          className="scrollbar-calm flex-1 overflow-y-auto px-3 py-4"
+          className="scrollbar-calm flex-1 overflow-y-auto px-3 py-5"
         >
           {NAV_SECTIONS.map((section) => {
             const sectionItems = items.filter(
@@ -125,7 +138,7 @@ export function Sidebar({
             if (sectionItems.length === 0) return null;
 
             return (
-              <div key={section.id} className="mb-5">
+              <div key={section.id} className="mb-6">
                 {!railCollapsed ? (
                   <h2 className="mb-1.5 px-3 text-label-sm font-semibold uppercase tracking-[0.06em] text-muted-text/80">
                     {t(section.labelKey as never)}
@@ -296,11 +309,11 @@ function NavLink({
       aria-current={active ? "page" : undefined}
       title={collapsed ? label : undefined}
       className={cn(
-        "group flex items-center gap-3 rounded-md px-3 py-2 text-nav-link transition-colors",
+        "group relative flex min-h-11 items-center gap-3 rounded-lg px-3 py-2 text-nav-link transition-[background-color,color,box-shadow] duration-150",
         "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-ink",
         active
-          ? "bg-pale font-semibold text-primary-ink"
-          : "text-secondary hover:bg-surface-muted",
+          ? "bg-pale font-semibold text-primary-ink shadow-[inset_0_0_0_1px_rgba(75,189,189,0.18)] before:absolute before:inset-y-2 before:start-0 before:w-[3px] before:rounded-full before:bg-primary-ink"
+          : "text-secondary hover:bg-surface-muted hover:text-tertiary",
         collapsed && "justify-center px-0",
       )}
     >

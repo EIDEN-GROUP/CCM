@@ -270,6 +270,34 @@ export interface Database {
         Update: Write;
         Relationships: [];
       };
+      account_login_credentials: {
+        Row: Row<{
+          account_id: string;
+          workspace_id: string;
+          username: string;
+          encrypted_password: string;
+          updated_by: string | null;
+          created_at: string;
+          updated_at: string;
+        }>;
+        Insert: Write;
+        Update: Write;
+        Relationships: [];
+      };
+      account_login_access_tickets: {
+        Row: Row<{
+          jti: string;
+          account_id: string;
+          workspace_id: string;
+          user_id: string;
+          expires_at: string;
+          consumed_at: string | null;
+          created_at: string;
+        }>;
+        Insert: Write;
+        Update: Write;
+        Relationships: [];
+      };
       launch_tickets: {
         Row: Row<{
           jti: string;

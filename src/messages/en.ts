@@ -204,6 +204,7 @@ export const en = {
     providerOutage: "Provider outage",
     rateLimited: "Rate limited",
     syncStale: "Sync stale",
+    notVisible: "API status not visible to this role",
     notConfigured: "Not configured",
   },
   browser: {

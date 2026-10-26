@@ -203,6 +203,7 @@ export const ar: Messages = {
     providerOutage: "عطل لدى المزوّد",
     rateLimited: "تجاوز حد المعدّل",
     syncStale: "مزامنة قديمة",
+    notVisible: "حالة API غير ظاهرة لهذا الدور",
     notConfigured: "غير مُهيّأ",
   },
   browser: {

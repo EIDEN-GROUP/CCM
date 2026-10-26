@@ -3,101 +3,120 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light" />
     <title>CCM Browser Bridge — Setup</title>
     <style>
       :root {
-        --primary: #4bbdbd;
-        --primary-ink: #208f91;
-        --secondary: #4b4f58;
-        --tertiary: #3a3a3a;
-        --muted: #f7f8f9;
-        --border: #e5e7eb;
-        --error: #d9534f;
-        --warning-surface: #fff5df;
-        --warning: #9b762d;
-        --pale: #eaf8f8;
+        --primary: #4bbdbd; --primary-ink: #17787b; --secondary: #4b4f58;
+        --tertiary: #3a3a3a; --muted-text: #6b727c; --surface: #fff;
+        --muted: #f7f8f9; --border: #e5e7eb; --pale: #eaf8f8;
+        --error-ink: #b33834; --error-surface: #fdeceb;
+        --warning-ink: #7d5f1f; --warning-surface: #fff5df;
       }
       * { box-sizing: border-box; }
-      body {
-        margin: 0;
-        padding: 32px 24px;
-        background: var(--muted);
-        color: var(--secondary);
-        font-family: Heebo, "Noto Sans", Arial, sans-serif;
-        font-size: 15px;
-        line-height: 1.7;
-      }
-      .card {
-        max-width: 620px;
-        margin: 0 auto;
-        background: #fff;
-        border: 1px solid var(--border);
-        border-radius: 8px;
-        padding: 24px;
-      }
-      h1 { margin: 0 0 4px; font-size: 25px; line-height: 35px; color: var(--tertiary); }
-      p.lede { margin: 0 0 24px; color: #727984; }
-      h2 { margin: 24px 0 8px; font-size: 18px; line-height: 22px; color: var(--tertiary); }
-      label { display: block; margin-bottom: 6px; font-size: 14px; font-weight: 600; }
-      input[type="text"], input[type="url"] {
-        width: 100%; height: 47px; padding: 12px 14px;
-        border: 1px solid var(--border); border-radius: 7px;
-        font: inherit; color: var(--secondary); background: #fff;
-      }
-      input:focus { outline: 2px solid var(--primary); outline-offset: 1px; border-color: var(--primary); }
-      button {
-        height: 47px; padding: 0 25px; margin-top: 12px;
-        border: 1px solid var(--primary); border-radius: 7px;
-        background: var(--primary); color: #fff;
-        font: inherit; font-weight: 600; cursor: pointer;
-      }
-      button:hover { background: #6ccaca; }
-      .code {
-        display: block; padding: 12px 14px; margin: 8px 0 0;
-        background: var(--muted); border: 1px solid var(--border); border-radius: 7px;
-        font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px;
-        word-break: break-all; user-select: all;
-      }
-      .status { margin-top: 16px; padding: 12px 14px; border-radius: 7px; font-size: 14px; }
-      .status.ok { background: var(--pale); color: var(--primary-ink); }
-      .status.error { background: #fdeceb; color: var(--error); }
-      .status.warn { background: var(--warning-surface); color: var(--warning); }
-      .note { margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--border); font-size: 14px; color: #727984; }
-      ul { padding-left: 20px; }
+      body { min-height: 100vh; margin: 0; padding: clamp(18px, 5vw, 56px) 20px; background: var(--muted); color: var(--secondary); font: 15px/1.6 Heebo, "Noto Sans", Arial, sans-serif; }
+      main { width: min(100%, 760px); margin: 0 auto; }
+      .topline { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 20px; }
+      .brand { display: flex; align-items: center; gap: 12px; }
+      .brand-copy, .step-copy { min-width: 0; }
+      .mark { display: grid; width: 48px; height: 48px; place-items: center; border-radius: 14px; background: var(--pale); color: var(--primary-ink); font-size: 15px; font-weight: 800; letter-spacing: -.04em; }
+      h1, h2, p { margin-top: 0; }
+      h1 { margin-bottom: 2px; color: var(--tertiary); font-size: clamp(22px, 4vw, 28px); line-height: 1.2; }
+      .brand p, .lede { margin: 0; color: var(--muted-text); }
+      .surface { overflow: hidden; border: 1px solid var(--border); border-radius: 16px; background: var(--surface); box-shadow: 0 1px 2px rgba(48,80,82,.04); }
+      .intro { padding: clamp(20px, 5vw, 32px); border-bottom: 1px solid var(--border); background: linear-gradient(135deg, #fff 45%, var(--pale)); }
+      .eyebrow { margin-bottom: 8px; color: var(--primary-ink); font-size: 12px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+      .lede { max-width: 600px; }
+      .steps { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
+      .step { min-width: 0; padding: clamp(20px, 4vw, 28px); }
+      .step + .step { border-inline-start: 1px solid var(--border); }
+      .step-head { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 18px; }
+      .number { display: grid; width: 30px; height: 30px; flex: none; place-items: center; border-radius: 10px; background: var(--pale); color: var(--primary-ink); font-size: 13px; font-weight: 800; }
+      h2 { margin: 1px 0 3px; color: var(--tertiary); font-size: 17px; line-height: 1.3; }
+      .step-head p { margin: 0; color: var(--muted-text); font-size: 13px; }
+      label { display: block; margin: 0 0 6px; color: var(--tertiary); font-size: 13px; font-weight: 700; }
+      input[type="url"] { width: 100%; min-height: 46px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface); color: var(--secondary); font: inherit; }
+      input:focus-visible, button:focus-visible, a:focus-visible { outline: 2px solid var(--primary-ink); outline-offset: 2px; }
+      .hint { margin: 7px 0 0; color: var(--muted-text); font-size: 12px; }
+      .profile-hint { margin: 0 0 9px; }
+      button, .button { display: inline-flex; min-height: 44px; align-items: center; justify-content: center; gap: 8px; padding: 0 16px; border: 1px solid var(--primary); border-radius: 9px; background: var(--primary); color: var(--tertiary); font: inherit; font-size: 14px; font-weight: 700; text-decoration: none; cursor: pointer; transition: background-color .15s ease, transform .15s ease; }
+      button:hover, .button:hover { background: #6ccaca; }
+      button:active, .button:active { transform: translateY(1px); }
+      button:disabled { cursor: wait; opacity: .65; }
+      .button.subtle, button.subtle { border-color: var(--border); background: var(--surface); color: var(--primary-ink); }
+      .button.subtle:hover, button.subtle:hover { background: var(--pale); }
+      .actions { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 13px; }
+      .save-button, .launcher-link { width: 100%; }
+      .save-button { margin-top: 14px; }
+      .launcher-link { margin-top: 10px; }
+      .status { display: flex; gap: 9px; margin-top: 16px; padding: 11px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--muted); color: var(--secondary); font-size: 13px; overflow-wrap: anywhere; }
+      .status::before { width: 8px; height: 8px; flex: none; margin-top: 6px; border-radius: 50%; background: var(--muted-text); content: ""; }
+      .status.ok { border-color: #d5eeea; background: var(--pale); color: var(--primary-ink); }
+      .status.ok::before { background: var(--primary-ink); }
+      .status.warn { border-color: #f1dfba; background: var(--warning-surface); color: var(--warning-ink); }
+      .status.warn::before { background: var(--warning-ink); }
+      .status.error { border-color: #f2d2cf; background: var(--error-surface); color: var(--error-ink); }
+      .status.error::before { background: var(--error-ink); }
+      .code { display: block; min-height: 48px; padding: 12px; border: 1px solid var(--border); border-radius: 9px; background: var(--muted); color: var(--tertiary); font: 12px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace; overflow-wrap: anywhere; user-select: all; }
+      .privacy { padding: 20px clamp(20px, 4vw, 28px); border-top: 1px solid var(--border); background: #fcfdfd; }
+      .privacy h2 { font-size: 14px; }
+      .privacy ul { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 24px; margin: 10px 0 0; padding-inline-start: 18px; color: var(--muted-text); font-size: 12px; }
+      @media (max-width: 620px) { body { padding: 16px 12px; } .steps { grid-template-columns: 1fr; } .step + .step { border-inline-start: 0; border-top: 1px solid var(--border); } .privacy ul { grid-template-columns: 1fr; } .actions > * { flex: 1 1 100%; } }
+      @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition-duration: .01ms !important; } }
     </style>
   </head>
   <body>
-    <main class="card">
-      <h1>CCM Browser Bridge</h1>
-      <p class="lede">
-        This extension opens Medical Bay's connected accounts in the browser
-        profile where it is installed, and verifies that each request really
-        came from CCM.
-      </p>
+    <main>
+      <header class="topline">
+        <div class="brand">
+          <span class="mark" aria-hidden="true">CCM</span>
+          <div class="brand-copy"><h1>Browser Bridge</h1><p>Connect your browser profile to CCM</p></div>
+        </div>
+        <a class="button subtle" id="open-ccm" href="https://ccm.eiden-group.com" target="_blank" rel="noreferrer">Open CCM</a>
+      </header>
 
-      <h2>1. Point the extension at CCM</h2>
-      <label for="origin">CCM origin</label>
-      <input id="origin" type="url" placeholder="https://ccm.medicalbay.ma" />
-      <button id="save" type="button">Save and verify key</button>
-      <div id="status" class="status" role="status" hidden></div>
+      <section class="surface" aria-label="Browser Bridge setup">
+        <div class="intro">
+          <p class="eyebrow">One-time setup</p>
+          <p class="lede">Pair this browser profile with your workspace. After setup, launch a connected provider account directly in the profile you use every day.</p>
+        </div>
+        <div class="steps">
+          <section class="step" aria-labelledby="step-origin-title">
+            <div class="step-head">
+              <span class="number" aria-hidden="true">1</span>
+              <div class="step-copy"><h2 id="step-origin-title">Connect to CCM</h2><p>Verify the trusted workspace address.</p></div>
+            </div>
+            <label for="origin">CCM workspace address</label>
+            <input id="origin" type="url" inputmode="url" autocomplete="url" spellcheck="false" placeholder="https://ccm.eiden-group.com" aria-describedby="origin-hint" />
+            <p id="origin-hint" class="hint">Use the exact CCM address your team signs in to.</p>
+            <button id="save" class="save-button" type="button">Save and verify</button>
+            <div id="status" class="status warn" role="status" aria-live="polite" aria-atomic="true">Not connected yet. Enter your workspace address to begin.</div>
+          </section>
 
-      <h2>2. Copy this instance id into CCM</h2>
-      <p>
-        In CCM, open <strong>Account Launcher → Set up account launching</strong>
-        and paste the id below. CCM uses it to map this browser profile to your
-        accounts.
-      </p>
-      <code class="code" id="instance">…</code>
+          <section class="step" aria-labelledby="step-profile-title">
+            <div class="step-head">
+              <span class="number" aria-hidden="true">2</span>
+              <div class="step-copy"><h2 id="step-profile-title">Link this browser</h2><p>Use this ID to map the profile to an account.</p></div>
+            </div>
+            <p class="hint profile-hint">In CCM, open <strong>Account Launcher → Set up account launching</strong> and paste this profile ID.</p>
+            <code class="code" id="instance" aria-label="Browser profile ID">Preparing profile ID…</code>
+            <div class="actions">
+              <button id="copy-instance" class="subtle" type="button" disabled>Copy profile ID</button>
+            </div>
+            <a id="open-launcher" class="button subtle launcher-link" href="https://ccm.eiden-group.com/launcher/setup" target="_blank" rel="noreferrer">Open launcher setup</a>
+          </section>
+        </div>
 
-      <div class="note">
-        <p><strong>What this extension does not do</strong></p>
-        <ul>
-          <li>It never asks for access to cookies, browsing history, passwords or form data.</li>
-          <li>It never signs in to a provider on your behalf, and never bypasses MFA or a CAPTCHA.</li>
-          <li>It refuses to open any address that is not on the provider allowlist.</li>
-          <li>A valid API connection does not imply a signed-in browser session; the provider decides that.</li>
-        </ul>
-      </div>
+        <aside class="privacy" aria-labelledby="privacy-title">
+          <h2 id="privacy-title">Private by design</h2>
+          <ul>
+            <li>Provider cookies stay in this browser profile.</li>
+            <li>Credentials are only used after you choose autofill.</li>
+            <li>The extension does not read browsing history or page content.</li>
+            <li>Only approved CCM and provider addresses can be opened.</li>
+          </ul>
+        </aside>
+      </section>
     </main>
     <script type="module" src="options.js"></script>
   </body>

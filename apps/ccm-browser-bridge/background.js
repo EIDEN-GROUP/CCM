@@ -30,6 +30,19 @@ import {
 
 const REPLAY_KEY = "ccm.usedTickets";
 const MAX_REPLAY_ENTRIES = 200;
+const LOGIN_HOSTS = {
+  google_ads: ["accounts.google.com"],
+  ga4: ["accounts.google.com"],
+  gsc: ["accounts.google.com"],
+  gtm: ["accounts.google.com"],
+  youtube: ["accounts.google.com"],
+  gmail: ["accounts.google.com"],
+  meta: ["www.facebook.com", "business.facebook.com"],
+  instagram: ["www.instagram.com", "www.facebook.com"],
+  linkedin: ["www.linkedin.com"],
+  ahrefs: ["app.ahrefs.com"],
+  clarity: ["clarity.microsoft.com", "login.microsoftonline.com"],
+};
 
 class LaunchError extends Error {
   constructor(message, code) {
@@ -162,8 +175,45 @@ async function handleLaunch(message, sender) {
   const claims = await verifyTicket(message.ticket);
   const url = urlFromClaims(claims);
 
+  // The CCM page passes only the signed launch ticket. The extension redeems
+  // it directly with CCM so plaintext never enters the page's JavaScript.
+  let credentials = null;
+  if (message?.autofill === true) {
+    const config = await getConfig();
+    if (config.origin && LOGIN_HOSTS[claims.prv]?.length) {
+      try {
+        const response = await fetch(
+          `${config.origin}/api/launch/credentials/reveal`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ ticket: message.ticket }),
+            redirect: "error",
+            cache: "no-store",
+          },
+        );
+        if (response.ok) {
+          const body = await response.json();
+          if (typeof body.username === "string" && typeof body.password === "string") {
+            credentials = { username: body.username, password: body.password };
+          }
+        }
+      } catch {
+        // Opening the account remains available when credential fill fails.
+      }
+    }
+  }
+
   const tab = await chrome.tabs.create({ url, active: true });
   await rememberUsedTicket(claims.jti);
+
+  let autofill = undefined;
+  if (credentials && tab?.id != null) {
+    autofill = await fillProviderLogin(tab.id, claims.prv, credentials);
+    credentials = null;
+  } else if (message?.autofill === true) {
+    autofill = "failed";
+  }
 
   return {
     ok: true,
@@ -173,7 +223,79 @@ async function handleLaunch(message, sender) {
     tabId: tab?.id ?? null,
     openedAt: new Date().toISOString(),
     jti: claims.jti,
+    autofill,
   };
+}
+
+/** Fill visible sign-in fields only. The provider's submit/MFA stays manual. */
+async function fillProviderLogin(tabId, provider, credentials) {
+  const allowedHosts = LOGIN_HOSTS[provider] ?? [];
+  const deadline = Date.now() + 15000;
+  let usernameFilled = false;
+  while (Date.now() < deadline) {
+    try {
+      const tab = await chrome.tabs.get(tabId);
+      if (!tab.url) break;
+      const url = new URL(tab.url);
+      if (url.protocol !== "https:" || !allowedHosts.includes(url.hostname)) {
+        await new Promise((resolve) => setTimeout(resolve, 350));
+        continue;
+      }
+      if (tab.status !== "complete") {
+        await new Promise((resolve) => setTimeout(resolve, 350));
+        continue;
+      }
+
+      const [result] = await chrome.scripting.executeScript({
+        target: { tabId },
+        args: [credentials.username, credentials.password],
+        func: (username, password) => {
+          const visible = (input) =>
+            input instanceof HTMLInputElement &&
+            !input.disabled &&
+            !input.readOnly &&
+            input.getClientRects().length > 0;
+          const inputs = [...document.querySelectorAll("input")].filter(visible);
+          const passwordInput = inputs.find((input) => input.type === "password");
+          const userInput =
+            inputs.find((input) => input.autocomplete === "username") ||
+            inputs.find((input) => input.type === "email") ||
+            inputs.find((input) => /user|email|login|account/i.test(`${input.name} ${input.id}`)) ||
+            inputs.find((input) => ["text", "tel"].includes(input.type));
+
+          const setValue = (input, value) => {
+            const setter = Object.getOwnPropertyDescriptor(
+              HTMLInputElement.prototype,
+              "value",
+            )?.set;
+            if (!setter) return false;
+            setter.call(input, value);
+            input.dispatchEvent(new Event("input", { bubbles: true }));
+            input.dispatchEvent(new Event("change", { bubbles: true }));
+            return true;
+          };
+
+          const filledUsername = userInput ? setValue(userInput, username) : false;
+          const filledPassword = passwordInput ? setValue(passwordInput, password) : false;
+          let submitted = false;
+          if (filledUsername && filledPassword && passwordInput?.form) {
+            passwordInput.form.requestSubmit();
+            submitted = true;
+          }
+          return { filledUsername, filledPassword, submitted };
+        },
+      });
+
+      usernameFilled ||= Boolean(result?.result?.filledUsername);
+      if (result?.result?.submitted) return "submitted";
+      if (result?.result?.filledPassword) return "filled";
+    } catch {
+      // The tab can be navigating or can leave the provider's sign-in host.
+    }
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  }
+
+  return usernameFilled ? "partial" : "not_detected";
 }
 
 async function handleIdentity(sender) {

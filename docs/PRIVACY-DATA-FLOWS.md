@@ -174,8 +174,15 @@ CCM tile  →  signed ticket  →  browser / extension  →  provider page
 ```
 
 The launcher sends an account id and a short-lived signed ticket. It never
-transmits a cookie, a password, an MFA code or a session token, and it
-never reads one.
+transmits a cookie, MFA code or provider session token. If an integrations
+manager has saved a provider login, the CCM page sends only the signed ticket
+to the paired extension; the extension redeems it once and retrieves the
+password directly from the server. The password is encrypted at rest, never
+returned to the CCM page, and held in extension memory only while filling the
+provider's visible login fields. On the user's explicit "Open account and
+sign in" action, the extension submits the form only when both username and
+password fields are present together. The provider continues to handle MFA
+and CAPTCHA.
 
 ## 3. Data minimisation in the analytics layer
 

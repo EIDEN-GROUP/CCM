@@ -201,6 +201,7 @@ export const fr: Messages = {
     providerOutage: "Incident chez le fournisseur",
     rateLimited: "Limite de débit atteinte",
     syncStale: "Synchronisation obsolète",
+    notVisible: "État de l’API non visible pour ce rôle",
     notConfigured: "Non configuré",
   },
   browser: {
