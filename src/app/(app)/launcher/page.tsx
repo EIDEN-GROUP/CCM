@@ -10,6 +10,7 @@ import { createClient } from "@/lib/supabase/server";
 import { listLaunchableAccounts } from "@/lib/repositories/launcher";
 import { requirePermission } from "@/lib/auth/guard";
 import { getTranslator } from "@/lib/i18n-server";
+import { PROVIDER_LIST } from "@/providers/registry";
 
 export const dynamic = "force-dynamic";
 
@@ -24,13 +25,22 @@ export async function generateMetadata(): Promise<Metadata> {
  * Release-blocking feature: every provider tile must open the exact
  * configured account destination, in a browser session the user controls.
  */
-export default async function LauncherPage() {
+export default async function LauncherPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ provider?: string | string[] }>;
+}) {
   const session = await getSession();
   const guard = await requirePermission(session, "launch.read");
   if (!guard.allowed) return guard.response;
 
   const supabase = await createClient();
   const t = await getTranslator();
+  const params = await searchParams;
+  const requestedProvider = Array.isArray(params.provider) ? params.provider[0] : params.provider;
+  const initialProvider = requestedProvider && PROVIDER_LIST.some((provider) => provider.key === requestedProvider)
+    ? requestedProvider
+    : "";
   let accounts: Awaited<ReturnType<typeof listLaunchableAccounts>> = [];
   let accountsUnavailable = false;
 
@@ -111,6 +121,7 @@ export default async function LauncherPage() {
                 accounts={accounts}
                 canManageCredentials={session.permissions.has("integrations.manage")}
                 canExecute={session.permissions.has("launch.execute")}
+                initialProvider={initialProvider}
               />
             </CardBody>
           </Card>

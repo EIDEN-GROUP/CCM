@@ -10,6 +10,8 @@ import { Button } from "@/components/ui/button";
 import { Notice } from "@/components/ui/notice";
 import { EmptyState } from "@/components/ui/states";
 import { ChannelTrendChart } from "@/components/charts/channel-trend-chart";
+import { LauncherOverview } from "@/components/overview/launcher-overview";
+import { ProviderIcon } from "@/components/providers/provider-icon";
 import { getSession } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { requirePermission } from "@/lib/auth/guard";
@@ -29,6 +31,7 @@ import { SYNC_INTERVALS, computeFreshness, formatAge } from "@/domain/freshness"
 import { getLocale, getTranslator } from "@/lib/i18n-server";
 import { formatMessage, intlLocale, type Translator } from "@/lib/i18n";
 import { ErrorState } from "@/components/ui/states";
+import { listLaunchableAccounts } from "@/lib/repositories/launcher";
 
 export const dynamic = "force-dynamic";
 
@@ -60,6 +63,17 @@ export default async function OverviewPage({
   const workspaceId = session.workspaceId!;
   const t = await getTranslator();
   const locale = intlLocale(await getLocale());
+  const canReadLauncher = session.permissions.has("launch.read");
+  let launcherAccounts: Awaited<ReturnType<typeof listLaunchableAccounts>> = [];
+  let launcherLoadError = false;
+  if (canReadLauncher) {
+    try {
+      launcherAccounts = await listLaunchableAccounts(supabase, workspaceId);
+    } catch (error) {
+      console.error("overview launcher accounts query failed", error);
+      launcherLoadError = true;
+    }
+  }
 
   // A failed query is **not** an empty result. The difference is the whole
   // point: "there was no spend" and "we could not read the spend" are
@@ -419,6 +433,23 @@ export default async function OverviewPage({
         </Notice>
       ) : null}
 
+      {canReadLauncher ? (
+        <LauncherOverview
+          accounts={launcherAccounts
+            .filter((account) => account.accountUrl !== null)
+            .map((account) => ({
+              id: account.id,
+              providerKey: account.providerKey,
+              providerName: account.providerName,
+              displayLabel: account.displayLabel,
+              launchMode: account.launchMode,
+              browserProfileDirectory: account.browserProfileDirectory,
+            }))}
+          canLaunch={session.permissions.has("launch.execute")}
+          loadError={launcherLoadError}
+        />
+      ) : null}
+
       {failure ? (
         <ErrorState
           detail={failure}
@@ -693,7 +724,8 @@ export default async function OverviewPage({
                   header: t("common.provider"),
                   mobile: "primary",
                   render: (row) => (
-                    <span className="font-semibold text-tertiary">
+                    <span className="flex items-center gap-2 font-semibold text-tertiary">
+                      <ProviderIcon providerKey={row.connection.provider_key} className="size-5 shrink-0" />
                       {row.connection.display_label}
                     </span>
                   ),

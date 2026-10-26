@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Chip } from "@/components/ui/chip";
 import { Notice } from "@/components/ui/notice";
 import { useI18n } from "@/components/providers/i18n-provider";
+import { ProviderIcon } from "@/components/providers/provider-icon";
 
 /**
  * Quick connect.
@@ -96,7 +97,8 @@ export function ConnectProviderButton({
             className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-border bg-surface-muted/50 px-3 py-2.5"
           >
             <div className="min-w-0">
-              <p className="font-semibold text-tertiary">
+              <p className="flex items-center gap-2 font-semibold text-tertiary">
+                <ProviderIcon providerKey={provider.key} className="size-5 shrink-0" />
                 {provider.displayName}
               </p>
               <p className="text-body-sm text-muted-text">

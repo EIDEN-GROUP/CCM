@@ -1,11 +1,11 @@
 "use client";
 
-import { createElement, useState } from "react";
+import { useState } from "react";
 import { CircleCheck, CircleX, ExternalLink, LoaderCircle } from "lucide-react";
 import { useI18n } from "@/components/providers/i18n-provider";
 import { Button } from "@/components/ui/button";
 import { Chip, StatusBadge, type Tone } from "@/components/ui/chip";
-import { getIcon, PROVIDER_ICONS } from "@/components/ui/icons";
+import { ProviderIcon } from "@/components/providers/provider-icon";
 import { launchAccount, type LaunchResult } from "@/lib/launch/client";
 import { cn } from "@/lib/cn";
 import type { LaunchableAccount } from "@/lib/launch/service";
@@ -33,8 +33,6 @@ export function AccountTile({
   const { t } = useI18n();
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<LaunchResult | null>(null);
-
-  const iconName = PROVIDER_ICONS[account.providerKey] ?? "Plug";
 
   const apiTone: Tone =
     account.apiStatus === "connected"
@@ -72,7 +70,7 @@ export function AccountTile({
           aria-hidden="true"
           className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-pale text-primary-ink"
         >
-          {createElement(getIcon(iconName), { className: "size-[18px]" })}
+          <ProviderIcon providerKey={account.providerKey} className="size-[18px]" />
         </span>
         <div className="min-w-0 flex-1">
           <h3 className="truncate text-headline-sm font-semibold text-tertiary">

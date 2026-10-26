@@ -86,6 +86,7 @@ export async function POST(request: Request) {
       mode: parsed.data.mode,
       userId: session.userId,
       workspaceId: session.workspaceId,
+      credentialLogin: parsed.data.includeCredentials,
     },
     {
       id: account.id,

@@ -12,6 +12,20 @@ export type ChannelsShape = DeepStringify<typeof english>;
 
 export const channels: ChannelsShape = {
   overview: {
+    accountLauncher: "Ù…Ø´ØºÙ‘Ù„ Ø§Ù„Ø­Ø³Ø§Ø¨Ø§Øª",
+    accountLauncherSubtitle: "Ø§ÙØªØ­ Ø­Ø³Ø§Ø¨Ø§Øª Ø§Ù„Ù…ØªØµÙØ­ Ø§Ù„Ù…ØªØ§Ø­Ø© ÙÙŠ Ù‡Ø°Ø§ Ù…Ø³Ø§Ø­Ø© Ø§Ù„Ø¹Ù…Ù„.",
+    openLauncher: "ÙØªØ­ Ù…Ø´ØºÙ‘Ù„ Ø§Ù„Ø­Ø³Ø§Ø¨Ø§Øª",
+    launcherLoadError: "ØªØ¹Ø°Ù‘Ø± ØªØ­Ù…ÙŠÙ„ Ø§Ø®ØªØµØ§Ø±Ø§Øª Ø§Ù„Ø­Ø³Ø§Ø¨Ø§Øª. ÙŠÙ…ÙƒÙ†Ùƒ Ù…ØªØ§Ø¨Ø¹Ø© ÙØªØ­ Ø§Ù„Ù…Ø´ØºÙ‘Ù„.",
+    openProvider: "ÙØªØ­ Ø­Ø³Ø§Ø¨Ø§Øª {provider}",
+    providerAccountCount: "{count} Ø­Ø³Ø§Ø¨Ø§Øª",
+    noProviderAccounts: "Ù„Ø§ ØªÙˆØ¬Ø¯ Ø­Ø³Ø§Ø¨Ø§Øª Ø¨Ø¹Ø¯",
+    noLauncherProviders: "Ù„Ø§ ÙŠÙˆØ¬Ø¯ Ù…ÙˆØ±Ù‘Ø¯ÙˆÙ† Ù…ØªØ§Ø­ÙˆÙ†.",
+    noConnectedLauncherAccounts: "لا توجد حسابات متصلة حتى الآن",
+    noConnectedLauncherAccountsHint: "أضف حسابًا في مشغّل الحسابات ليظهر هنا مع زر تشغيل سريع.",
+    quickLaunch: "تشغيل سريع",
+    launchingAccount: "جارٍ الفتح…",
+    quickLaunchAccount: "تشغيل {account} بسرعة",
+    launchPermissionRequired: "ليست لديك صلاحية تشغيل الحسابات.",
     title: "مرحباً بك في CCM",
     subtitle: "مركزك الموحّد للتسويق والنمو والعمليات الرقمية.",
     portfolioKpis: "أداء المحفظة",

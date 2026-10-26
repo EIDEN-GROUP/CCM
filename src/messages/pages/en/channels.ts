@@ -6,6 +6,20 @@
  */
 export const channels = {
   overview: {
+    accountLauncher: "Account Launcher",
+    accountLauncherSubtitle: "Open the browser accounts available in this workspace.",
+    openLauncher: "Open launcher",
+    launcherLoadError: "Account shortcuts could not be loaded. You can still open the launcher.",
+    openProvider: "Open {provider} accounts",
+    providerAccountCount: "{count} accounts",
+    noProviderAccounts: "No accounts yet",
+    noLauncherProviders: "No providers are available.",
+    noConnectedLauncherAccounts: "No connected accounts yet",
+    noConnectedLauncherAccountsHint: "Add an account in Account Launcher and it will appear here with a quick launch button.",
+    quickLaunch: "Quick launch",
+    launchingAccount: "Opening…",
+    quickLaunchAccount: "Quick launch {account}",
+    launchPermissionRequired: "You do not have permission to launch accounts.",
     title: "Welcome to CCM",
     subtitle: "Your central hub for marketing, growth and digital operations.",
     portfolioKpis: "Portfolio performance",

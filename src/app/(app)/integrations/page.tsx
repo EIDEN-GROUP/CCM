@@ -5,6 +5,7 @@ import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { DataTable } from "@/components/ui/table";
 import { Chip } from "@/components/ui/chip";
 import { ConnectionActions } from "@/components/integrations/connection-actions";
+import { ProviderIcon } from "@/components/providers/provider-icon";
 import { ConnectProviderButton } from "@/components/integrations/connect-provider-button";
 import { EmptyState } from "@/components/ui/states";
 import { Notice } from "@/components/ui/notice";
@@ -313,7 +314,8 @@ export default async function IntegrationsPage() {
                 header: t("common.provider"),
                 mobile: "primary",
                 render: (row) => (
-                  <span className="font-semibold text-tertiary">
+                  <span className="flex items-center gap-2 font-semibold text-tertiary">
+                    <ProviderIcon providerKey={row.key} className="size-5 shrink-0" />
                     {row.display_name}
                   </span>
                 ),

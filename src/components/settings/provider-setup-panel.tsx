@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Chip } from "@/components/ui/chip";
 import { Notice } from "@/components/ui/notice";
 import { useI18n } from "@/components/providers/i18n-provider";
+import { ProviderIcon } from "@/components/providers/provider-icon";
 
 /**
  * The provider app setup.
@@ -174,6 +175,7 @@ export function ProviderSetupPanel({
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="min-w-0">
                 <h3 className="flex items-center gap-2 text-label-lg font-semibold text-secondary">
+                  <ProviderIcon providerKey={provider.key} className="size-5 shrink-0" />
                   {provider.displayName}
                   {stored ? (
                     <Chip tone="success">

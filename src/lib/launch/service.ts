@@ -65,6 +65,8 @@ export interface LaunchRequest {
   mode: LaunchMode;
   userId: string;
   workspaceId: string;
+  /** Prefer the fixed provider sign-in URL when the operator requested credential fill. */
+  credentialLogin?: boolean;
 }
 
 export type LaunchOutcome =
@@ -88,11 +90,13 @@ export async function prepareLaunch(
   const provider = getProvider(account.providerKey);
 
   const target = buildLaunchTarget(account.providerKey, account.identifiers, request.mode);
-  const targetUrl = target.url ?? (
-    request.mode === "account" && account.loginOnly
-      ? CREDENTIAL_LOGIN_URLS[account.providerKey] ?? null
-      : null
-  );
+  const targetUrl = request.mode === "account" && request.credentialLogin
+    ? CREDENTIAL_LOGIN_URLS[account.providerKey] ?? null
+    : target.url ?? (
+        request.mode === "account" && account.loginOnly
+          ? CREDENTIAL_LOGIN_URLS[account.providerKey] ?? null
+          : null
+      );
   if (!targetUrl) {
     return {
       ok: false,

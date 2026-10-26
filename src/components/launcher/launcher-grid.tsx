@@ -8,6 +8,7 @@ import { Input, Select } from "@/components/ui/input";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/states";
 import type { LaunchableAccount } from "@/lib/launch/service";
+import { PROVIDER_LIST } from "@/providers/registry";
 
 /**
  * The account launcher grid, with the filters an operator needs when several
@@ -17,21 +18,18 @@ export function LauncherGrid({
   accounts,
   canManageCredentials,
   canExecute,
+  initialProvider = "",
 }: {
   accounts: LaunchableAccount[];
   canManageCredentials: boolean;
   canExecute: boolean;
+  initialProvider?: string;
 }) {
   const { t, tp } = useI18n();
-  const [provider, setProvider] = useState("");
+  const [provider, setProvider] = useState(initialProvider);
   const [status, setStatus] = useState("");
   const [profile, setProfile] = useState("");
   const [query, setQuery] = useState("");
-
-  const providers = useMemo(
-    () => [...new Set(accounts.map((a) => a.providerName))].sort(),
-    [accounts],
-  );
 
   const profiles = useMemo(
     () => [
@@ -47,7 +45,7 @@ export function LauncherGrid({
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase();
     return accounts.filter((account) => {
-      if (provider && account.providerName !== provider) return false;
+      if (provider && account.providerKey !== provider) return false;
       if (status && account.status !== status) return false;
       if (profile && account.browserProfileLabel !== profile) return false;
       if (
@@ -110,9 +108,9 @@ export function LauncherGrid({
             onChange={(event) => setProvider(event.target.value)}
           >
             <option value="">{t("common.all")}</option>
-            {providers.map((name) => (
-              <option key={name} value={name}>
-                {name}
+            {PROVIDER_LIST.map((item) => (
+              <option key={item.key} value={item.key}>
+                {item.displayName}
               </option>
             ))}
           </Select>

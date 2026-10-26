@@ -201,6 +201,10 @@
   .dashboard-page-enter > :nth-child(2) { animation-delay: 50ms; }
   .dashboard-page-enter > :nth-child(3) { animation-delay: 100ms; }
   .dashboard-page-enter > :nth-child(4) { animation-delay: 150ms; }
+
+  .provider-launch-link {
+    animation: ccm-rise-in 360ms var(--ease-calm) both;
+  }
 }
 
 /* Print: reports and briefings must print cleanly on white. */

@@ -12,6 +12,20 @@ export type ChannelsShape = DeepStringify<typeof english>;
 
 export const channels: ChannelsShape = {
   overview: {
+    accountLauncher: "Lanceur de comptes",
+    accountLauncherSubtitle: "Ouvrez les comptes navigateur disponibles dans cet espace.",
+    openLauncher: "Ouvrir le lanceur",
+    launcherLoadError: "Les raccourcis de comptes n'ont pas pu Ãªtre chargÃ©s. Vous pouvez toujours ouvrir le lanceur.",
+    openProvider: "Ouvrir les comptes {provider}",
+    providerAccountCount: "{count} comptes",
+    noProviderAccounts: "Aucun compte pour le moment",
+    noLauncherProviders: "Aucun fournisseur disponible.",
+    noConnectedLauncherAccounts: "Aucun compte connecté pour le moment",
+    noConnectedLauncherAccountsHint: "Ajoutez un compte dans le lanceur de comptes pour le retrouver ici avec un bouton de lancement rapide.",
+    quickLaunch: "Lancement rapide",
+    launchingAccount: "Ouverture…",
+    quickLaunchAccount: "Lancer rapidement {account}",
+    launchPermissionRequired: "Vous n’avez pas l’autorisation de lancer des comptes.",
     title: "Bienvenue dans CCM",
     subtitle: "Votre hub central pour le marketing, la croissance et les opérations numériques.",
     portfolioKpis: "Performance du portefeuille",
