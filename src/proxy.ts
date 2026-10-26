@@ -19,8 +19,9 @@ export const config = {
      *  - static assets and images
      *  - favicon / manifest
      *  - the browser bridge extension directory (served as static files)
+     *  - the downloadable browser bridge package
      *  - API routes, which authenticate their own request
      */
-    "/((?!_next/static|_next/image|favicon.ico|manifest.webmanifest|robots.txt|sitemap.xml|apps/ccm-browser-bridge|api/).*)",
+    "/((?!_next/static|_next/image|favicon.ico|manifest.webmanifest|robots.txt|sitemap.xml|apps/ccm-browser-bridge|downloads/ccm-browser-bridge\\.zip|api/).*)",
   ],
 };
