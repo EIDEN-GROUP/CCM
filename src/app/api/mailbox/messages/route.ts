@@ -8,6 +8,7 @@ import {
   resolveMailbox,
 } from "@/lib/mailbox/access";
 import { seal } from "@/lib/sealed";
+import { customReplyHeaders } from "@/lib/mailbox/custom-mail";
 
 export const dynamic = "force-dynamic";
 
@@ -75,9 +76,38 @@ export async function POST(request: Request) {
     );
   }
 
-  const { connector, accessToken, mailbox } = resolution.access;
+  const { mailbox } = resolution.access;
 
   try {
+    if (resolution.access.kind === "imap") {
+      const replyHeaders = parsed.data.threadId
+        ? await customReplyHeaders(resolution.access.settings, parsed.data.threadId)
+        : {};
+      const confirmation = seal(SEND_CONFIRMATION_PURPOSE, {
+        custom: true,
+        mailboxId: mailbox.id,
+        userId: session.userId,
+        workspaceId: session.workspaceId,
+        to: parsed.data.to,
+        cc: parsed.data.cc ?? [],
+        subject: parsed.data.subject,
+        body: parsed.data.body,
+        ...replyHeaders,
+        issuedAt: Math.floor(Date.now() / 1000),
+      });
+      return NextResponse.json({
+        confirmation,
+        draftId: "custom-smtp-confirmation",
+        threadId: "",
+        from: mailbox.mailbox_email,
+        fromLabel: mailbox.display_label,
+        to: parsed.data.to,
+        cc: parsed.data.cc ?? [],
+        subject: parsed.data.subject,
+        expiresInSeconds: SEND_CONFIRMATION_TTL_SECONDS,
+      }, { headers: { "Cache-Control": "no-store, private" } });
+    }
+    const { connector, accessToken } = resolution.access;
     const draft = await connector.createDraft(
       {
         to: parsed.data.to,
@@ -127,6 +157,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       // The interface must show this before anything is sent.
       confirmation,
+        custom: true,
       draftId: draft.id,
       threadId: draft.threadId,
       from: mailbox.mailbox_email,

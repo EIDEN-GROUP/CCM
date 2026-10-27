@@ -7,6 +7,7 @@ import {
   mailboxErrorMessage,
   resolveMailbox,
 } from "@/lib/mailbox/access";
+import { setCustomRead, setCustomStar } from "@/lib/mailbox/custom-mail";
 import { writeAuditEvent } from "@/lib/repositories/alerts";
 
 export const dynamic = "force-dynamic";
@@ -69,6 +70,16 @@ export async function PATCH(
       { error: resolution.error },
       { status: resolution.status },
     );
+  }
+
+  if (resolution.access.kind === "imap") {
+    try {
+      if (parsedBody.data.read !== undefined) await setCustomRead(resolution.access.settings, id, parsedBody.data.read);
+      if (parsedBody.data.starred !== undefined) await setCustomStar(resolution.access.settings, id, parsedBody.data.starred);
+      return NextResponse.json({ ok: true });
+    } catch (error) {
+      return NextResponse.json({ error: mailboxErrorMessage(error) }, { status: 502 });
+    }
   }
 
   const { connector, accessToken } = resolution.access;

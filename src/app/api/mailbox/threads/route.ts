@@ -7,6 +7,7 @@ import {
   mailboxErrorMessage,
   resolveMailbox,
 } from "@/lib/mailbox/access";
+import { searchCustomThreads } from "@/lib/mailbox/custom-mail";
 
 export const dynamic = "force-dynamic";
 
@@ -71,9 +72,24 @@ export async function GET(request: Request) {
     );
   }
 
-  const { connector, accessToken } = resolution.access;
-
   try {
+    if (resolution.access.kind === "imap") {
+      const page = await searchCustomThreads(resolution.access.settings, {
+        query: parsed.data.q?.trim() || undefined,
+        cursor: parsed.data.cursor ?? null,
+        pageSize: parsed.data.pageSize,
+        label: parsed.data.label ?? "inbox",
+      });
+      return NextResponse.json({
+        ...page,
+        mailbox: {
+          id: resolution.access.mailbox.id,
+          email: resolution.access.mailbox.mailbox_email,
+          displayLabel: resolution.access.mailbox.display_label,
+        },
+      }, { headers: { "Cache-Control": "no-store, private" } });
+    }
+    const { connector, accessToken } = resolution.access;
     const page = await connector.searchThreads(
       {
         query: parsed.data.q?.trim() || undefined,

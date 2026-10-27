@@ -4,6 +4,7 @@ import { readCredential } from "@/lib/providers/credentials";
 import { refreshAccessToken } from "@/lib/oauth/google";
 import { serverEnv } from "@/lib/env";
 import { ConnectorError } from "@/providers/connector";
+import type { CustomMailSettings } from "@/lib/mailbox/custom-mail";
 
 /**
  * Resolving access to a mailbox.
@@ -31,13 +32,27 @@ export interface MailboxRecord {
   ai_processing_enabled: boolean;
   last_sync_at: string | null;
   last_error: string | null;
+  host?: string | null;
+  port?: number | null;
+  username?: string | null;
+  smtp_host?: string | null;
+  smtp_port?: number | null;
 }
 
-export interface MailboxAccess {
+export interface GmailMailboxAccess {
+  kind: "gmail";
   mailbox: MailboxRecord;
   connector: GmailConnector;
   accessToken: string;
 }
+
+export interface CustomMailboxAccess {
+  kind: "imap";
+  mailbox: MailboxRecord;
+  settings: CustomMailSettings;
+}
+
+export type MailboxAccess = GmailMailboxAccess | CustomMailboxAccess;
 
 export type MailboxResolution =
   | { ok: true; access: MailboxAccess }
@@ -59,7 +74,7 @@ export async function resolveMailbox(
   const { data, error } = await userDb
     .from("mailbox_connections")
     .select(
-      "id, workspace_id, account_id, provider_key, mailbox_email, display_label, auth_method, status, scopes, ai_processing_enabled, last_sync_at, last_error",
+      "id, workspace_id, account_id, provider_key, mailbox_email, display_label, auth_method, status, scopes, ai_processing_enabled, last_sync_at, last_error, host, port, username, smtp_host, smtp_port",
     )
     .eq("id", mailboxId)
     .eq("workspace_id", workspaceId)
@@ -124,6 +139,33 @@ export async function resolveMailbox(
       status: 409,
       error:
         "This mailbox has no stored credential. Re-authorise the Google account in Integrations.",
+    };
+  }
+
+  if (mailbox.auth_method === "imap") {
+    const secrets = credential.secrets;
+    const imapPassword = typeof secrets.imapPassword === "string" ? secrets.imapPassword : "";
+    const smtpPassword = typeof secrets.smtpPassword === "string" ? secrets.smtpPassword : "";
+    if (!mailbox.host || !mailbox.port || !mailbox.username || !mailbox.smtp_host || !mailbox.smtp_port || !imapPassword || !smtpPassword) {
+      return { ok: false, status: 409, error: "Custom mail setup is incomplete. Update the IMAP and SMTP settings." };
+    }
+    return {
+      ok: true,
+      access: {
+        kind: "imap",
+        mailbox,
+        settings: {
+          email: mailbox.mailbox_email,
+          imapHost: mailbox.host,
+          imapPort: mailbox.port,
+          imapUsername: mailbox.username,
+          imapPassword,
+          smtpHost: mailbox.smtp_host,
+          smtpPort: mailbox.smtp_port,
+          smtpUsername: typeof secrets.smtpUsername === "string" ? secrets.smtpUsername : mailbox.username,
+          smtpPassword,
+        },
+      },
     };
   }
 
@@ -198,6 +240,7 @@ export async function resolveMailbox(
   return {
     ok: true,
     access: {
+      kind: "gmail",
       mailbox,
       connector: new GmailConnector({ userId: mailbox.mailbox_email }),
       accessToken,

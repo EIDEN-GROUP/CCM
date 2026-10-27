@@ -8,6 +8,7 @@ import {
   resolveMailbox,
 } from "@/lib/mailbox/access";
 import { open } from "@/lib/sealed";
+import { sendCustomMail } from "@/lib/mailbox/custom-mail";
 import { writeAuditEvent } from "@/lib/repositories/alerts";
 import {
   SEND_CONFIRMATION_PURPOSE,
@@ -17,7 +18,7 @@ import {
 export const dynamic = "force-dynamic";
 
 const bodySchema = z.object({
-  confirmation: z.string().min(20).max(4000),
+  confirmation: z.string().min(20).max(100_000),
 });
 
 type SendConfirmation = {
@@ -29,6 +30,10 @@ type SendConfirmation = {
   to: string[];
   cc: string[];
   subject: string;
+  custom?: boolean;
+  body?: string;
+  inReplyTo?: string;
+  references?: string;
   issuedAt?: number;
 };
 
@@ -112,9 +117,41 @@ export async function POST(request: Request) {
     );
   }
 
-  const { connector, accessToken, mailbox } = resolution.access;
+  const { mailbox } = resolution.access;
 
   try {
+    if (resolution.access.kind === "imap") {
+      if (!confirmation.custom || typeof confirmation.body !== "string") {
+        return NextResponse.json({ error: "Prepare this custom mailbox message again." }, { status: 400 });
+      }
+      const sent = await sendCustomMail(resolution.access.settings, {
+        to: confirmation.to,
+        cc: confirmation.cc,
+        subject: confirmation.subject,
+        body: confirmation.body,
+        inReplyTo: confirmation.inReplyTo,
+        references: confirmation.references,
+      });
+      await writeAuditEvent(userDb, {
+        workspaceId: session.workspaceId,
+        actorUserId: session.userId,
+        action: "mailbox.sent",
+        entityType: "mailbox",
+        entityId: mailbox.id,
+        targetLabel: mailbox.mailbox_email,
+        details: { to: confirmation.to, cc: confirmation.cc, providerMessageId: sent.messageId },
+      });
+      return NextResponse.json({
+        ok: true,
+        messageId: sent.messageId,
+        threadId: "",
+        from: mailbox.mailbox_email,
+        to: confirmation.to,
+        subject: confirmation.subject,
+        sentAt: new Date().toISOString(),
+      }, { headers: { "Cache-Control": "no-store, private" } });
+    }
+    const { connector, accessToken } = resolution.access;
     const sent = await connector.sendDraft(confirmation.draftId, {
       accessToken,
     });

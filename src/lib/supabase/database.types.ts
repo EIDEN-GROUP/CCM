@@ -665,6 +665,8 @@ export interface Database {
           host: string | null;
           port: number | null;
           username: string | null;
+          smtp_host: string | null;
+          smtp_port: number | null;
           status: string;
           scopes: string[];
           ai_processing_enabled: boolean;

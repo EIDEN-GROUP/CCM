@@ -7,6 +7,7 @@ import {
   mailboxErrorMessage,
   resolveMailbox,
 } from "@/lib/mailbox/access";
+import { readCustomThread } from "@/lib/mailbox/custom-mail";
 
 export const dynamic = "force-dynamic";
 
@@ -73,9 +74,12 @@ export async function GET(
     );
   }
 
-  const { connector, accessToken, mailbox } = resolution.access;
-
   try {
+    if (resolution.access.kind === "imap") {
+      const result = await readCustomThread(resolution.access.settings, id);
+      return NextResponse.json(result, { headers: { "Cache-Control": "no-store, private" } });
+    }
+    const { connector, accessToken, mailbox } = resolution.access;
     const { thread, messages } = await connector.getThread(id, {
       accessToken,
     });

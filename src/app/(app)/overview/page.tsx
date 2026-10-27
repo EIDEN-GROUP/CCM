@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Notice } from "@/components/ui/notice";
 import { EmptyState } from "@/components/ui/states";
 import { ChannelTrendChart } from "@/components/charts/channel-trend-chart";
+import { TopCampaignsChart } from "@/components/charts/top-campaigns-chart";
 import { LauncherOverview } from "@/components/overview/launcher-overview";
 import { ProviderIcon } from "@/components/providers/provider-icon";
 import { getSession } from "@/lib/auth/session";
@@ -573,6 +574,19 @@ export default async function OverviewPage({
             }
           />
           <CardBody className="p-0">
+            {topCampaigns.some((row) => row.cost_micros !== null) ? (
+              <TopCampaignsChart
+                label={t("pages.googleAds.spend")}
+                data={topCampaigns.flatMap((row) =>
+                  row.cost_micros === null
+                    ? []
+                    : [{
+                        name: row.dimension_label ?? row.dimension_id,
+                        spend: microsToAmount(row.cost_micros, "MAD"),
+                      }],
+                )}
+              />
+            ) : null}
             <DataTable
               label={t("pages.overview.topCampaigns")}
               rows={topCampaigns}

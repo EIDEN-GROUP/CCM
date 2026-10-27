@@ -48,6 +48,7 @@ export interface MailboxSummary {
   email: string;
   displayLabel: string;
   status: string;
+  source: "gmail" | "custom";
 }
 
 interface ThreadSummary {
@@ -87,6 +88,7 @@ interface PreparedSend {
   cc: string[];
   subject: string;
   expiresInSeconds: number;
+  custom?: boolean;
 }
 
 /** The mailbox sections, in the order Gmail shows them. */
@@ -121,6 +123,8 @@ export function MailboxBrowser({
   canSend: boolean;
 }) {
   const { t, tp, intlLocale, dir } = useI18n();
+  const [source, setSource] = useState<"gmail" | "custom">(mailboxes[0]?.source ?? "gmail");
+  const visibleMailboxes = mailboxes.filter((mailbox) => mailbox.source === source);
   const [mailboxId, setMailboxId] = useState(mailboxes[0]?.id ?? "");
   const [label, setLabel] = useState<(typeof LABELS)[number]["key"]>("inbox");
   const [search, setSearch] = useState("");
@@ -260,6 +264,17 @@ export function MailboxBrowser({
       cancelled = true;
     };
   }, [fetchThreads, t]);
+
+  // Keep the selected inbox fresh while it is open. IMAP is the source of
+  // truth for custom mail, so periodic lightweight refreshes surface new
+  // messages without storing message bodies in CCM.
+  useEffect(() => {
+    const timer = setInterval(() => {
+      if (document.visibilityState !== "visible" || loading) return;
+      void load(page, cursors[page] ?? null);
+    }, 60_000);
+    return () => clearInterval(timer);
+  }, [cursors, load, loading, page]);
 
   // The search box is debounced, so a long query is not a request per key.
   function onSearchChange(value: string) {
@@ -500,6 +515,42 @@ export function MailboxBrowser({
 
   return (
     <div className="space-y-4">
+      <div className="flex flex-wrap items-center gap-2 rounded-lg bg-surface-muted p-1.5" role="group" aria-label={t("pages.inbox.mailSource")}>
+        {(["gmail", "custom"] as const).map((kind) => {
+          const count = mailboxes.filter((mailbox) => mailbox.source === kind).length;
+          return (
+            <button
+              key={kind}
+              type="button"
+              onClick={() => {
+                setSource(kind);
+                setMailboxId(mailboxes.find((mailbox) => mailbox.source === kind)?.id ?? "");
+                setOpenThread(null);
+                setMessages([]);
+                setLabel("inbox");
+                setQuery("");
+                setSearch("");
+              }}
+              aria-pressed={source === kind}
+              className={cn(
+                "min-h-10 rounded-md px-4 text-label-md font-semibold transition-[background-color,color,box-shadow] duration-200",
+                source === kind ? "bg-surface text-primary-ink shadow-card" : "text-muted-text hover:text-secondary",
+              )}
+            >
+              {kind === "gmail" ? t("pages.inbox.gmailMail") : t("pages.inbox.customMail")}
+              <span className="ms-2 rounded-full bg-pale px-2 py-0.5 text-body-xs">{count}</span>
+            </button>
+          );
+        })}
+      </div>
+      {visibleMailboxes.length === 0 ? (
+        <EmptyState
+          title={t(source === "gmail" ? "pages.inbox.noGmailMailbox" : "pages.inbox.noCustomMailbox")}
+          description={t(source === "gmail" ? "pages.inbox.noGmailMailboxHint" : "pages.inbox.noCustomMailboxHint")}
+          icon={<Inbox aria-hidden="true" className="size-5" />}
+        />
+      ) : null}
+      {visibleMailboxes.length > 0 ? <>
       {sentNotice ? (
         <Notice tone="success" title={t("pages.inbox.messageSentTitle")}>
           {sentNotice}
@@ -531,7 +582,7 @@ export function MailboxBrowser({
             }}
             className="h-[42px] w-full rounded-md border border-border bg-surface px-3 text-body-md text-secondary focus:border-primary focus:outline-2 focus:outline-primary-ink/40"
           >
-            {mailboxes.map((mailbox) => (
+            {visibleMailboxes.map((mailbox) => (
               <option key={mailbox.id} value={mailbox.id}>
                 {mailbox.displayLabel} — {mailbox.email}
               </option>
@@ -796,7 +847,7 @@ export function MailboxBrowser({
                       })}
                     </p>
                     <p className="mt-2">
-                      {tp("pages.inbox.draftExpiry", {
+                      {tp(prepared.custom ? "pages.inbox.customDraftExpiry" : "pages.inbox.draftExpiry", {
                         seconds: prepared.expiresInSeconds,
                       })}
                     </p>
@@ -1028,6 +1079,7 @@ export function MailboxBrowser({
           )}
         </div>
       </div>
+      </> : null}
     </div>
   );
 }

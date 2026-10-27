@@ -66,7 +66,7 @@ export function ChannelTrendChart({
       <div
         role="img"
         aria-label={summary}
-        className="h-[260px] w-full"
+        className="chart-enter h-[260px] w-full"
       >
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: -12 }}>
@@ -129,6 +129,9 @@ export function ChannelTrendChart({
                 connectNulls={false}
                 dot={false}
                 activeDot={{ r: 4 }}
+                isAnimationActive
+                animationDuration={850}
+                animationEasing="ease-out"
               />
             ))}
           </AreaChart>

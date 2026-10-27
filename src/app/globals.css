@@ -194,6 +194,10 @@
 }
 
 @media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+
   .dashboard-page-enter > * {
     animation: ccm-rise-in 420ms var(--ease-calm) both;
   }
@@ -204,6 +208,20 @@
 
   .provider-launch-link {
     animation: ccm-rise-in 360ms var(--ease-calm) both;
+  }
+
+  .chart-enter {
+    animation: ccm-rise-in 480ms var(--ease-calm) both;
+  }
+
+  .dashboard-page-enter > .grid > .rounded-lg {
+    transition: transform 180ms var(--ease-calm), box-shadow 180ms var(--ease-calm), border-color 180ms var(--ease-calm);
+  }
+
+  .dashboard-page-enter > .grid > .rounded-lg:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-raised);
+    border-color: color-mix(in srgb, var(--color-primary) 24%, var(--color-border));
   }
 }
 
